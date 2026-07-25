@@ -281,6 +281,23 @@ describe('projects', () => {
       expect(view.data?.issueTypes.map((t) => t.name)).toEqual(['Task', 'Bug']);
     });
 
+    it('copies which optional sections the source project shows', async () => {
+      const { api } = await signUpClient();
+      await api.projects.post({ key: 'SRC', name: 'Source' });
+      await api
+        .projects({ projectKey: 'SRC' })
+        .settings.patch({ features: { notes: false, dashboards: false } });
+
+      await api.projects({ projectKey: 'SRC' }).copy.post({ key: 'DST', name: 'Destination' });
+
+      const settings = await api.projects({ projectKey: 'DST' }).settings.get();
+      expect(settings.data?.features).toEqual({
+        initiatives: true,
+        dashboards: false,
+        notes: false,
+      });
+    });
+
     it("remaps a saved view's filter ids to the copied project's entities", async () => {
       const { api } = await signUpClient();
       await api.projects.post({ key: 'SRC', name: 'Source' });
@@ -558,6 +575,56 @@ describe('projects', () => {
         mcpEnabled: false,
         autoArchive: { completedDays: 28, canceledDays: 7 },
       });
+    });
+
+    it('starts a new project with every optional section enabled', async () => {
+      const { api } = await signUpClient();
+      await api.projects.post({ key: 'MKT', name: 'Marketing' });
+
+      const res = await api.projects({ projectKey: 'MKT' }).settings.get();
+      expect(res.data?.features).toMatchObject({
+        initiatives: true,
+        dashboards: true,
+        notes: true,
+      });
+      expect((await viewOf(api, 'MKT')).data?.project).toMatchObject({
+        initiativesEnabled: true,
+        dashboardsEnabled: true,
+        notesEnabled: true,
+      });
+    });
+
+    it('lets an owner turn a section off and back on, leaving the others', async () => {
+      const { api } = await signUpClient();
+      await api.projects.post({ key: 'MKT', name: 'Marketing' });
+
+      const off = await api
+        .projects({ projectKey: 'MKT' })
+        .settings.patch({ features: { initiatives: false } });
+      expect(off.status).toBe(200);
+      expect(off.data?.features).toMatchObject({
+        initiatives: false,
+        dashboards: true,
+        notes: true,
+      });
+      expect((await viewOf(api, 'MKT')).data?.project.initiativesEnabled).toBe(false);
+
+      const on = await api
+        .projects({ projectKey: 'MKT' })
+        .settings.patch({ features: { initiatives: true } });
+      expect(on.data?.features).toMatchObject({ initiatives: true });
+      expect((await viewOf(api, 'MKT')).data?.project.initiativesEnabled).toBe(true);
+    });
+
+    it('denies turning a section off to a non-owner (owner-only)', async () => {
+      const owner = await signUpClient();
+      await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
+
+      const outsider = await signUpClient();
+      const res = await outsider.api
+        .projects({ projectKey: 'MKT' })
+        .settings.patch({ features: { notes: false } });
+      expect(res.status).toBe(403);
     });
 
     it('lets an owner set and read back the auto-archive thresholds', async () => {
