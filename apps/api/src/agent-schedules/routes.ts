@@ -4,6 +4,7 @@ import { guards } from '../shared/guards';
 import { noContent } from '../shared/http';
 import { HttpError } from '../shared/lib';
 import { ErrorResponse } from '../shared/responses';
+import { mcpTool } from '../mcp/generate';
 import { nextCronRun } from './cron';
 import {
   createAgentSchedule,
@@ -15,15 +16,63 @@ import {
   updateAgentSchedule,
 } from './store';
 
-const params = t.Object({ projectKey: t.String(), scheduleId: t.Numeric() });
-const status = t.UnionEnum(['active', 'paused']);
+const params = t.Object({
+  projectKey: t.String(),
+  scheduleId: t.Numeric({ description: 'Schedule id from list_agent_schedules.' }),
+});
+const status = t.UnionEnum(['active', 'paused'], {
+  description: "'active' runs on the cron, 'paused' stops it until it is set back to 'active'.",
+});
 const scheduleBody = t.Object({
-  agentId: t.Number(),
-  name: t.String({ minLength: 1, maxLength: 120 }),
-  prompt: t.String({ minLength: 1, maxLength: 20_000 }),
-  cron: t.String({ minLength: 1, maxLength: 120 }),
+  agentId: t.Number({ description: 'Internal agent id from list_ai_agents that runs the task.' }),
+  name: t.String({ minLength: 1, maxLength: 120, description: 'Display name of the schedule.' }),
+  prompt: t.String({
+    minLength: 1,
+    maxLength: 20_000,
+    description: 'Task sent to the agent on every run.',
+  }),
+  cron: t.String({
+    minLength: 1,
+    maxLength: 120,
+    description: "Five-field cron expression in UTC, e.g. '0 9 * * 1' for Mondays at 09:00.",
+  }),
   status: t.Optional(status),
 });
+
+// A schedule DTO (AgentScheduleRow from the store).
+const AgentScheduleResponse = t.Object({
+  id: t.Number(),
+  agentId: t.Number(),
+  agentName: t.String(),
+  name: t.String(),
+  prompt: t.String(),
+  cron: t.String(),
+  timezone: t.Literal('UTC'),
+  status,
+  nextRunAt: t.String(),
+  lastRunAt: t.Nullable(t.String()),
+  lastRunStatus: t.Nullable(t.String()),
+  createdAt: t.String(),
+  updatedAt: t.String(),
+});
+
+// One run of a schedule (ScheduleRunRow from the store), with the agent's answer in
+// `output` once the run has finished.
+const ScheduleRunResponse = t.Object({
+  id: t.Number(),
+  status: t.String(),
+  trigger: t.String(),
+  prompt: t.String(),
+  attempts: t.Number(),
+  lastError: t.Nullable(t.String()),
+  output: t.Nullable(t.String()),
+  scheduledFor: t.Nullable(t.String()),
+  startedAt: t.Nullable(t.String()),
+  finishedAt: t.Nullable(t.String()),
+  createdAt: t.String(),
+});
+
+const QueuedRunResponse = t.Object({ runId: t.Number() });
 
 function requiredText(value: string, field: string): string {
   const trimmed = value.trim();
@@ -39,7 +88,19 @@ export const agentScheduleRoutes = new Elysia({
   .use(guards)
   .get('/projects/:projectKey/agent-schedules', ({ project }) => listAgentSchedules(project.id), {
     permission: ['ai_agents', 'read'],
-    detail: { summary: 'List agent schedules' },
+    response: {
+      200: t.Array(AgentScheduleResponse),
+      401: ErrorResponse,
+      403: ErrorResponse,
+      404: ErrorResponse,
+    },
+    detail: {
+      summary: 'List agent schedules',
+      description:
+        "List the project's agent schedules: which internal agent runs which task on which cron, " +
+        'with the next and last run.',
+      ...mcpTool('list_agent_schedules'),
+    },
   })
   .post(
     '/projects/:projectKey/agent-schedules',
@@ -61,8 +122,20 @@ export const agentScheduleRoutes = new Elysia({
     {
       body: scheduleBody,
       permission: ['ai_agents', 'create'],
-      response: { 400: ErrorResponse, 401: ErrorResponse, 403: ErrorResponse, 404: ErrorResponse },
-      detail: { summary: 'Create an agent schedule' },
+      response: {
+        201: AgentScheduleResponse,
+        400: ErrorResponse,
+        401: ErrorResponse,
+        403: ErrorResponse,
+        404: ErrorResponse,
+      },
+      detail: {
+        summary: 'Create an agent schedule',
+        description:
+          'Create a schedule that sends a task to an internal agent on a cron. It starts active ' +
+          "unless status is 'paused'.",
+        ...mcpTool('create_agent_schedule'),
+      },
     },
   )
   .patch(
@@ -91,8 +164,20 @@ export const agentScheduleRoutes = new Elysia({
       params,
       body: t.Partial(scheduleBody),
       permission: ['ai_agents', 'edit'],
-      response: { 400: ErrorResponse, 401: ErrorResponse, 403: ErrorResponse, 404: ErrorResponse },
-      detail: { summary: 'Update an agent schedule' },
+      response: {
+        200: AgentScheduleResponse,
+        400: ErrorResponse,
+        401: ErrorResponse,
+        403: ErrorResponse,
+        404: ErrorResponse,
+      },
+      detail: {
+        summary: 'Update an agent schedule',
+        description:
+          "Update a schedule's agent, task, or cron, and pause or resume it through status. " +
+          'Resuming and a new cron both move the next run to the next matching time.',
+        ...mcpTool('update_agent_schedule'),
+      },
     },
   )
   .delete(
@@ -106,7 +191,20 @@ export const agentScheduleRoutes = new Elysia({
     {
       params,
       permission: ['ai_agents', 'delete'],
-      detail: { summary: 'Delete an agent schedule' },
+      response: {
+        204: t.Void(),
+        400: ErrorResponse,
+        401: ErrorResponse,
+        403: ErrorResponse,
+        404: ErrorResponse,
+      },
+      detail: {
+        summary: 'Delete an agent schedule',
+        description:
+          'Delete a schedule with its run history and the conversation its runs shared. ' +
+          'Irreversible; pause it instead to keep it.',
+        ...mcpTool('delete_agent_schedule'),
+      },
     },
   )
   .post(
@@ -117,7 +215,25 @@ export const agentScheduleRoutes = new Elysia({
       set.status = 202;
       return { runId };
     },
-    { params, permission: ['ai_agents', 'edit'], detail: { summary: 'Run an agent schedule now' } },
+    {
+      params,
+      permission: ['ai_agents', 'edit'],
+      response: {
+        202: QueuedRunResponse,
+        400: ErrorResponse,
+        401: ErrorResponse,
+        403: ErrorResponse,
+        404: ErrorResponse,
+      },
+      detail: {
+        summary: 'Run an agent schedule now',
+        description:
+          'Queue a run of the schedule right away, without waiting for its cron, and return the ' +
+          "run id. The run is executed in the background: read its status and the agent's answer " +
+          'with list_agent_schedule_runs.',
+        ...mcpTool('run_agent_schedule'),
+      },
+    },
   )
   .get(
     '/projects/:projectKey/agent-schedules/:scheduleId/runs',
@@ -126,5 +242,22 @@ export const agentScheduleRoutes = new Elysia({
       if (!rows) throw new HttpError(404, 'Schedule not found');
       return rows;
     },
-    { params, permission: ['ai_agents', 'read'], detail: { summary: 'List agent schedule runs' } },
+    {
+      params,
+      permission: ['ai_agents', 'read'],
+      response: {
+        200: t.Array(ScheduleRunResponse),
+        400: ErrorResponse,
+        401: ErrorResponse,
+        403: ErrorResponse,
+        404: ErrorResponse,
+      },
+      detail: {
+        summary: 'List agent schedule runs',
+        description:
+          "The schedule's last 50 runs, newest first, each with its status, the agent's answer " +
+          'in output, and the error of a failed run.',
+        ...mcpTool('list_agent_schedule_runs'),
+      },
+    },
   );
