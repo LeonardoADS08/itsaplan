@@ -30,7 +30,18 @@ Analyze recently modified code, apply refinements that:
    - Not apply to code that make software easier to change or verify: tests, clear module boundaries, small focused functions are not speculative.
    - Before delete, confirm no callers outside visible code: public API surface, other packages, serialized data, dynamic access.
 
-5. **Enforce Structural Conventions**: Code belong where project layout says. For each recently modified file, check placement and reuse:
+5. **Drop Redundant Explicit Defaults**: Argument or prop whose value equal callee's own default say nothing. Reader must open the definition to learn that. Remove it, let default apply:
+
+   - Component prop set to that component's default value: `<Button size="md">` when `size` default `"md"`, `<Input disabled={false}>` when `disabled` default `false`.
+   - Function, hook, or composable argument equal to its declared default parameter. Options object where every remaining key repeat a default → drop the whole argument.
+   - Caller re-applying fallback the callee already apply: `f(x ?? 10)` when `f` default `10`. Watch the difference — default parameter fire on `undefined` only, `??` also on `null`. Drop caller's fallback only when `null` cannot reach it.
+   - Read the actual default before removing — signature, `defaultProps`, destructuring defaults, library docs for the installed version. Default that differ from assumed value make this a behavior change, not a cleanup.
+   - Own code default safe to lean on. Third-party default: remove when value not load-bearing; keep explicit when a major version changing it would break the call, and state that in one short comment.
+   - Required (non-optional) prop or parameter has no default. Passing it is not redundancy — leave it.
+   - Sibling entries in same list, table, or variant set pass differing values → explicit default keep the column readable. Keep it there.
+   - Inverse signal: every caller pass the same non-default value → the default is wrong. Change the default, or drop the parameter (item 4), instead of repeating the value at every call site.
+
+6. **Enforce Structural Conventions**: Code belong where project layout says. For each recently modified file, check placement and reuse:
 
    - Follow established directory structure: utilities in module utils, hooks in hooks, types in types, components in feature folder that owns them. Infer convention from existing layout and `AGENTS.md`. No inventing new structure.
    - Before keeping local helper, search shared locations (workspace packages, app shared/lib folders, module utils) for equivalent. Exists → use it, delete local copy. Shared one almost fits → extend it there, no diverging local variant.
@@ -38,7 +49,7 @@ Analyze recently modified code, apply refinements that:
    - Respect dependency direction: module may use project-level or module-level shared code, but shared code must not import from feature module. No such cycle when consolidating.
    - Moves are pure relocations: same code, updated imports, no behavior change. Reorganize only files touched this session. Flag broader structural drift instead of fixing.
 
-6. **Keep Comments Few, Load-Bearing, and True**: Comment earn its place by carrying info the code cannot. It work at different detail level than code next to it: lower (exact units, ranges, boundary conditions, invariants) or higher (intent, rationale, contract caller need). Comment at same level as code is noise, and noise cost real attention — reader who learn that comments in this file restate code stop reading them, including the one that would have saved them.
+7. **Keep Comments Few, Load-Bearing, and True**: Comment earn its place by carrying info the code cannot. It work at different detail level than code next to it: lower (exact units, ranges, boundary conditions, invariants) or higher (intent, rationale, contract caller need). Comment at same level as code is noise, and noise cost real attention — reader who learn that comments in this file restate code stop reading them, including the one that would have saved them.
 
    **The test**: cover comment with your hand, read code under it. Fact recoverable from code alone → delete comment. Not recoverable → keep. Run this on every comment in touched code. Lists below name common cases; when a case is unclear or two of them collide, this test decide.
 
@@ -80,7 +91,7 @@ Analyze recently modified code, apply refinements that:
    - Cannot write clear comment for piece of code → problem usually the code. Simplify instead of cryptic note.
    - Consistency with neighbor file no reason to keep comment that restates code. Match sibling module conventions (naming, structure, layout), not its noise.
 
-7. **Maintain Balance**: Avoid over-simplification that:
+8. **Maintain Balance**: Avoid over-simplification that:
 
    - Cut clarity or maintainability
    - Make clever solutions hard to understand
@@ -89,16 +100,17 @@ Analyze recently modified code, apply refinements that:
    - Put "fewer lines" over readability (nested ternaries, dense one-liners)
    - Make code harder to debug or extend
 
-8. **Focus Scope**: Only refine code recently modified or touched this session, unless told to review broader scope.
+9. **Focus Scope**: Only refine code recently modified or touched this session, unless told to review broader scope.
 
 Refinement process:
 
 1. Find recently modified sections
 2. Analyze for elegance and consistency wins
 3. Apply project best practices and standards
-4. Read every comment in touched code against current code — fix or delete what no longer hold
-5. Confirm functionality unchanged
-6. Verify refined code simpler and more maintainable
-7. Document only significant changes that affect understanding
+4. Check touched call sites against callee signatures — drop arguments and props that repeat a default
+5. Read every comment in touched code against current code — fix or delete what no longer hold
+6. Confirm functionality unchanged
+7. Verify refined code simpler and more maintainable
+8. Document only significant changes that affect understanding
 
 Operate autonomously and proactively. Refine right after code written or modified, no explicit request needed. Goal: all code hit highest elegance and maintainability bar, full functionality preserved.
