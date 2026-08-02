@@ -170,6 +170,23 @@ export default function AccountPreferencesPage() {
         </AccountPreferenceRow>
       </AccountPreferencesSection>
 
+      <AccountPreferencesSection
+        id="notifications"
+        title="Notifications"
+        description="Watching an issue brings you its comments and status changes."
+      >
+        <AccountPreferenceRow
+          label="Watch issues automatically"
+          description="The ones you create, get assigned, comment on, or are mentioned in."
+        >
+          <Switch
+            checked={prefs.autoWatch}
+            onCheckedChange={(autoWatch) => save({ autoWatch })}
+            disabled={disabled}
+          />
+        </AccountPreferenceRow>
+      </AccountPreferencesSection>
+
       <AccountPreferencesSection id="ai-chat" title="AI chat">
         <AccountPreferenceRow
           label="Show chat by default"
