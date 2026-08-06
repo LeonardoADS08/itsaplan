@@ -43,6 +43,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Pill } from '@/components/common/fields/Pill';
 import InitiativeSelect from '../fields/InitiativeSelect';
+import CycleSelect, { type CycleOption } from '../fields/CycleSelect';
 
 export default function NewIssueModal({
   project,
@@ -68,6 +69,11 @@ export default function NewIssueModal({
       : defaults.typeId,
   );
   const [initiativeId, setInitiativeId] = useState<number | null>(defaults.initiativeId ?? null);
+  // A default cycle that is not among the planned ones has finished, and nothing new
+  // is planned into it — the issue is created without a cycle instead.
+  const [cycle, setCycle] = useState<CycleOption | null>(
+    () => project.plannedCycles.find((c) => c.id === defaults.cycleId) ?? null,
+  );
   const { data: session } = useSession();
   // Assignee defaults to the creating user unless the caller set one explicitly
   // (defaults.assigneeUserId is null for the "No assignee" board group).
@@ -222,6 +228,7 @@ export default function NewIssueModal({
           parentId: defaults.parentId ?? null,
           typeId,
           initiativeId,
+          cycleId: cycle?.id ?? null,
           assigneeUserId,
           delegateUserId,
           priority: priority || null,
@@ -347,6 +354,10 @@ export default function NewIssueModal({
               value={initiativeId}
               onChange={setInitiativeId}
             />
+          )}
+
+          {project.project.cyclesEnabled && (
+            <CycleSelect projectKey={project.project.key} value={cycle} onChange={setCycle} />
           )}
 
           {project.labels.length > 0 && (
