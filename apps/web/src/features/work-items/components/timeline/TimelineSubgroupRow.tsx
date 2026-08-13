@@ -1,12 +1,13 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
 import { useTranslations } from 'next-intl';
 import { DEFAULT_COLOR, type IssueGroup } from '@/utils/project';
 import { cn } from '@/lib/utils';
 import { GroupDot } from '../shared/GroupDot';
 import { SUBGROUP_H } from '../../utils/timeline';
 
-// A sub-group header row (only present when sub-grouped). `data-group-key` carries
-// the sub-section key, so dropping a bar on it reassigns both grouping fields.
+// A sub-group header row (only present when sub-grouped). A row dropped onto it
+// is appended to the sub-section, which reassigns both grouping fields.
 export function TimelineSubgroupRow({
   sub,
   groupKey,
@@ -15,7 +16,7 @@ export function TimelineSubgroupRow({
   aggregateRect,
   labelW,
   trackWidth,
-  isDrop,
+  onDrop,
   onToggle,
 }: {
   sub: IssueGroup;
@@ -25,13 +26,14 @@ export function TimelineSubgroupRow({
   aggregateRect: { left: number; width: number } | null;
   labelW: number;
   trackWidth: number;
-  isDrop: boolean;
+  onDrop: (issueId: number) => void;
   onToggle: () => void;
 }) {
   const t = useTranslations('workItems.timeline');
+  const { setNodeRef, isOver: isDrop } = useDroppable({ id: `sec:${groupKey}`, data: { onDrop } });
   return (
     <div
-      data-group-key={groupKey}
+      ref={setNodeRef}
       className={cn('flex border-b bg-muted/20', isDrop && 'bg-accent/60')}
       style={{ height: SUBGROUP_H }}
     >

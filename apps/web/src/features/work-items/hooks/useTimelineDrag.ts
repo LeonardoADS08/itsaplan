@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import { type Issue, type IssuePatch, type ProjectDetail } from '@/lib/api';
-import type { FilterSet } from '@/utils/filters';
 import { addDays, toDateStr } from '@/utils/dates';
-import { buildGroups, groupKeyOf, mergeAssign, subgroupKey } from '@/utils/project';
-import { useGroupLabels } from '@/hooks/useGroupLabels';
 import { useUpdateIssue } from '@/services/issues.service';
-import type { GroupField } from '@/utils/viewSettings';
 import { effSpan } from '../utils/timeline';
 
 // Whether a bar drag moves the whole span or resizes one end.
@@ -18,60 +14,29 @@ interface DragSession {
   curStart: Date;
   curEnd: Date;
   deltaDays: number;
-  origGroupKey: string;
-  targetGroupKey: string;
 }
 
-// Pointer-drag state and handlers for the timeline bars. A drag moves the bar
-// (rewriting start/due dates and, on a vertical move, the section's grouping
-// fields) or resizes one end; a gesture with no change opens the issue.
-// `preview` is the in-progress span for the dragged issue; `dropGroupKey` is the
-// section under the cursor during a move (null when it matches the origin), used
-// to highlight the target.
+// Pointer-drag state and handlers for the timeline bars. A bar drag only moves
+// the issue in time — it shifts the whole span or resizes one end; a gesture with
+// no change opens the issue. Moving an issue between sections and reordering it
+// is the label column's drag (useIssueReorder).
+// `preview` is the in-progress span for the dragged issue.
 export function useTimelineDrag({
   project,
-  filters,
-  group,
-  subgroup,
   dayW,
   onOpenIssue,
 }: {
   project: ProjectDetail;
-  filters: FilterSet;
-  group: GroupField;
-  subgroup: GroupField;
   dayW: number;
   onOpenIssue: (id: number) => void;
 }) {
-  const groupLabels = useGroupLabels();
   const updateIssue = useUpdateIssue(project.project.key);
-  const subgrouped = group !== 'none' && subgroup !== 'none';
-  const subGroups = subgrouped ? buildGroups(project, subgroup, groupLabels, filters) : [];
-  // The patch each drop target applies: the group's own, and — when sub-grouped —
-  // the two grouping fields combined for every sub-section.
-  const assignByKey = new Map<string, IssuePatch | null>();
-  for (const issueGroup of buildGroups(project, group, groupLabels, filters)) {
-    assignByKey.set(issueGroup.key, issueGroup.assign);
-    for (const sub of subGroups) {
-      assignByKey.set(
-        subgroupKey(issueGroup.key, sub.key),
-        mergeAssign(issueGroup.assign, sub.assign),
-      );
-    }
-  }
-  // The section an issue currently sits in — the same key its row renders under.
-  const sectionKeyOf = (issue: Issue) =>
-    subgrouped
-      ? subgroupKey(groupKeyOf(issue, group), groupKeyOf(issue, subgroup))
-      : groupKeyOf(issue, group);
   const [preview, setPreview] = useState<{ issueId: number; start: Date; end: Date } | null>(null);
-  const [dropGroupKey, setDropGroupKey] = useState<string | null>(null);
 
   function beginDrag(e: React.PointerEvent, issue: Issue, mode: TimelineDragMode) {
     e.preventDefault();
     e.stopPropagation();
     const span = effSpan(issue);
-    const issueGroupKey = sectionKeyOf(issue);
     const session: DragSession = {
       startX: e.clientX,
       origStart: span.start,
@@ -79,8 +44,6 @@ export function useTimelineDrag({
       curStart: span.start,
       curEnd: span.end,
       deltaDays: 0,
-      origGroupKey: issueGroupKey,
-      targetGroupKey: issueGroupKey,
     };
 
     const onMove = (ev: PointerEvent) => {
@@ -91,15 +54,6 @@ export function useTimelineDrag({
       if (mode === 'move') {
         start = addDays(session.origStart, deltaDays);
         end = addDays(session.origEnd, deltaDays);
-        const rowEl = document
-          .elementFromPoint(ev.clientX, ev.clientY)
-          ?.closest('[data-group-key]');
-        if (rowEl) {
-          session.targetGroupKey = rowEl.getAttribute('data-group-key') ?? session.origGroupKey;
-          setDropGroupKey(
-            session.targetGroupKey === session.origGroupKey ? null : session.targetGroupKey,
-          );
-        }
       } else if (mode === 'start') {
         start = addDays(session.origStart, deltaDays);
         if (start > end) start = end;
@@ -116,29 +70,20 @@ export function useTimelineDrag({
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       setPreview(null);
-      setDropGroupKey(null);
 
-      const patch: IssuePatch = {};
-      if (mode === 'move') {
-        // Only rewrite the dates on a horizontal move, so a purely vertical drag
-        // changes the status without materializing the inferred start date.
-        if (session.deltaDays !== 0) {
-          patch.startDate = toDateStr(session.curStart);
-          patch.dueDate = toDateStr(session.curEnd);
-        }
-        if (session.targetGroupKey !== session.origGroupKey) {
-          const assign = assignByKey.get(session.targetGroupKey);
-          if (assign) Object.assign(patch, assign);
-        }
-      } else if (session.deltaDays !== 0) {
-        if (mode === 'start') patch.startDate = toDateStr(session.curStart);
-        else patch.dueDate = toDateStr(session.curEnd);
-      }
-
-      // Nothing changed — treat the gesture as a click that opens the issue.
-      if (Object.keys(patch).length === 0) {
+      // Nothing moved — treat the gesture as a click that opens the issue.
+      if (session.deltaDays === 0) {
         onOpenIssue(issue.id);
         return;
+      }
+      const patch: IssuePatch = {};
+      if (mode === 'move') {
+        patch.startDate = toDateStr(session.curStart);
+        patch.dueDate = toDateStr(session.curEnd);
+      } else if (mode === 'start') {
+        patch.startDate = toDateStr(session.curStart);
+      } else {
+        patch.dueDate = toDateStr(session.curEnd);
       }
       updateIssue.mutate({ id: issue.id, patch });
     };
@@ -147,5 +92,5 @@ export function useTimelineDrag({
     window.addEventListener('pointerup', onUp);
   }
 
-  return { preview, dropGroupKey, beginDrag };
+  return { preview, beginDrag };
 }

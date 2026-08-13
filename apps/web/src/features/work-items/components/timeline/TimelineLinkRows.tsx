@@ -11,7 +11,6 @@ import { effSpan, LINK_ROW_H } from '../../utils/timeline';
 // opens it.
 export function TimelineLinkRows({
   links: refs,
-  groupKey,
   indented,
   maps,
   labelW,
@@ -23,9 +22,6 @@ export function TimelineLinkRows({
   onOpen,
 }: {
   links: IssueLinkRef[] | undefined;
-  // The parent row's group, so a bar dragged over a sub-row still reads the group
-  // it is being dropped into.
-  groupKey: string;
   // Follows the parent row's indent, so the sub-rows stay nested under it.
   indented: boolean;
   maps: Maps;
@@ -51,7 +47,6 @@ export function TimelineLinkRows({
         return (
           <div
             key={link.id}
-            data-group-key={groupKey}
             className={cn(
               'flex border-b border-dashed hover:bg-accent/20',
               named && index > 0 && 'border-t',

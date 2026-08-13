@@ -12,7 +12,6 @@ import { effSpan, LINK_ROW_H } from '../../utils/timeline';
 // subtask itself — and a click opens it.
 export function TimelineSubtaskRows({
   issueId,
-  groupKey,
   indented,
   maps,
   labelW,
@@ -24,9 +23,6 @@ export function TimelineSubtaskRows({
   onOpen,
 }: {
   issueId: number;
-  // The parent row's group, so a bar dragged over a sub-row still reads the group
-  // it is being dropped into.
-  groupKey: string;
   // Follows the parent row's indent, so the sub-rows stay nested under it.
   indented: boolean;
   maps: Maps;
@@ -51,7 +47,6 @@ export function TimelineSubtaskRows({
         return (
           <div
             key={subtask.id}
-            data-group-key={groupKey}
             className={cn(
               'flex border-b hover:bg-accent/20',
               // The last sub-row closes the block against the next issue row, so

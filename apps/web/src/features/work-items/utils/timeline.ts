@@ -1,16 +1,19 @@
 import { startOfDay } from 'date-fns';
-import { type BoardIssue, type Issue, type ProjectDetail } from '@/lib/api';
+import { type BoardIssue, type Issue, type IssuePatch, type ProjectDetail } from '@/lib/api';
 import { parseDate } from '@/utils/dates';
 import type { FilterSet } from '@/utils/filters';
 import { buildDayTrack, type DayTrack } from '@/utils/timelineTrack';
 import {
   buildGroups,
   groupIssues,
+  mergeAssign,
   nestIssues,
+  sortIssues,
   subgroupKey,
   type GroupLabels,
   type IssueGroup,
 } from '@/utils/project';
+import type { Sort } from '@/utils/viewTypes';
 import type { GroupField, TimelineScale } from '@/utils/viewSettings';
 
 // px per day at each zoom level. Wider days keep the per-day numbers legible;
@@ -50,9 +53,9 @@ export function effSpan(issue: Issue): Span {
 
 // A flat render list so the left labels and the right tracks share the exact
 // same row order and heights: one entry per group header, its sub-group headers
-// when sub-grouped, then the issues. `groupKey` on an issue row is the section
-// it sits in — the sub-section key when sub-grouped — which is what a vertical
-// drag drops onto.
+// when sub-grouped, then the issues. `assign` is the patch a drop onto the row
+// applies, `bucket` the ordered issue list the drop position is measured against,
+// and `index` the row's place in it — the same shape the table rows carry.
 export type TimelineRow =
   | {
       kind: 'group';
@@ -60,6 +63,8 @@ export type TimelineRow =
       count: number;
       collapsed: boolean;
       aggregateSpan: Span | null;
+      assign: IssuePatch | null;
+      bucket: BoardIssue[];
     }
   | {
       kind: 'subgroup';
@@ -68,8 +73,17 @@ export type TimelineRow =
       count: number;
       collapsed: boolean;
       aggregateSpan: Span | null;
+      assign: IssuePatch | null;
+      bucket: BoardIssue[];
     }
-  | { kind: 'issue'; issue: BoardIssue; span: Span; groupKey: string };
+  | {
+      kind: 'issue';
+      issue: BoardIssue;
+      span: Span;
+      index: number;
+      assign: IssuePatch | null;
+      bucket: BoardIssue[];
+    };
 
 // The span covering a section's bars, shown on its header row when collapsed.
 function sectionSpan(issueRows: { span: Span }[]): Span | null {
@@ -94,6 +108,7 @@ export function buildTimeline({
   filters,
   group,
   subgroup,
+  sort,
   groupLabels,
   showEmptyGroups,
   collapsedGroups,
@@ -105,6 +120,7 @@ export function buildTimeline({
   filters: FilterSet;
   group: GroupField;
   subgroup: GroupField;
+  sort: Sort;
   groupLabels: GroupLabels;
   showEmptyGroups: boolean;
   collapsedGroups: Set<string>;
@@ -112,6 +128,7 @@ export function buildTimeline({
   labelW: number;
   dayW: number;
 }): TimelineModel {
+  const sorted = sortIssues(project.issues, sort, project);
   const groups = buildGroups(project, group, groupLabels, filters);
   const subgrouped = group !== 'none' && subgroup !== 'none';
   const subGroups = subgrouped ? buildGroups(project, subgroup, groupLabels, filters) : [];
@@ -121,9 +138,10 @@ export function buildTimeline({
     issues.map((issue) => ({ issue, span: effSpan(issue) }));
 
   if (!subgrouped) {
-    const issuesByGroup = groupIssues(groups, project.issues, group);
+    const issuesByGroup = groupIssues(groups, sorted, group);
     for (const issueGroup of groups) {
-      const issueRows = spanned(issuesByGroup.get(issueGroup.key) ?? []);
+      const bucket = issuesByGroup.get(issueGroup.key) ?? [];
+      const issueRows = spanned(bucket);
       if (!showEmptyGroups && issueRows.length === 0) continue;
       const collapsed = collapsedGroups.has(issueGroup.key);
       rows.push({
@@ -132,14 +150,16 @@ export function buildTimeline({
         count: issueRows.length,
         collapsed,
         aggregateSpan: sectionSpan(issueRows),
+        assign: issueGroup.assign,
+        bucket,
       });
       if (collapsed) continue;
-      for (const { issue, span } of issueRows) {
-        rows.push({ kind: 'issue', issue, span, groupKey: issueGroup.key });
-      }
+      issueRows.forEach(({ issue, span }, index) => {
+        rows.push({ kind: 'issue', issue, span, index, assign: issueGroup.assign, bucket });
+      });
     }
   } else {
-    const nested = nestIssues(groups, subGroups, project.issues, group, subgroup);
+    const nested = nestIssues(groups, subGroups, sorted, group, subgroup);
     for (const issueGroup of groups) {
       const inner = nested.get(issueGroup.key)!;
       const bySub = subGroups.map((sub) => ({ sub, issueRows: spanned(inner.get(sub.key) ?? []) }));
@@ -152,12 +172,21 @@ export function buildTimeline({
         count,
         collapsed,
         aggregateSpan: sectionSpan(bySub.flatMap((s) => s.issueRows)),
+        assign: issueGroup.assign,
+        // Appending to a collapsed group lands after its last issue whichever
+        // sub-group that one sits in, so the bucket is the whole group in
+        // position order.
+        bucket: subGroups
+          .flatMap((sub) => inner.get(sub.key) ?? [])
+          .sort((a, b) => a.position - b.position),
       });
       if (collapsed) continue;
       for (const { sub, issueRows } of bySub) {
         if (!showEmptyGroups && issueRows.length === 0) continue;
         const key = subgroupKey(issueGroup.key, sub.key);
         const subCollapsed = collapsedGroups.has(key);
+        const assign = mergeAssign(issueGroup.assign, sub.assign);
+        const bucket = issueRows.map((r) => r.issue);
         rows.push({
           kind: 'subgroup',
           sub,
@@ -165,11 +194,13 @@ export function buildTimeline({
           count: issueRows.length,
           collapsed: subCollapsed,
           aggregateSpan: sectionSpan(issueRows),
+          assign,
+          bucket,
         });
         if (subCollapsed) continue;
-        for (const { issue, span } of issueRows) {
-          rows.push({ kind: 'issue', issue, span, groupKey: key });
-        }
+        issueRows.forEach(({ issue, span }, index) => {
+          rows.push({ kind: 'issue', issue, span, index, assign, bucket });
+        });
       }
     }
   }
