@@ -22,18 +22,18 @@ import { eq, inArray } from 'drizzle-orm';
 import { iso } from '../shared/lib';
 import { defaultMemberPermissions } from '../shared/permissions';
 import { DEFAULT_COLUMNS, type ProjectRow } from './store';
-import { GITHUB_SETTING_KEY } from '../github/store';
-import { listAgents, createAgent, type NewAgentInput } from '../ai-agents/store';
+import { GITHUB_SETTING_KEY } from '#modules/github/service';
+import { listAgents, createAgent, type NewAgentInput } from '#modules/agents/core/service';
 import {
   listSkills,
   getSkillMarkdown,
   createSkillFromFiles,
   setAgentSkills,
   listAgentSkills,
-} from '../agent-skills/store';
-import { listAgentToolLinks, setAgentTools } from '../agent-tools/store';
-import { listAgentSchedules, createAgentSchedule } from '../agent-schedules/store';
-import { nextCronRun } from '../agent-schedules/cron';
+} from '#modules/agents/skills/service';
+import { listAgentToolLinks, setAgentTools } from '#modules/agents/tools/service';
+import { listAgentSchedules, createAgentSchedule } from '#modules/agents/schedules/service';
+import { nextCronRun } from '#modules/agents/schedules/cron';
 import { getObject } from '../shared/s3';
 
 // Which parts of a source project the copy carries over. Each key mirrors a section

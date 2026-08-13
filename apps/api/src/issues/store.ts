@@ -30,10 +30,10 @@ import {
   sql,
   type SQL,
 } from 'drizzle-orm';
-import type { IssueQuery } from '../ai-agents/issue-query';
+import type { IssueQuery } from '#modules/agents/core/issue-query';
 import { iso, num, HttpError } from '../shared/lib';
 import type { ProjectRow } from '../projects/store';
-import { getCustomFieldById, type CustomFieldType } from '../custom-fields/store';
+import { getCustomFieldById, type CustomFieldType } from '#modules/custom-fields/service';
 import {
   recordActivity,
   recordActivityEntries,
@@ -45,15 +45,15 @@ import {
   type IssueSnapshot,
 } from './activity';
 import { autoWatchIssue } from './watchers';
-import { mapAttachment, type AttachmentRow } from '../attachments/store';
+import { mapAttachment, type AttachmentRow } from '#modules/attachments/service';
 import { notifyIssueChange } from '../notifications/store';
 import { emitWebhookEvent } from '../webhooks/emit';
-import { getAssignTriggerAgent, isProjectAgent } from '../ai-agents/store';
-import { deleteThreadsWhere } from '../ai-agents/runtime/memory';
-import { getInitiativeProjectId } from '../initiatives/store';
-import { getCycleRef } from '../cycles/store';
+import { getAssignTriggerAgent, isProjectAgent } from '#modules/agents/core/service';
+import { deleteThreadsWhere } from '#modules/agents/core/runtime/memory';
+import { getInitiativeProjectId } from '#modules/initiatives/service';
+import { getCycleRef } from '#modules/cycles/service';
 import { getMembership } from '../members/store';
-import { enqueueAgentRun } from '../ai-agents/run-queue';
+import { enqueueAgentRun } from '#modules/agents/core/run-queue';
 import { applySubtaskAutomation } from './automation';
 
 // Data access for issues and their per-issue data: labels, custom field values,

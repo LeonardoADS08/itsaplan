@@ -6,7 +6,7 @@ import { authContext } from '../shared/auth-context';
 import { guards } from '../shared/guards';
 import { requireUser } from '../shared/access';
 import { isMcpRequest } from '../shared/mcp-request';
-import { ErrorResponse } from '../shared/responses';
+import { accessErrors, commonErrors, errors } from '../shared/responses';
 import { getMemberContext, listAssigneeCandidates } from '../members/store';
 import {
   listProjects,
@@ -23,10 +23,11 @@ import {
   ISSUE_TYPE_PRESET_KEYS,
 } from './store';
 import { copyProject, COPY_INCLUDE_KEYS } from './copy';
-import { listColumns } from '../columns/store';
+import { listColumns } from '#modules/columns/service';
+import { ColumnResponse } from '#modules/columns/model';
 import { listIssueTypes } from '../issue-types/store';
 import { listLabels, listLabelGroups } from '../labels/store';
-import { listCustomFields } from '../custom-fields/store';
+import { listCustomFields } from '#modules/custom-fields/service';
 
 const projectBody = t.Object({
   key: t.String({ minLength: 1 }),
@@ -95,16 +96,6 @@ const ProjectListItemResponse = t.Composite([
     permissions: t.Optional(PermissionMatrix),
   }),
 ]);
-
-// A column (ColumnRow from columns/store).
-const ColumnResponse = t.Object({
-  id: t.Number(),
-  projectId: t.Number(),
-  name: t.String(),
-  stateType: t.String(),
-  color: t.String(),
-  position: t.Number(),
-});
 
 // An issue type (IssueTypeRow from issue-types/store).
 const IssueTypeResponse = t.Object({
@@ -236,10 +227,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
           }),
         ),
       }),
-      response: {
-        200: t.Array(ProjectListItemResponse),
-        401: ErrorResponse,
-      },
+      response: { 200: t.Array(ProjectListItemResponse), ...errors(401) },
       detail: {
         summary: 'List projects',
         description:
@@ -258,11 +246,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
     },
     {
       body: createProjectBody,
-      response: {
-        201: ProjectResponse,
-        400: ErrorResponse,
-        401: ErrorResponse,
-      },
+      response: { 201: ProjectResponse, ...errors(400, 401) },
       detail: {
         summary: 'Create a project',
         description:
@@ -296,13 +280,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
     {
       body: copyProjectBody,
       permission: ['work_items', 'read'],
-      response: {
-        201: ProjectResponse,
-        400: ErrorResponse,
-        401: ErrorResponse,
-        403: ErrorResponse,
-        404: ErrorResponse,
-      },
+      response: { 201: ProjectResponse, ...commonErrors },
       detail: {
         summary: 'Copy a project',
         description:
@@ -354,12 +332,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
     },
     {
       projectMember: true,
-      response: {
-        200: ProjectBoardResponse,
-        401: ErrorResponse,
-        403: ErrorResponse,
-        404: ErrorResponse,
-      },
+      response: { 200: ProjectBoardResponse, ...accessErrors },
       detail: {
         summary: 'Get a project',
         description:
@@ -386,13 +359,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
         description: t.Optional(t.String()),
       }),
       projectOwner: true,
-      response: {
-        200: ProjectResponse,
-        400: ErrorResponse,
-        401: ErrorResponse,
-        403: ErrorResponse,
-        404: ErrorResponse,
-      },
+      response: { 200: ProjectResponse, ...commonErrors },
       detail: {
         summary: 'Update a project',
         description: "Update a project's name and/or description. The key is immutable.",
@@ -411,12 +378,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
     }),
     {
       projectMember: true,
-      response: {
-        200: ProjectSettingsResponse,
-        401: ErrorResponse,
-        403: ErrorResponse,
-        404: ErrorResponse,
-      },
+      response: { 200: ProjectSettingsResponse, ...accessErrors },
       detail: { summary: "Get a project's settings" },
     },
   )
@@ -457,13 +419,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
         ),
       }),
       projectOwner: true,
-      response: {
-        200: ProjectSettingsResponse,
-        400: ErrorResponse,
-        401: ErrorResponse,
-        403: ErrorResponse,
-        404: ErrorResponse,
-      },
+      response: { 200: ProjectSettingsResponse, ...commonErrors },
       detail: { summary: "Update a project's settings" },
     },
   )
@@ -476,12 +432,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
     ({ project }) => getAutoArchiveSettings(project.id),
     {
       permission: ['workflow_config', 'read'],
-      response: {
-        200: AutoArchiveResponse,
-        401: ErrorResponse,
-        403: ErrorResponse,
-        404: ErrorResponse,
-      },
+      response: { 200: AutoArchiveResponse, ...accessErrors },
       detail: { summary: "Get a project's auto-archive thresholds" },
     },
   )
@@ -497,13 +448,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
         canceledDays: t.Nullable(t.Integer({ minimum: 1 })),
       }),
       permission: ['workflow_config', 'edit'],
-      response: {
-        200: AutoArchiveResponse,
-        400: ErrorResponse,
-        401: ErrorResponse,
-        403: ErrorResponse,
-        404: ErrorResponse,
-      },
+      response: { 200: AutoArchiveResponse, ...commonErrors },
       detail: { summary: "Update a project's auto-archive thresholds" },
     },
   )
@@ -513,12 +458,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
     ({ project }) => getSubtaskAutomationSettings(project.id),
     {
       permission: ['workflow_config', 'read'],
-      response: {
-        200: SubtaskAutomationResponse,
-        401: ErrorResponse,
-        403: ErrorResponse,
-        404: ErrorResponse,
-      },
+      response: { 200: SubtaskAutomationResponse, ...accessErrors },
       detail: { summary: "Get a project's subtask automations" },
     },
   )
@@ -533,13 +473,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
         closeSubtasks: t.Boolean(),
       }),
       permission: ['workflow_config', 'edit'],
-      response: {
-        200: SubtaskAutomationResponse,
-        400: ErrorResponse,
-        401: ErrorResponse,
-        403: ErrorResponse,
-        404: ErrorResponse,
-      },
+      response: { 200: SubtaskAutomationResponse, ...commonErrors },
       detail: { summary: "Update a project's subtask automations" },
     },
   )
@@ -554,12 +488,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
     },
     {
       permission: ['danger_zone', 'delete'],
-      response: {
-        204: t.Void(),
-        401: ErrorResponse,
-        403: ErrorResponse,
-        404: ErrorResponse,
-      },
+      response: { 204: t.Void(), ...accessErrors },
       detail: {
         summary: 'Delete a project',
         description: 'Permanently delete a project and everything in it. Irreversible.',

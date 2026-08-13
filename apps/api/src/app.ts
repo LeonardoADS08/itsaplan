@@ -12,10 +12,10 @@ import { planner } from './planner';
 import { webhookTestRoutes } from './webhook-test/routes';
 import { mountMcp } from './mcp/mount';
 import { setMcpApp } from './mcp/app-ref';
-import { internalAgentRunRoutes } from './ai-agents/internal-routes';
+import { internalAgentRunRoutes } from './modules/agents/core/internal-routes';
 import { internalNotificationRoutes } from './notifications/internal-routes';
 import { internalTelegramRoutes } from './telegram/internal-routes';
-import { githubWebhookRoutes } from './github/routes';
+import { githubWebhookRoutes } from './modules/github/webhook';
 
 // The assembled Elysia app, without `.listen()`. `index.ts` imports this and
 // binds the port; tests import it and pass it to Eden Treaty to drive routes in
