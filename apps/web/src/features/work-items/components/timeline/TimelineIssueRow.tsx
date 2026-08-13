@@ -1,19 +1,18 @@
-import { useTranslations } from 'next-intl';
+import { useDraggable } from '@dnd-kit/core';
 import { type BoardIssue, type ProjectDetail, type Issue } from '@/lib/api';
 import { type Maps } from '@/utils/project';
-import { isBlocked } from '@/utils/issueLinks';
+import { useIsPhone } from '@/hooks/useIsPhone';
 import { cn } from '@/lib/utils';
 import IssueContextMenu from '@/features/issue/components/actions/IssueContextMenu';
 import { type TimelineDragMode } from '../../hooks/useTimelineDrag';
 import { ROW_H, type Span } from '../../utils/timeline';
 import { SubtaskProgress } from '../shared/SubtaskProgress';
+import { TimelineBar } from './TimelineBar';
 
-const BLOCKED_HATCH =
-  'repeating-linear-gradient(45deg, color-mix(in oklab, var(--destructive) 70%, transparent) 0 4px, transparent 4px 9px)';
-
-// One issue row: the sticky label on the left and its draggable bar on the day
-// track. The bar moves the issue (rewriting dates and, on a vertical move, the
-// selected group) or resizes one end; the start/end handles appear on hover.
+// One issue row: the sticky label on the left and its bar on the day track.
+// Dragging the label moves the issue between sections and reorders it inside one
+// (the drop targets are the blocks around it); the bar moves the issue in time.
+// A click on either opens the issue.
 export function TimelineIssueRow({
   project,
   issue,
@@ -22,8 +21,6 @@ export function TimelineIssueRow({
   rect,
   color,
   active,
-  isDrop,
-  groupKey,
   indented,
   labelW,
   trackWidth,
@@ -41,8 +38,6 @@ export function TimelineIssueRow({
   rect: { left: number; width: number };
   color: string;
   active: boolean;
-  isDrop: boolean;
-  groupKey: string;
   // Rows under a sub-section are indented to sit below their sub-header.
   indented: boolean;
   labelW: number;
@@ -50,27 +45,33 @@ export function TimelineIssueRow({
   dayLines: { backgroundImage: string };
   todayInRange: boolean;
   todayLeft: number;
-  // In a read-only share the bar cannot be dragged or resized; a click on it
-  // still opens the issue.
+  // In a read-only share nothing is draggable; a click still opens the issue.
   readOnly?: boolean;
   onBeginDrag: (e: React.PointerEvent, issue: Issue, mode: TimelineDragMode) => void;
   onOpen: (id: number) => void;
 }) {
-  const t = useTranslations('workItems.timeline');
-  const blocked = isBlocked(issue);
+  // Drag is disabled on phones so a touch scrolls the timeline instead of picking
+  // up a row (see the `sm:touch-none` below).
+  const isPhone = useIsPhone();
+  const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
+    id: issue.id,
+    disabled: isPhone || readOnly,
+  });
 
   return (
     <div
-      data-group-key={groupKey}
-      className={cn('flex border-b', isDrop ? 'bg-accent/40' : 'hover:bg-accent/20')}
+      className={cn('flex border-b hover:bg-accent/20', isDragging && 'opacity-40')}
       style={{ height: ROW_H }}
     >
       <IssueContextMenu project={project} issue={issue}>
         <div
+          ref={setNodeRef}
+          {...attributes}
+          {...listeners}
           className={cn(
-            'sticky left-0 z-10 flex shrink-0 cursor-pointer items-center gap-2 overflow-hidden border-r pr-3',
+            'sticky left-0 z-10 flex shrink-0 items-center gap-2 overflow-hidden border-r bg-background pr-3 sm:touch-none',
             indented ? 'pl-7' : 'pl-3',
-            isDrop ? 'bg-accent/40' : 'bg-background',
+            readOnly ? 'cursor-pointer' : 'cursor-grab',
           )}
           style={{ width: labelW }}
           onClick={() => onOpen(issue.id)}
@@ -89,43 +90,16 @@ export function TimelineIssueRow({
             style={{ left: todayLeft }}
           />
         )}
-        <div
-          onPointerDown={readOnly ? undefined : (e) => onBeginDrag(e, issue, 'move')}
-          onClick={readOnly ? () => onOpen(issue.id) : undefined}
-          className={cn(
-            'group absolute top-1/2 z-10 flex h-6 -translate-y-1/2 items-center rounded px-1.5 text-white select-none',
-            readOnly ? 'cursor-pointer' : active ? 'cursor-grabbing' : 'cursor-grab',
-          )}
-          style={{
-            left: rect.left,
-            width: rect.width,
-            backgroundColor: color,
-            // Held up by another issue: red hatching over the fill and a ring
-            // around it. Hatched rather than filled, so the bar keeps showing
-            // the issue's status color underneath.
-            backgroundImage: blocked ? BLOCKED_HATCH : undefined,
-            boxShadow: blocked ? '0 0 0 1.5px var(--destructive)' : undefined,
-            opacity: span.inferredStart ? 0.8 : 1,
-            borderLeft: span.inferredStart ? '2px dashed rgba(255,255,255,0.75)' : undefined,
-          }}
-          title={span.inferredStart ? t('inferredStartDraggable') : undefined}
-        >
-          {!readOnly && (
-            <span
-              onPointerDown={(e) => onBeginDrag(e, issue, 'start')}
-              className="absolute top-0 left-0 h-full w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100"
-              style={{ background: 'rgba(255,255,255,0.4)' }}
-            />
-          )}
-          <span className="truncate text-[11px] leading-none">{issue.title}</span>
-          {!readOnly && (
-            <span
-              onPointerDown={(e) => onBeginDrag(e, issue, 'end')}
-              className="absolute top-0 right-0 h-full w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100"
-              style={{ background: 'rgba(255,255,255,0.4)' }}
-            />
-          )}
-        </div>
+        <TimelineBar
+          issue={issue}
+          span={span}
+          rect={rect}
+          color={color}
+          active={active}
+          readOnly={readOnly}
+          onBeginDrag={onBeginDrag}
+          onOpen={onOpen}
+        />
       </div>
     </div>
   );

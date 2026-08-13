@@ -1,12 +1,13 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
 import { useTranslations } from 'next-intl';
 import { DEFAULT_COLOR, type IssueGroup } from '@/utils/project';
 import { cn } from '@/lib/utils';
 import { GroupDot } from '../shared/GroupDot';
 import { GROUP_H } from '../../utils/timeline';
 
-// A group header row. `data-group-key` marks it as a drop target for the timeline
-// drag, so a vertical move reassigns the selected grouping field.
+// A group header row. A row dropped onto it is appended to the group, which
+// reassigns the selected grouping field.
 export function TimelineGroupRow({
   group,
   count,
@@ -14,7 +15,8 @@ export function TimelineGroupRow({
   aggregateRect,
   labelW,
   trackWidth,
-  isDrop,
+  disabled,
+  onDrop,
   onToggle,
 }: {
   group: IssueGroup;
@@ -23,13 +25,22 @@ export function TimelineGroupRow({
   aggregateRect: { left: number; width: number } | null;
   labelW: number;
   trackWidth: number;
-  isDrop: boolean;
+  // When sub-grouped, issues live under the sub-headers, so the group header is
+  // only a drop target while the group is collapsed and they are hidden.
+  disabled: boolean;
+  onDrop: (issueId: number) => void;
   onToggle: () => void;
 }) {
   const t = useTranslations('workItems.timeline');
+  const { setNodeRef, isOver } = useDroppable({
+    id: `sec:${group.key}`,
+    data: { onDrop },
+    disabled,
+  });
+  const isDrop = isOver && !disabled;
   return (
     <div
-      data-group-key={group.key}
+      ref={setNodeRef}
       className={cn('flex border-b bg-muted/40', isDrop && 'bg-accent/60')}
       style={{ height: GROUP_H }}
     >

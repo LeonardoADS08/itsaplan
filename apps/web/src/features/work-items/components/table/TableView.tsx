@@ -1,22 +1,11 @@
-import { useRef, useState } from 'react';
-import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
+import { useRef } from 'react';
+import { DndContext } from '@dnd-kit/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { toast } from 'sonner';
-import { type Issue, type IssuePatch } from '@/lib/api';
-import {
-  buildGroups,
-  buildMaps,
-  positionsAt,
-  sortIssues,
-  type WorkItemsViewProps,
-} from '@/utils/project';
-import { useDndSensors } from '@/lib/dnd';
+import { buildGroups, buildMaps, sortIssues, type WorkItemsViewProps } from '@/utils/project';
 import { usePersistedSet } from '@/hooks/usePersistedSet';
-import { useUpdateIssue } from '@/services/issues.service';
 import { useTableColumnWidths } from '../../hooks/useTableColumnWidths';
-import { useSortedOrderMessage } from '../../hooks/useSortedOrderMessage';
+import { useIssueReorder } from '../../hooks/useIssueReorder';
 import { useGroupLabels } from '@/hooks/useGroupLabels';
-import { preferPrefix, type DropData } from '../../utils/dnd';
 import {
   buildTableItems,
   collapsedKey,
@@ -24,12 +13,11 @@ import {
   resolveColumns,
   type FlatItem,
 } from '../../utils/table';
+import { IssueDragOverlay } from '../shared/IssueDragOverlay';
 import { TableColumnHeader } from './TableColumnHeader';
 import { TableSectionHeader } from './TableSectionHeader';
 import { TableSubHeader } from './TableSubHeader';
 import { TableRow } from './TableRow';
-
-const tableCollision = preferPrefix('row:');
 
 interface TableViewProps extends WorkItemsViewProps {
   // Which stored set of column widths this table uses: a saved view's own, the
@@ -47,11 +35,8 @@ export default function TableView({
   readOnly,
   widthScope,
 }: TableViewProps) {
-  const sortedOrderMessage = useSortedOrderMessage();
   const groupLabels = useGroupLabels();
-  const updateIssue = useUpdateIssue(project.project.key);
-  const [activeId, setActiveId] = useState<number | null>(null);
-  const sensors = useDndSensors(readOnly);
+  const reorder = useIssueReorder({ project, sort: settings.sort, readOnly });
   const collapsed = usePersistedSet(
     collapsedKey(project.project.id, settings.group, settings.subgroup),
   );
@@ -94,30 +79,6 @@ export default function TableView({
     },
   });
 
-  // Reordering inside a section only holds when the view is ordered manually: with
-  // any other sort field the row snaps back to where the sort puts it. A drop that
-  // would only reorder is refused and explained; a drop into another section still
-  // goes through, since it changes the grouping field rather than the order.
-  const manualOrder = settings.sort.field === 'manual';
-
-  function moveIssue(issueId: number, assign: IssuePatch | null, bucket: Issue[], index: number) {
-    if (!manualOrder && bucket.some((i) => i.id === issueId)) {
-      toast.info(sortedOrderMessage(settings.sort.field));
-      return;
-    }
-    const [position] = positionsAt(bucket, index, 1);
-    updateIssue.mutate({ id: issueId, patch: assign ? { ...assign, position } : { position } });
-  }
-
-  function handleDragEnd(e: DragEndEvent) {
-    setActiveId(null);
-    const data = e.over?.data.current as DropData | undefined;
-    data?.onDrop(Number(e.active.id));
-  }
-
-  const activeIssue =
-    activeId != null ? (project.issues.find((i) => i.id === activeId) ?? null) : null;
-
   function renderItem(item: FlatItem) {
     switch (item.kind) {
       case 'header': {
@@ -131,7 +92,7 @@ export default function TableView({
             collapsed={isCollapsed}
             disabled={subgrouped && !isCollapsed}
             dropId={`sec:${item.dropKey}`}
-            onDrop={(id) => moveIssue(id, item.assign, item.bucket, item.bucket.length)}
+            onDrop={(id) => reorder.moveIssue(id, item.assign, item.bucket, item.bucket.length)}
             onToggle={() => collapsed.toggle(item.group.key)}
             onAddIssue={() =>
               onAddIssue({ columnId: project.columns[0]?.id ?? 0, ...item.group.assign })
@@ -147,7 +108,7 @@ export default function TableView({
             count={item.count}
             collapsed={collapsed.values.has(item.dropKey)}
             dropId={`sec:${item.dropKey}`}
-            onDrop={(id) => moveIssue(id, item.assign, item.bucket, item.bucket.length)}
+            onDrop={(id) => reorder.moveIssue(id, item.assign, item.bucket, item.bucket.length)}
             onToggle={() => collapsed.toggle(item.dropKey)}
           />
         );
@@ -162,8 +123,10 @@ export default function TableView({
             alignTop={alignTop}
             indented={subgrouped}
             gridTemplate={gridTemplate}
-            dropDisabled={!manualOrder && grouped}
-            onDrop={(draggedId) => moveIssue(draggedId, item.assign, item.bucket, item.index)}
+            dropDisabled={!reorder.manualOrder && grouped}
+            onDrop={(draggedId) =>
+              reorder.moveIssue(draggedId, item.assign, item.bucket, item.index)
+            }
             onClick={() => onOpenIssue(item.issue.id)}
             onOpenIssue={onOpenIssue}
           />
@@ -173,11 +136,11 @@ export default function TableView({
 
   return (
     <DndContext
-      sensors={sensors}
-      collisionDetection={tableCollision}
-      onDragStart={(e: DragStartEvent) => setActiveId(Number(e.active.id))}
-      onDragCancel={() => setActiveId(null)}
-      onDragEnd={handleDragEnd}
+      sensors={reorder.sensors}
+      collisionDetection={reorder.collisionDetection}
+      onDragStart={reorder.onDragStart}
+      onDragCancel={reorder.onDragCancel}
+      onDragEnd={reorder.onDragEnd}
     >
       <div ref={scrollRef} className="h-full overflow-y-auto">
         <TableColumnHeader
@@ -215,19 +178,7 @@ export default function TableView({
         </div>
       </div>
 
-      {/* dropAnimation disabled: the row is moved optimistically, so animating the
-          overlay back to its source position first makes it look like it snaps
-          back before landing in its new place. */}
-      <DragOverlay dropAnimation={null}>
-        {activeIssue ? (
-          <div className="flex max-w-[360px] items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm shadow-lg">
-            <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-              {activeIssue.identifier}
-            </span>
-            <span className="truncate text-foreground">{activeIssue.title}</span>
-          </div>
-        ) : null}
-      </DragOverlay>
+      <IssueDragOverlay issue={reorder.activeIssue} />
     </DndContext>
   );
 }
