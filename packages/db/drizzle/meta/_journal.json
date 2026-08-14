@@ -540,6 +540,41 @@
       "when": 1786713287358,
       "tag": "0076_demonic_shaman",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1786713288358,
+      "tag": "0077_nostalgic_captain_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1786713289358,
+      "tag": "0078_external_agent_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1786713290358,
+      "tag": "0079_fair_eternals",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1786713291358,
+      "tag": "0080_complete_wolf_cub",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1786713292358,
+      "tag": "0081_owner_scope_backfill",
+      "breakpoints": true
     }
   ]
 }
