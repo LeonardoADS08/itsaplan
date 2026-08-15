@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { useInitiativeOptionsQuery } from '@/services/initiatives.service';
 import { useIssueBySeqQuery } from '@/services/issues.service';
 import { useAccountPreferences } from '@/services/preferences.service';
 import type { IssueOpenMode } from '@/lib/api';
@@ -12,6 +13,7 @@ import { useShellProject } from '@/hooks/useShellProject';
 import { useShellRoute } from '@/hooks/useShellRoute';
 import { useProjectRouteSync } from '@/hooks/useProjectRouteSync';
 import { projectPath, issuePath } from '@/utils/paths';
+import { defaultsFromFilters, type NewIssueDefaults } from '@/utils/project';
 import { ShellCtx, type ShellContext } from '@/context/shellContext';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/layout/AppSidebar';
@@ -51,6 +53,7 @@ export default function Shell({
     forbidden,
   } = useShellProject(projectKey, route.activeViewId);
 
+  const initiativeOptions = useInitiativeOptionsQuery(projectKey).data ?? [];
   const { issueOpenMode, showChatByDefault } = useAccountPreferences();
   const overlays = useOverlays(showChatByDefault);
   const issueQuery = useIssueBySeqQuery(projectKey, routeIssueSeq);
@@ -61,8 +64,18 @@ export default function Shell({
   // them, the same entry the sidebar links to.
   const { firstHref: firstSettingsHref } = useSettingsNavGroups(projectKey, project);
 
-  const openNewIssue = () =>
-    project && overlays.setNewIssueDefaults({ columnId: project.columns[0]?.id ?? 0 });
+  // Only the work items routes: a cycle or an initiative board carries its own
+  // filters and merges them itself.
+  const filterDefaults = route.onBoard
+    ? defaultsFromFilters(editor.effectiveFilters, {
+        cycles: project?.plannedCycles ?? [],
+        initiatives: initiativeOptions,
+      })
+    : {};
+  const addIssue = (defaults: NewIssueDefaults) =>
+    overlays.setNewIssueDefaults({ ...filterDefaults, ...defaults });
+
+  const openNewIssue = () => addIssue({});
 
   // The issue the palette builds its issue commands for: the open detail panel
   // takes precedence over the issue page behind it.
@@ -111,7 +124,7 @@ export default function Shell({
     editor,
     customFields,
     onOpenIssue: openIssue,
-    onAddIssue: overlays.setNewIssueDefaults,
+    onAddIssue: addIssue,
   };
 
   return (

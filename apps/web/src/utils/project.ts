@@ -7,6 +7,8 @@ import type {
   ProjectDetail,
   Column,
   CustomField,
+  CycleOption,
+  InitiativeOption,
   Label,
   StateType,
   InitiativeRef,
@@ -20,6 +22,7 @@ import { PRIORITY_ORDER, PRIORITY_RANK } from '@/utils/fieldOptions';
 import {
   hasValue,
   isEffectiveCondition,
+  parseStatusValue,
   statusValue,
   type FilterCondition,
   type FilterSet,
@@ -31,17 +34,83 @@ import type { Sort } from '@/utils/viewTypes';
 
 export type { Sort, SortField } from '@/utils/viewTypes';
 
-export type NewIssueDefaults = Pick<
-  NewIssueInput,
-  | 'columnId'
-  | 'typeId'
-  | 'initiativeId'
-  | 'cycleId'
-  | 'assigneeUserId'
-  | 'delegateUserId'
-  | 'priority'
-> &
-  Partial<Pick<NewIssueInput, 'title' | 'description' | 'parentId'>>;
+// What a call site fills the create dialog with. A field it leaves out is the
+// dialog's own choice: the first column, the default type, the current user.
+export type NewIssueDefaults = Partial<
+  Pick<
+    NewIssueInput,
+    | 'columnId'
+    | 'typeId'
+    | 'initiativeId'
+    | 'cycleId'
+    | 'assigneeUserId'
+    | 'delegateUserId'
+    | 'priority'
+    | 'title'
+    | 'description'
+    | 'parentId'
+    | 'labelIds'
+  >
+>;
+
+// The value a condition pins its field to. A field named by several conditions,
+// or by one that allows several values, is not pinned to any.
+function pinnedFilterValues(filters: FilterSet): Map<string, FilterValue | undefined> {
+  const pinned = new Map<string, FilterValue | undefined>();
+  for (const cond of filters.conditions) {
+    if (cond.op !== 'is') continue;
+    const pins = cond.values.length === 1 && !pinned.has(cond.field);
+    pinned.set(cond.field, pins ? cond.values[0] : undefined);
+  }
+  return pinned;
+}
+
+// The one entity of a status, for a condition that pins a whole status ("the
+// active cycle") instead of naming one. Several of them name nothing.
+function onlyWithStatus(entities: { id: number; status: string }[], status: string) {
+  const inStatus = entities.filter((e) => e.status === status);
+  return inStatus.length === 1 ? inStatus[0].id : undefined;
+}
+
+// The defaults a new issue takes from the active filters, so an issue created on
+// a filtered board stays visible on it. They fill in only what the call site left
+// out — what the user pointed at wins over the filters.
+export function defaultsFromFilters(
+  filters: FilterSet,
+  planned: { cycles: CycleOption[]; initiatives: InitiativeOption[] },
+): NewIssueDefaults {
+  const pinned = pinnedFilterValues(filters);
+  const pinnedId = (field: string) => {
+    const value = pinned.get(field);
+    return typeof value === 'number' || value === null ? value : undefined;
+  };
+  const pinnedText = (field: string) => {
+    const value = pinned.get(field);
+    return typeof value === 'string' || value === null ? value : undefined;
+  };
+
+  const pinnedEntity = (field: string, entities: { id: number; status: string }[]) => {
+    const value = pinned.get(field);
+    if (typeof value === 'number' || value === null) return value;
+    const status = parseStatusValue(value ?? null);
+    return status === null ? undefined : onlyWithStatus(entities, status);
+  };
+
+  const labelId = pinnedId('labels');
+  const defaults: NewIssueDefaults = {
+    // A column is never pinned to null: every issue has one.
+    columnId: pinnedId('status') ?? undefined,
+    typeId: pinnedId('type'),
+    initiativeId: pinnedEntity('initiative', planned.initiatives),
+    cycleId: pinnedEntity('cycle', planned.cycles),
+    assigneeUserId: pinnedText('assignee'),
+    delegateUserId: pinnedText('delegate'),
+    priority: pinnedText('priority'),
+    labelIds: labelId != null ? [labelId] : undefined,
+  };
+  // The dialog reads an explicit undefined as "no assignee" / "no type".
+  return Object.fromEntries(Object.entries(defaults).filter(([, v]) => v !== undefined));
+}
 
 // Fallback dot/bar color for a group or issue whose status/type has no color.
 export const DEFAULT_COLOR = '#6b7280';
