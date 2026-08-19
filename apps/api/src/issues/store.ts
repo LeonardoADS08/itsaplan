@@ -33,7 +33,7 @@ import {
 } from 'drizzle-orm';
 import type { IssueQuery } from '#modules/agents/core/issue-query';
 import { iso, num, HttpError } from '../shared/lib';
-import type { ProjectRow } from '../projects/store';
+import type { ProjectRow } from '#modules/projects/service';
 import { getCustomFieldById, type CustomFieldType } from '#modules/custom-fields/service';
 import {
   recordActivity,
@@ -47,13 +47,13 @@ import {
 } from './activity';
 import { autoWatchIssue } from './watchers';
 import { mapAttachment, type AttachmentRow } from '#modules/attachments/service';
-import { notifyIssueChange } from '../notifications/store';
+import { notifyIssueChange } from '#modules/notifications/service';
 import { emitWebhookEvent } from '../webhooks/emit';
 import { getAssignTriggerAgent, isProjectAgent } from '#modules/agents/core/service';
 import { deleteThreadsWhere } from '#modules/agents/core/runtime/memory';
 import { getInitiativeProjectId } from '#modules/initiatives/service';
 import { cycleStatus, getCycleRef, type CycleStatus } from '#modules/cycles/service';
-import { getMembership } from '../members/store';
+import { getMembership } from '#modules/members/service';
 import { enqueueAgentRun } from '#modules/agents/core/run-queue';
 import { applySubtaskAutomation } from './automation';
 import { assertWipLimit, wipLimitBreach } from '#modules/columns/service';
