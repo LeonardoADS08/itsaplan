@@ -3,7 +3,7 @@ import { inferAdditionalFields } from 'better-auth/client/plugins';
 import { magicLinkClient, usernameClient } from 'better-auth/client/plugins';
 import { passkeyClient } from '@better-auth/passkey/client';
 import { apiKeyClient } from '@better-auth/api-key/client';
-import { API_URL } from '@/lib/api';
+import { API_URL, markSigningOut } from '@/lib/api';
 
 // The better-auth handler lives on the backend (Elysia), so baseURL is the API origin.
 // inferAdditionalFields declares the custom `role` column added in @repo/auth so the
@@ -35,7 +35,6 @@ export const authClient = createAuthClient({
 export const {
   signIn,
   signUp,
-  signOut,
   useSession,
   getSession,
   passkey,
@@ -52,5 +51,13 @@ export const {
   linkSocial,
   unlinkAccount,
 } = authClient;
+
+// Sign out through this wrapper rather than through the client: it tells lib/api
+// that the 401s the dropped session causes are expected, so they do not send the
+// browser to the expired-session screen.
+export async function signOut() {
+  markSigningOut();
+  return authClient.signOut();
+}
 
 export type SessionUser = typeof authClient.$Infer.Session.user;

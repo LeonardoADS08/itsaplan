@@ -1,9 +1,4 @@
-import { API_URL } from '@/lib/api';
-
-async function errorMessage(res: Response): Promise<string> {
-  const body = await res.json().catch(() => null);
-  return body?.error ?? `${res.status} ${res.statusText}`;
-}
+import { API_URL, apiFailure } from '@/lib/api';
 
 // Uploads an avatar image to the API (stored in MinIO). The API writes the new URL
 // to the user's image column itself and returns it, so the caller only has to read
@@ -17,12 +12,12 @@ export async function uploadAvatar(file: File): Promise<{ image: string }> {
     credentials: 'include',
     body: form,
   });
-  if (!res.ok) throw new Error(await errorMessage(res));
+  if (!res.ok) throw await apiFailure(res);
   return res.json();
 }
 
 // Removes the stored avatar object and clears the user's image column.
 export async function removeAvatar(): Promise<void> {
   const res = await fetch(`${API_URL}/me/avatar`, { method: 'DELETE', credentials: 'include' });
-  if (!res.ok) throw new Error(await errorMessage(res));
+  if (!res.ok) throw await apiFailure(res);
 }

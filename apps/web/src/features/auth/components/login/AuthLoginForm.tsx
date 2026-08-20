@@ -55,6 +55,9 @@ export default function AuthLoginForm() {
   const authConfig = useAuthConfig();
   const params = useSearchParams();
   const justReset = params.get('reset') === '1';
+  // `apiFailure` in lib/api.ts sends the browser here with ?expired=1 after the API
+  // refused the session, so the screen can say why the user is back on it.
+  const sessionExpired = params.get('expired') === '1';
   // A Google sign-in or a confirmation link that could not complete comes back here
   // as a redirect rather than as a rejected promise, so its reason arrives in the
   // query string.
@@ -118,6 +121,7 @@ export default function AuthLoginForm() {
   const signingInWithLink = method === 'link';
 
   function subtitle() {
+    if (sessionExpired) return t('login.subtitleExpired');
     if (justVerified) return t('login.subtitleVerified');
     if (justReset) return t('login.subtitleReset');
     if (signingInWithLink) return t('login.subtitleLink');
