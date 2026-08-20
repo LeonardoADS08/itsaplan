@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/lib/auth-client';
+import { markSignedIn } from '@/lib/api';
 
 // Everything cached in this tab belongs to one account. Signing in as somebody else
 // without a full page load (sign out and back in, a magic link opened in the same
@@ -25,6 +26,7 @@ export default function SessionScope() {
     const before = previous.current;
     previous.current = userId;
     if (before === undefined || before === userId) return;
+    if (userId) markSignedIn();
     queryClient.clear();
   }, [userId, isPending, queryClient]);
 

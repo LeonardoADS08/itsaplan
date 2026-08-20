@@ -36,6 +36,55 @@ export class ApiError extends Error {
   }
 }
 
+// Set while the session is being dropped, by the sign-out below or by the app's own
+// `signOut`. Concurrent requests that all fail with 401 then trigger a single
+// sign-out and a single navigation, and a sign-out the person asked for does not
+// end on the expired screen.
+let signingOut = false;
+
+// Called by `signOut` in @/lib/auth-client before it drops the session: the requests
+// that fail right after are the expected fallout, not a session the API refused.
+export function markSigningOut(): void {
+  signingOut = true;
+}
+
+// Called by SessionScope once a session appears without a page load, so a later 401
+// is reacted to again. An accepted request does not prove one: /auth-config and the
+// invite and share reads answer without a session.
+export function markSignedIn(): void {
+  signingOut = false;
+}
+
+// A 401 means the session behind the cookie is gone. The proxy only checks that a
+// session cookie exists, so a stale one keeps the app open on a page where every
+// request fails. Signing out is what drops the cookie; with it still set the proxy
+// would bounce /login straight back into the app.
+// The request is written out rather than calling `signOut()` from @/lib/auth-client:
+// that module reads API_URL from this one, so importing it back here would make a
+// cycle that evaluates auth-client before API_URL is assigned.
+function endSession(): void {
+  if (typeof window === 'undefined' || signingOut) return;
+  signingOut = true;
+  void fetch(`${API_URL}/api/auth/sign-out`, { method: 'POST', credentials: 'include' })
+    .then((res) => {
+      // Leaving with the cookie still set sends the proxy straight back into the
+      // app, where the next 401 starts this over as a fresh page load.
+      if (res.ok) window.location.replace('/login?expired=1');
+      else signingOut = false;
+    })
+    .catch(() => {
+      signingOut = false;
+    });
+}
+
+// Turns a failed response into the error to throw, and catches an ended session on
+// the way. Every request in this module reports its failure through here.
+export async function apiFailure(res: Response): Promise<ApiError> {
+  const body = await res.json().catch(() => null);
+  if (res.status === 401) endSession();
+  return new ApiError(res.status, body?.error ?? `${res.status} ${res.statusText}`, body?.code);
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
@@ -49,10 +98,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    throw new ApiError(res.status, body?.error ?? `${res.status} ${res.statusText}`, body?.code);
-  }
+  if (!res.ok) throw await apiFailure(res);
   if (res.status === 204) return undefined as T;
   return res.json();
 }
@@ -531,10 +577,7 @@ export async function* streamAiAgentRun(
 // JSON-encoded event on its `data:` line and, on a resumable stream, the `id:` a
 // reconnect resumes from. Throws ApiError when the request failed before the stream.
 async function* readSseFrames(res: Response): AsyncGenerator<{ id: number | null; data: string }> {
-  if (!res.ok || !res.body) {
-    const err = await res.json().catch(() => null);
-    throw new ApiError(res.status, err?.error ?? `${res.status} ${res.statusText}`);
-  }
+  if (!res.ok || !res.body) throw await apiFailure(res);
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffer = '';
   for (;;) {
@@ -2158,10 +2201,7 @@ async function sendAttachmentFile(
   const form = new FormData();
   form.append('file', file);
   const res = await fetch(`${API_URL}${path}`, { method, credentials: 'include', body: form });
-  if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    throw new Error(body?.error ?? `${res.status} ${res.statusText}`);
-  }
+  if (!res.ok) throw await apiFailure(res);
   return absolutizeAttachment(await res.json());
 }
 
@@ -2883,10 +2923,7 @@ export const api = {
         body: form,
       },
     );
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      throw new ApiError(res.status, body?.error ?? `${res.status} ${res.statusText}`);
-    }
+    if (!res.ok) throw await apiFailure(res);
     return res.json();
   },
   updateSkillReferenceContent: (
