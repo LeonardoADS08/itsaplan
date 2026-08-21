@@ -43,10 +43,13 @@ stable release.
 **Tracking**
 
 - Configure issues per project: custom fields, labels, states, and issue types
-- Kanban, table, timeline, and calendar views, with configurable display fields and two-level grouping
-- Save any view as a reusable template
+- Kanban, table, timeline, and calendar views, saved as tabs with their own filters, display
+  fields, and two-level grouping
+- Cycles that time-box the work, with the unfinished issues carried into the next one
+- Subtasks, checklists, attachments, and links between issues: blocks, relates, duplicates
+- Comment threads with replies, and @username mentions of people and agents
 - Configurable dashboards for project analytics: throughput, breakdown, pulse
-- Custom quick actions that run on an issue
+- Quick actions that run on an issue, and auto-assignment when an issue enters a state
 - Freeform notes boards: sticky notes on a canvas, with colors, checklists, and connections
 - Share a view or an issue by public link, read-only and without sign-in
 - Initiatives that group and track work across projects
@@ -56,13 +59,14 @@ stable release.
 
 - Agents as project members with their own permissions and assigned issues
 - Internal agents run on the instance: configure the model, system prompt, tools, and reusable
-  skills — built on the [Mastra](https://github.com/mastra-ai/mastra) agent framework
+  skills, written inline or imported from a GitHub repository — built on the
+  [Mastra](https://github.com/mastra-ai/mastra) agent framework
 - External agents run wherever you want: drive the run queue through the API with your own
   implementation, or install [`@itsaplan/runner`](packages/runner) and let it hand every task to
   Claude Code, Codex, Gemini CLI, GitHub Copilot CLI, opencode, or any command that reads stdin —
   on your own machine, under your own account
-- Mention an agent in a comment to trigger a run
-- Scheduled agent runs
+- A run starts on an @mention in a comment, on an assignment, or on a schedule
+- Tools that reach outside the tracker: Notion, Telegram, Threads, Instagram, Jina, and Firecrawl
 - Built-in chat with per-agent conversation history, with an external agent too: the runner
   answers from your machine, streaming the reply and the tools it uses, and resumes the same
   coding agent session on every message of the conversation
@@ -71,9 +75,12 @@ stable release.
 
 - REST API with an OpenAPI reference and API keys
 - MCP server, so an external assistant can read and change issues through the same API
+- Pull requests from GitHub, GitLab, Gitea, Forgejo, and Bitbucket: "Fixes KEY-42" links the pull
+  request to the issue and moves it when the pull request opens and merges
 - Outgoing webhooks: subscribe to events, signed payloads, and retries with a delivery log
-- Email and password, passkey, and Google sign-in
+- Sign in with an email or a username and a password, a passkey, or Google
 - Notifications by email (SMTP or Resend) and Telegram, with per-member preferences
+- Interface in English, Ukrainian, Russian, Simplified Chinese, and Arabic
 - Instance administration: storage limits, mail transport, and instance-wide settings
 
 ## Getting started
@@ -120,14 +127,16 @@ first account registered becomes the instance admin.
 | AI agents | [Mastra](https://github.com/mastra-ai/mastra)            |
 
 ```
-apps/api        Elysia HTTP API, mounts better-auth at /api/auth/*
-apps/web        Next.js app, server-side rendered
-apps/worker     webhooks, notifications, agent runs
-apps/bot        Telegram bot
-packages/db     Drizzle client, schema, migrations
-packages/auth   better-auth server instance
-packages/crypto AES-256-GCM encryption for secrets at rest
-packages/mailer SMTP and Resend transport
+apps/api             Elysia HTTP API, mounts better-auth at /api/auth/*
+apps/web             Next.js app, server-side rendered
+apps/worker          webhooks, notifications, agent runs
+apps/bot             Telegram bot
+packages/db          Drizzle client, schema, migrations
+packages/auth        better-auth server instance
+packages/crypto      AES-256-GCM encryption for secrets at rest
+packages/mailer      SMTP and Resend transport
+packages/agent-tools tool integrations for the agent runtime
+packages/runner      CLI that runs an external agent's tasks on your own machine
 ```
 
 The web app never imports the packages directly, it talks to the API over HTTP.
