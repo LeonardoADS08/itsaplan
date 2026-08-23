@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { ApiError, streamAiAgentChat, streamAiAgentRun } from '@/lib/api';
 import type { AiChatMessage, AiChatPart, AiChatToolPart } from '@/lib/api';
 import { useTranslations } from 'next-intl';
 
-export type ChatMessage = AiChatMessage;
+// `error` is what a stream that failed left behind. It is not part of a stored
+// transcript: a restored thread holds the answer the agent produced, not the run that
+// broke.
+export type ChatMessage = AiChatMessage & { error?: string };
 
 // Only a tool call between two chunks of the answer starts a new text part.
 function appendText(parts: AiChatPart[], chunk: string): AiChatPart[] {
@@ -49,9 +51,10 @@ export type PendingMessage = { id: string; text: string };
 // one. threadId is null while a new conversation has not produced its first reply.
 //
 // A message sent while a reply is running is held in `pending` and sent on its own once
-// that reply ends, one at a time and in the order it was typed. A reply that failed or
-// was stopped pauses the queue: what is left waits until the next send, so a message is
-// not thrown at an agent that is not answering.
+// that reply ends, one at a time and in the order it was typed. A reply that failed
+// pauses the queue: what is left waits until the next send, so a message is not thrown
+// at an agent that is not answering. A stop is not a failure — it ends the reply being
+// produced and the message waiting behind it is sent next.
 //
 // stop() ends the reply being produced. What the agent wrote before it stays in the
 // transcript, marked stopped. An internal agent's run is bound to the stream, so
@@ -84,6 +87,9 @@ export function useAgentChat(projectKey: string, agentId: number, external: bool
       setRunning(true);
       const stopper = new AbortController();
       stopRef.current = stopper;
+      // Kept for the transcript rather than reported at once: the session may not be
+      // the one on screen, and the answer is where the user looks for what happened.
+      let failure: string | null = null;
 
       const assistantId = crypto.randomUUID();
       const createdAt = new Date().toISOString();
@@ -155,31 +161,40 @@ export function useAgentChat(projectKey: string, agentId: number, external: bool
               setThreadId(event.threadId);
               break;
             case 'error':
-              toast.error(event.message);
+              failure = event.message;
               setQueuePaused(true);
               break;
           }
         }
       } catch (err) {
         // A stop ends the stream by aborting it; that is what was asked for, not a
-        // failure to report.
+        // failure to report, and the queue behind it goes on.
         if (!stopper.signal.aborted) {
-          toast.error(err instanceof ApiError ? err.message : t('unreachable'));
+          failure = err instanceof ApiError ? err.message : t('unreachable');
+          setQueuePaused(true);
         }
-        setQueuePaused(true);
       } finally {
         runningRef.current = false;
         stopRef.current = null;
         setRunning(false);
         setStatus('ready');
         setActiveTool(null);
-        // Drop the assistant placeholder if the agent never produced anything (an error
-        // or a stop before the first chunk), so an empty bubble is not left behind.
+        // Drop the assistant placeholder if the agent never produced anything and there
+        // is nothing to say about it, so an empty bubble is not left behind. A failure
+        // keeps the bubble: it carries the message.
         const stopped = stopper.signal.aborted;
         setMessages((m) =>
           m
-            .filter((msg) => !(msg.id === assistantId && msg.parts.length === 0))
-            .map((msg) => (stopped && msg.id === assistantId ? { ...msg, stopped: true } : msg)),
+            .filter((msg) => !(msg.id === assistantId && msg.parts.length === 0 && !failure))
+            .map((msg) =>
+              msg.id === assistantId
+                ? {
+                    ...msg,
+                    ...(stopped && { stopped: true }),
+                    ...(failure && { error: failure }),
+                  }
+                : msg,
+            ),
         );
       }
     },
@@ -204,8 +219,8 @@ export function useAgentChat(projectKey: string, agentId: number, external: bool
     setPending((queue) => queue.filter((message) => message.id !== id));
   }, []);
 
-  // Ends the reply being produced. Whatever is queued stays queued: stopping this reply
-  // is not a reason to discard what was typed while it ran.
+  // Ends the reply being produced. What is queued behind it is sent next: stopping this
+  // reply is what clears the way for the message typed while it ran.
   const stop = useCallback(() => {
     stopRef.current?.abort();
   }, []);

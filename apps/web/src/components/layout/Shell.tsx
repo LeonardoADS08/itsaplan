@@ -8,6 +8,7 @@ import { useAccountPreferences } from '@/services/preferences.service';
 import type { IssueOpenMode } from '@/lib/api';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useOverlays } from '@/hooks/useOverlays';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useSettingsNavGroups } from '@/hooks/useSettingsNavGroups';
 import { useShellProject } from '@/hooks/useShellProject';
 import { useShellRoute } from '@/hooks/useShellRoute';
@@ -22,6 +23,8 @@ import CommandLayer from '@/components/layout/CommandLayer';
 import ShellBody from '@/components/layout/ShellBody';
 import ShellHeaderTitle from '@/components/layout/ShellHeaderTitle';
 import ShellOverlays from '@/components/layout/ShellOverlays';
+import { ChatPanel } from '@/features/ai-chat/components/panel/ChatPanel';
+import { useChatPanel } from '@/features/ai-chat/hooks/useChatPanel';
 import { useTranslations } from 'next-intl';
 
 // The layout for /project/:projectKey and its children (the work items view and the
@@ -55,7 +58,12 @@ export default function Shell({
 
   const initiativeOptions = useInitiativeOptionsQuery(projectKey).data ?? [];
   const { issueOpenMode, showChatByDefault } = useAccountPreferences();
-  const overlays = useOverlays(showChatByDefault);
+  const overlays = useOverlays();
+  const chatPanel = useChatPanel(projectKey, showChatByDefault);
+  // The Shell renders the context provider, so its own permission check reads the
+  // project it loaded rather than the context.
+  const { can } = usePermissions(project);
+  const chatAvailable = !!projectKey && can('ai_agents', 'read');
   const issueQuery = useIssueBySeqQuery(projectKey, routeIssueSeq);
 
   useProjectRouteSync({ projects, projectsLoaded, projectKey });
@@ -89,6 +97,7 @@ export default function Shell({
 
   useKeyboardShortcuts({
     hasProject: !!project,
+    hasChat: chatAvailable,
     projects,
     overlayOpen: overlays.anyOpen,
     onToggleCommand: () => overlays.setShowCommand((v) => !v),
@@ -97,6 +106,7 @@ export default function Shell({
     onNewIssue: () => canCreateIssue && openNewIssue(),
     onNewProject: () => overlays.setShowNewProject(true),
     onSettings: () => firstSettingsHref && router.push(firstSettingsHref),
+    onToggleChat: chatPanel.toggle,
   });
 
   // Every view opens an issue through this one callback, so the user's choice
@@ -149,8 +159,8 @@ export default function Shell({
             hasProject={!!project}
             onOpenCommand={() => overlays.setShowCommand(true)}
             onNewIssue={openNewIssue}
-            chatActive={overlays.chatEnabled}
-            onToggleChat={overlays.toggleChat}
+            chatActive={chatPanel.open}
+            onToggleChat={chatPanel.toggle}
           />
 
           {errorMsg && !forbidden && (
@@ -159,16 +169,30 @@ export default function Shell({
             </div>
           )}
 
-          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-            <ShellBody
-              forbidden={forbidden}
-              hasProject={!!project}
-              hasError={!!errorMsg}
-              projectsLoaded={projectsLoaded}
-              projectCount={projects.length}
-            >
-              {children}
-            </ShellBody>
+          <div className="relative flex min-h-0 flex-1 overflow-hidden">
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              <ShellBody
+                forbidden={forbidden}
+                hasProject={!!project}
+                hasError={!!errorMsg}
+                projectsLoaded={projectsLoaded}
+                projectCount={projects.length}
+              >
+                {children}
+              </ShellBody>
+            </div>
+
+            {chatAvailable && projectKey && (
+              <ChatPanel
+                projectKey={projectKey}
+                open={chatPanel.open}
+                mode={chatPanel.mode}
+                fullscreen={chatPanel.fullscreen}
+                onToggleMode={chatPanel.toggleMode}
+                onToggleFullscreen={chatPanel.toggleFullscreen}
+                onClose={chatPanel.toggle}
+              />
+            )}
           </div>
         </SidebarInset>
 
@@ -189,6 +213,7 @@ export default function Shell({
           onSelectProject={(key) => router.push(projectPath(key))}
           onOpenIssue={(seq) => projectKey && router.push(issuePath(projectKey, seq))}
           onIssueDeleted={onIssueDeleted}
+          onToggleChat={chatPanel.toggle}
         />
 
         <ShellOverlays project={project} projectKey={projectKey} overlays={overlays} />

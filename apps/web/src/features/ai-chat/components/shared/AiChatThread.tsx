@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { AiAgent } from '@/lib/api';
 import { useAgentChat } from '@/hooks/useAgentChat';
@@ -22,11 +22,18 @@ export function AiChatThread({
   agent,
   threadId,
   onThreadCreated,
+  onStateChange,
+  composerStart,
 }: {
   projectKey: string;
   agent: AiAgent;
   threadId: string | null;
   onThreadCreated: (threadId: string) => void;
+  // Reported so a host that keeps the conversation out of sight can still tell what is
+  // going on in it.
+  onStateChange?: (state: { running: boolean; hasMessages: boolean }) => void;
+  // A control of the host that belongs to this conversation, put next to its composer.
+  composerStart?: ReactNode;
 }) {
   const {
     messages,
@@ -50,6 +57,10 @@ export function AiChatThread({
     if (status !== 'ready') return;
     void qc.invalidateQueries({ queryKey: qk.agentThreads(projectKey, agent.id) });
   }, [status, qc, projectKey, agent.id]);
+
+  useEffect(() => {
+    onStateChange?.({ running: status !== 'ready', hasMessages: messages.length > 0 });
+  }, [status, messages.length, onStateChange]);
 
   // How many transcript pages of the active thread are already in the conversation.
   // Page 0 counts as merged from the start: for a restored thread it is what
@@ -103,6 +114,7 @@ export function AiChatThread({
       onSend={send}
       onStop={stop}
       onRemovePending={removePending}
+      composerStart={composerStart}
       hasEarlierMessages={messagesQuery.hasNextPage}
       isLoadingEarlier={messagesQuery.isFetchingNextPage}
       onLoadEarlier={() => void messagesQuery.fetchNextPage()}
