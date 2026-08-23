@@ -1486,7 +1486,7 @@ export interface ActionPatch {
   effect?: ActionEffect;
 }
 
-// Outgoing webhook subscription (mirrors apps/api webhooks/store.ts). The event
+// Outgoing webhook subscription (mirrors apps/api modules/webhooks/service.ts). The event
 // types must stay in sync with WEBHOOK_EVENT_TYPES on the server.
 export type WebhookEventType =
   | 'issue.created'
@@ -1754,7 +1754,7 @@ export interface IssueDetail extends Issue {
   fields: IssueFieldValue[];
 }
 
-// A relation between two issues (mirrors apps/api issues/links.ts). 'blocks' and
+// A relation between two issues (mirrors apps/api modules/issues/links.ts). 'blocks' and
 // 'duplicates' are directional and read differently on each end, which direction
 // selects: 'outward' is the side that blocks/duplicates, 'inward' the side that is
 // blocked/duplicated. On a symmetric 'relates' relation direction means nothing.

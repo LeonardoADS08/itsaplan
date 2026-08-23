@@ -9,12 +9,11 @@ import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { Elysia } from 'elysia';
 import { planner } from './planner';
-import { webhookTestRoutes } from './webhook-test/routes';
 import { mountMcp } from './mcp/mount';
 import { setMcpApp } from './mcp/app-ref';
 import { internalAgentRunRoutes } from './modules/agents/core/internal-routes';
 import { internalNotificationRoutes } from './modules/notifications/internal-routes';
-import { internalTelegramRoutes } from './telegram/internal-routes';
+import { internalTelegramRoutes } from './modules/telegram/internal-routes';
 import { gitWebhookRoutes } from './modules/git/webhook';
 
 // The assembled Elysia app, without `.listen()`. `index.ts` imports this and
@@ -199,8 +198,6 @@ export const app = new Elysia()
   .use(internalAgentRunRoutes)
   .use(internalNotificationRoutes)
   .use(internalTelegramRoutes)
-  // Test receiver for inspecting webhook deliveries (unauthenticated, dev aid).
-  .use(webhookTestRoutes)
   // Inbound repository webhook receiver (authenticated by its per-project secret).
   .use(gitWebhookRoutes)
   // Planner API: projects, issues, and their dependent entities.
