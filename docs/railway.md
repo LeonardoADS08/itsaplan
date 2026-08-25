@@ -1,14 +1,14 @@
 # Deploy on Railway
 
-Railway builds the stack from source and generates the secrets itself. You supply two
+Railway runs the published images and generates the secrets itself. You supply two
 hostnames; everything else is wired by the template.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/its-a-plan?referralCode=lQ5O6i&utm_medium=integration&utm_source=button&utm_campaign=itsaplan)
 
 The template provisions six resources: Postgres with a volume, a storage bucket for
-attachments, and the api, web, worker and bot services, each built from its own Dockerfile
-in this repository. It tracks the `release` branch, so a deploy gets the latest published
-release.
+attachments, and the api, web, worker and bot services, each running its image from
+`ghcr.io/croffasia/itsaplan-<service>`. Nothing is built: a deploy pulls the `latest` tag,
+which is the newest published release.
 
 ## 1. A domain of your own is required
 
@@ -51,6 +51,13 @@ variables.
 
 Edit `API_URL` or `APP_URL` **on the web service**. Both services restart and serve the new
 address; no rebuild is involved.
+
+## Updates
+
+Every service ships with auto updates on, in the 02:00–06:00 UTC window. Railway watches the
+`latest` tag in GHCR and redeploys the service once a release pushes a new image; the api
+applies the migrations when it starts. Turn it off per service under **Settings → Source →
+Configure Auto Updates**, or narrow the window there.
 
 ## Notes
 
