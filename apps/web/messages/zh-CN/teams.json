@@ -15,6 +15,7 @@
     "title": "管理团队",
     "description": "你的团队及其项目。",
     "empty": "你还没有加入任何团队。",
+    "newTeam": "新建团队",
     "columns": {
       "team": "团队",
       "role": "角色",

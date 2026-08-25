@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ChevronsUpDown, SquareKanban, UserPlus, Users } from 'lucide-react';
+import { ChevronsUpDown, UserPlus, Users } from 'lucide-react';
 import type { Project, Team } from '@/lib/api';
 import { useTeamsQuery } from '@/services/teams.service';
 import { manageTeamsPath } from '@/utils/paths';
-import { Badge } from '@/components/ui/badge';
+import ItsAPlanMark from '@/components/brand/ItsAPlanMark';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,19 +77,16 @@ export default function ProjectSwitcher({
               disabled={projects.length === 0}
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <SquareKanban className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{current?.name ?? t('noProjects')}</span>
+              <ItsAPlanMark className="size-9! shrink-0 text-sidebar-foreground" />
+              <div className="grid flex-1 gap-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold tracking-tight">
+                  {current?.name ?? t('noProjects')}
+                </span>
                 <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                   {current && (
-                    <Badge
-                      variant="outline"
-                      className="shrink-0 rounded px-1 py-0 font-mono text-[10px] text-muted-foreground"
-                    >
+                    <span className="shrink-0 font-mono text-[10px] tracking-wider uppercase">
                       {current.key}
-                    </Badge>
+                    </span>
                   )}
                   <Users className="size-3 shrink-0" />
                   <span className="truncate">{current?.teamName ?? '—'}</span>

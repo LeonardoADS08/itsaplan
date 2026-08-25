@@ -1,4 +1,5 @@
 import { ChevronRight, SquareKanban, Users } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { Project } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +25,8 @@ export default function ProjectSwitcherTeamGroup({
   onOpenChange: (open: boolean) => void;
   onSelectProject: (key: string) => void;
 }) {
+  const t = useTranslations('nav');
+
   return (
     <Collapsible open={open} onOpenChange={onOpenChange}>
       {/* A menu item rather than a plain button: only items take part in the
@@ -44,6 +47,9 @@ export default function ProjectSwitcherTeamGroup({
         </DropdownMenuItem>
       </CollapsibleTrigger>
       <CollapsibleContent>
+        {group.projects.length === 0 && (
+          <p className="py-2 ps-9 pe-2 text-xs text-muted-foreground">{t('noProjects')}</p>
+        )}
         {group.projects.map(({ project, shortcut }) => (
           <DropdownMenuItem
             key={project.key}

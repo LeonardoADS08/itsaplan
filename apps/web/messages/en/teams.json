@@ -15,6 +15,7 @@
     "title": "Manage teams",
     "description": "Your teams and the projects they own.",
     "empty": "You do not belong to any team yet.",
+    "newTeam": "New team",
     "columns": {
       "team": "Team",
       "role": "Role",
