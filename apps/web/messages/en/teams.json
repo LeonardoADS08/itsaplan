@@ -1,0 +1,8 @@
+{
+  "create": {
+    "title": "New team",
+    "namePlaceholder": "Team name",
+    "hint": "You'll be the owner of this team.",
+    "submit": "Create team"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "create": {
+    "title": "新建团队",
+    "namePlaceholder": "团队名称",
+    "hint": "你将成为该团队的所有者。",
+    "submit": "创建团队"
+  }
+}

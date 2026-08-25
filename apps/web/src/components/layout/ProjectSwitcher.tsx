@@ -2,7 +2,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ChevronsUpDown, Plus, Settings2, SquareKanban, UserPlus, Users } from 'lucide-react';
-import type { Project } from '@/lib/api';
+import type { Project, Team } from '@/lib/api';
+import { useTeamsQuery } from '@/services/teams.service';
 import { manageProjectsPath } from '@/utils/paths';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -23,11 +24,17 @@ import ProjectSwitcherTeamGroup, {
   type TeamGroup,
 } from '@/components/layout/ProjectSwitcherTeamGroup';
 
-// The projects grouped by the team that owns them, keeping the order of the list.
-// `shortcut` is the project's place in the whole list, which is what ⌘1..9 switches
-// by (useKeyboardShortcuts), so grouping does not renumber it.
-function groupByTeam(projects: Project[]): TeamGroup[] {
-  const groups: TeamGroup[] = [];
+// The projects grouped by the team that owns them. Every team the user belongs to
+// gets a group, so one without projects is still listed; a project whose team the
+// user is not a member of gets a group of its own. `shortcut` is the project's place
+// in the whole list, which is what ⌘1..9 switches by (useKeyboardShortcuts), so
+// grouping does not renumber it.
+function groupByTeam(projects: Project[], teams: Team[]): TeamGroup[] {
+  const groups: TeamGroup[] = teams.map((team) => ({
+    teamId: team.id,
+    teamName: team.name,
+    projects: [],
+  }));
   projects.forEach((project, i) => {
     let group = groups.find((g) => g.teamId === project.teamId);
     if (!group) {
@@ -45,16 +52,19 @@ export default function ProjectSwitcher({
   currentProjectKey,
   onSelectProject,
   onNewProject,
+  onNewTeam,
 }: {
   projects: Project[];
   currentProjectKey: string | null;
   onSelectProject: (key: string) => void;
   onNewProject: () => void;
+  onNewTeam: () => void;
 }) {
   const t = useTranslations('nav');
   const { isMobile } = useSidebar();
+  const teams = useTeamsQuery().data ?? [];
   const current = projects.find((b) => b.key === currentProjectKey);
-  const groups = groupByTeam(projects);
+  const groups = groupByTeam(projects, teams);
   // Which teams the user folded away. Held here rather than in each group: the menu
   // unmounts its content when it closes, so the choice would not survive reopening.
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
@@ -126,7 +136,7 @@ export default function ProjectSwitcher({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 p-2">
+            <DropdownMenuItem onClick={onNewTeam} className="gap-2 p-2">
               <div className="flex size-6 items-center justify-center rounded-md border bg-background">
                 <UserPlus className="size-4" />
               </div>

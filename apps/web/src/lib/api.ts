@@ -106,6 +106,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+// A team the caller belongs to. It owns projects and holds its own member list.
+export interface Team {
+  id: number;
+  name: string;
+  // The caller's rank in the team.
+  role: 'owner' | 'manager' | 'member';
+  createdAt: string;
+}
+
 export interface Project {
   id: number;
   teamId: number;
@@ -2420,6 +2429,9 @@ function subtaskQuery(disposition?: SubtaskDisposition): string {
 }
 
 export const api = {
+  listTeams: () => request<Team[]>('/teams'),
+  createTeam: (input: { name: string }) =>
+    request<Team>('/teams', { method: 'POST', body: JSON.stringify(input) }),
   listProjects: (opts?: { permissions?: boolean }) =>
     request<Project[]>(`/projects${opts?.permissions ? '?permissions=true' : ''}`),
   createProject: (input: { key: string; name: string; description?: string; preset?: string }) =>

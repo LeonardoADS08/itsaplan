@@ -50,6 +50,7 @@ export const app = new Elysia()
         },
         tags: [
           { name: 'Projects', description: 'Projects and the full work items view' },
+          { name: 'Teams', description: 'Teams that own projects' },
           { name: 'Members', description: 'Project membership and roles' },
           { name: 'Roles', description: 'Project roles and their permissions' },
           { name: 'Invites', description: 'Project invites (create, accept, reject)' },

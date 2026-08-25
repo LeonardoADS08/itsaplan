@@ -5,12 +5,12 @@ import type { ProjectDetail } from '@/lib/api';
 import { issuePath, projectPath } from '@/utils/paths';
 import type { useOverlays } from '@/hooks/useOverlays';
 import NewProjectModal from '@/components/layout/NewProjectModal';
+import NewTeamModal from '@/components/layout/NewTeamModal';
 import NewIssueModal from '@/features/issue/components/create/NewIssueModal';
 import IssueDetail from '@/features/issue/components/detail/IssueDetail';
 
-// The project-level overlays the Shell mounts above its content: the new-project
-// modal, the new-issue modal and the issue detail panel. Each renders only while its
-// overlay state says it is open.
+// The project-level overlays the Shell mounts above its content. Each renders only
+// while its overlay state says it is open.
 export default function ShellOverlays({
   project,
   projectKey,
@@ -33,6 +33,8 @@ export default function ShellOverlays({
           }}
         />
       )}
+
+      {overlays.showNewTeam && <NewTeamModal onClose={() => overlays.setShowNewTeam(false)} />}
 
       {project && overlays.newIssueDefaults != null && (
         <NewIssueModal

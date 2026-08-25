@@ -3,6 +3,7 @@
 // invalidate another service's queries by the same key.
 export const qk = {
   projects: ['projects'] as const,
+  teams: ['teams'] as const,
   // The board scaffold (columns/types/labels/fields/viewer) for a project.
   project: (projectKey: string) => ['workItems', projectKey] as const,
   // The board's issues, their relations and the change marker for a project.
