@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia';
-import { requireUser, type AuthUser } from '#shared/access';
+import { requireUser } from '#shared/access';
 import { authContext } from '#shared/auth-context';
+import { guards } from '#shared/guards';
 import { noContent } from '#shared/http';
 import { HttpError } from '#shared/lib';
 import { errors } from '#shared/responses';
@@ -25,30 +26,12 @@ import {
 import {
   createTeam,
   getTeam,
-  getTeamMembership,
   getTeamProject,
   leaveTeam,
   listTeams,
   renameTeam,
   teamOwnsProject,
-  type TeamRole,
 } from './service';
-
-type TeamParams = { teamId: string };
-
-// Resolves the :teamId path param to the caller's membership in it. 404 for an
-// unknown team and for one the caller is not a member of: a team the caller
-// cannot see should not be distinguishable from one that does not exist.
-async function requireTeamRole(
-  params: unknown,
-  user: AuthUser | undefined | null,
-): Promise<{ teamId: number; role: TeamRole; userId: string }> {
-  const current = requireUser(user);
-  const teamId = Number((params as TeamParams).teamId);
-  const role = await getTeamMembership(teamId, current.id);
-  if (!role) throw new HttpError(404, 'Team not found');
-  return { teamId, role, userId: current.id };
-}
 
 // The write routes act on a project the team owns; one of another team answers 404
 // rather than being changed through this team.
@@ -61,41 +44,7 @@ async function requireTeamProject(teamId: number, projectId: number): Promise<vo
 // their owner.
 export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] } })
   .use(authContext)
-  .macro({
-    // Any member of the team may proceed.
-    teamMember(_enabled: boolean) {
-      return {
-        async resolve({ params, user }) {
-          return { membership: await requireTeamRole(params, user) };
-        },
-      };
-    },
-
-    // Owner or manager. They run the team's projects: create, copy and update one.
-    teamManager(_enabled: boolean) {
-      return {
-        async resolve({ params, user }) {
-          const membership = await requireTeamRole(params, user);
-          if (membership.role === 'member')
-            throw new HttpError(403, 'Only a team owner or manager can do this');
-          return { membership };
-        },
-      };
-    },
-
-    // Owner-only actions. A non-member gets the same 404 as for an unknown team,
-    // since membership is resolved before the owner check.
-    teamOwner(_enabled: boolean) {
-      return {
-        async resolve({ params, user }) {
-          const membership = await requireTeamRole(params, user);
-          if (membership.role !== 'owner')
-            throw new HttpError(403, 'Only a team owner can do this');
-          return { membership };
-        },
-      };
-    },
-  })
+  .use(guards)
 
   .get('/teams', ({ user }) => listTeams(requireUser(user).id), {
     response: { 200: TeamListResponse, ...errors(401) },

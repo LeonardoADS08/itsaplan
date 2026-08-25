@@ -5,6 +5,7 @@ import { ArrowUpRight, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { TeamProject, TeamRole } from '@/lib/api';
 import { projectPath } from '@/utils/paths';
+import Avatar from '@/components/common/Avatar';
 import DisclosureCard from '@/components/common/DisclosureCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,21 @@ export default function TeamProjectRow({
             {project.key}
           </Badge>
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{project.name}</span>
+          {project.owners.length > 0 && (
+            <span
+              className="flex shrink-0 items-center -space-x-1.5"
+              title={t('owners', { names: project.owners.map((o) => o.name).join(', ') })}
+            >
+              {project.owners.map((owner) => (
+                <Avatar
+                  key={owner.userId}
+                  name={owner.name}
+                  image={owner.image}
+                  className="ring-2 ring-card"
+                />
+              ))}
+            </span>
+          )}
           <span
             className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
             title={t('memberCount', { count: project.memberCount })}

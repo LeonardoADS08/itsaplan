@@ -3,6 +3,7 @@ import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { addProjectMember } from '#tests/helpers/members';
+import { createRole } from '#tests/helpers/roles';
 
 // Full integration flow: a real session against the real (test) database.
 // Requires the test DB to be up and migrated:
@@ -11,8 +12,8 @@ import { addProjectMember } from '#tests/helpers/members';
 // See apps/api/AGENTS.md "Tests" for the setup.
 //
 // The projects feature owns five routes: list, create, copy, the full work-items
-// view, and delete. createProject seeds five default columns (one per state type)
-// and a default "Member" role; it seeds no issue types or assignees.
+// view, and delete. createProject seeds five default columns (one per state type);
+// it seeds no issue types or assignees.
 
 // createProject seeds one column per state type; a new project always has these
 // five and nothing else.
@@ -244,9 +245,10 @@ describe('projects', () => {
     it('opens to a member whose role grants nothing, so any role can enter the project', async () => {
       const owner = await signUpClient();
       await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
-      const role = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Notes only', permissions: { note_boards: { read: true } } });
+      const role = await createRole(owner.api, 'MKT', {
+        name: 'Notes only',
+        permissions: { note_boards: { read: true } },
+      });
       const member = await addProjectMember(owner.api, 'MKT', role.data!.id);
 
       const res = await viewOf(member, 'MKT');
@@ -437,28 +439,20 @@ describe('projects', () => {
       expect(filters.conditions[0].values).toEqual([dstReview.id]);
     });
 
-    it('copies custom roles when selected, and not by default', async () => {
+    it("draws on the target team's roles, which the source team's do not reach", async () => {
       const { api } = await signUpClient();
       await api.projects.post({ key: 'SRC', name: 'Source' });
-      await api.projects({ projectKey: 'SRC' }).roles.post({
+      await createRole(api, 'SRC', {
         name: 'Editor',
         permissions: { work_items: { create: true, edit: true, read: true, delete: false } },
       });
 
-      await api.projects({ projectKey: 'SRC' }).copy.post({
-        key: 'NOR',
-        name: 'No roles',
-      });
-      const withoutRoles = await api.projects({ projectKey: 'NOR' }).roles.get();
-      expect(withoutRoles.data?.map((r) => r.name).sort()).toEqual(['Member']);
+      // The copy lands in the caller's own team, which shares its roles with every
+      // project it owns, so the source project's roles come along with it.
+      await api.projects({ projectKey: 'SRC' }).copy.post({ key: 'DST', name: 'Destination' });
 
-      await api.projects({ projectKey: 'SRC' }).copy.post({
-        key: 'DST',
-        name: 'Destination',
-        include: { roles: true },
-      });
-      const withRoles = await api.projects({ projectKey: 'DST' }).roles.get();
-      expect(withRoles.data?.map((r) => r.name).sort()).toEqual(['Editor', 'Member']);
+      const roles = await api.projects({ projectKey: 'DST' }).roles.get();
+      expect(roles.data?.map((r) => r.name).sort()).toEqual(['Editor', 'Member']);
     });
 
     it("keeps an external agent's runner scope, bound to the caller", async () => {
@@ -739,7 +733,7 @@ describe('projects', () => {
       expect(res.data).toMatchObject({ mcpEnabled: true, features: { notes: false } });
     });
 
-    it('denies writing settings to a non-owner (owner-only)', async () => {
+    it('denies writing settings to someone outside the project and its team', async () => {
       const owner = await signUpClient();
       await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
 
@@ -748,6 +742,38 @@ describe('projects', () => {
         .projects({ projectKey: 'MKT' })
         .settings.patch({ mcpEnabled: true });
       expect(res.status).toBe(403);
+    });
+
+    it('denies writing settings to a plain member of the project', async () => {
+      const owner = await signUpClient();
+      await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const member = await addProjectMember(owner.api, 'MKT');
+
+      const res = await member.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: true });
+      expect(res.status).toBe(403);
+    });
+
+    it("lets the team's owner write settings on a project they left", async () => {
+      const owner = await signUpClient();
+      await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
+
+      // Hand MKT to someone else and leave it. The team still owns the project, so
+      // its owner keeps the settings without a membership of their own.
+      const successor = await signUpClient();
+      const invite = await owner.api
+        .projects({ projectKey: 'MKT' })
+        .invites.post({ email: successor.user.email, role: 'owner' });
+      await successor.api.invites({ token: invite.data!.token }).accept.post();
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: owner.user.userId })
+        .delete();
+
+      const res = await owner.api
+        .projects({ projectKey: 'MKT' })
+        .settings.patch({ mcpEnabled: true });
+      expect(res.status).toBe(200);
+      expect(res.data).toMatchObject({ mcpEnabled: true });
     });
   });
 
@@ -809,9 +835,10 @@ describe('projects', () => {
     it('lets a granted role read the thresholds but not change them without edit', async () => {
       const owner = await signUpClient();
       await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
-      const role = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Reader', permissions: { workflow_config: { read: true } } });
+      const role = await createRole(owner.api, 'MKT', {
+        name: 'Reader',
+        permissions: { workflow_config: { read: true } },
+      });
       const member = await addProjectMember(owner.api, 'MKT', role.data!.id);
 
       expect((await autoArchive(member).get()).status).toBe(200);
@@ -823,7 +850,7 @@ describe('projects', () => {
     it('lets a role with edit change the thresholds', async () => {
       const owner = await signUpClient();
       await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
-      const role = await owner.api.projects({ projectKey: 'MKT' }).roles.post({
+      const role = await createRole(owner.api, 'MKT', {
         name: 'Archivist',
         permissions: { workflow_config: { read: true, edit: true } },
       });
@@ -893,7 +920,7 @@ describe('projects', () => {
     it('lets a role with edit change the kinds', async () => {
       const owner = await signUpClient();
       await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
-      const role = await owner.api.projects({ projectKey: 'MKT' }).roles.post({
+      const role = await createRole(owner.api, 'MKT', {
         name: 'Planner',
         permissions: { workflow_config: { read: true, edit: true } },
       });
@@ -945,9 +972,10 @@ describe('projects', () => {
     it('lets a granted role read the automations but not change them without edit', async () => {
       const owner = await signUpClient();
       await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
-      const role = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Reader', permissions: { workflow_config: { read: true } } });
+      const role = await createRole(owner.api, 'MKT', {
+        name: 'Reader',
+        permissions: { workflow_config: { read: true } },
+      });
       const member = await addProjectMember(owner.api, 'MKT', role.data!.id);
 
       expect((await subtasks(member).get()).status).toBe(200);

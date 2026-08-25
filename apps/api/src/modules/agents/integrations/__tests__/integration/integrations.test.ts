@@ -4,6 +4,7 @@ import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { addProjectMember } from '#tests/helpers/members';
 import { untaggedRoutes } from '#tests/helpers/mcp';
+import { createRole } from '#tests/helpers/roles';
 
 // Integration credentials for a project: one store for LLM provider keys (kind 'llm')
 // and tool credentials (kind 'tool'). The secret is stored encrypted and never
@@ -171,9 +172,10 @@ describe('integrations', () => {
         integrationKey: 'openai',
         credential: { apiKey: 'sk-secret-1234' },
       });
-      const role = await asOwner
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Agents only', permissions: { ai_agents: { read: true } } });
+      const role = await createRole(asOwner, 'MKT', {
+        name: 'Agents only',
+        permissions: { ai_agents: { read: true } },
+      });
       const asMember = await addProjectMember(asOwner, 'MKT', role.data!.id);
 
       expect((await options(asMember).get()).status).toBe(200);

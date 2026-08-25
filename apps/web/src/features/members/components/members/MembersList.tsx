@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useMembersQuery, useRemoveMember } from '@/services/members.service';
-import { useRolesQuery } from '@/services/roles.service';
+import { useProjectRolesQuery } from '@/services/roles.service';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSession } from '@/lib/auth-client';
 import MemberRow from './MemberRow';
@@ -32,7 +32,7 @@ export default function MembersList({ projectKey }: { projectKey: string }) {
   const removeMember = useRemoveMember(projectKey);
   // Roles feed the per-member role select; only an owner can reassign, so only an
   // owner needs the list fetched.
-  const rolesQuery = useRolesQuery(projectKey, isOwner);
+  const rolesQuery = useProjectRolesQuery(projectKey, isOwner);
   const router = useRouter();
   const [target, setTarget] = useState<Member | null>(null);
 

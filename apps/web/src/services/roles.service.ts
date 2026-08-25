@@ -12,51 +12,58 @@ export function usePermissionCatalogQuery() {
   });
 }
 
-// Roles are listable by any member, but only owners have a use for them here.
-// Pass enabled=false for a non-owner to skip the request.
-export function useRolesQuery(projectKey: string | null, enabled = true) {
+// The roles a project assigns from — the ones its team offers. Listable by any
+// member, but only owners have a use for them; pass enabled=false for a non-owner
+// to skip the request.
+export function useProjectRolesQuery(projectKey: string | null, enabled = true) {
   return useQuery({
-    queryKey: qk.roles(projectKey ?? ''),
-    queryFn: () => api.listRoles(projectKey!),
+    queryKey: qk.projectRoles(projectKey ?? ''),
+    queryFn: () => api.listProjectRoles(projectKey!),
     enabled: projectKey != null && enabled,
   });
 }
 
-export function useCreateRole(projectKey: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: { name: string; permissions: Permissions }) =>
-      api.createRole(projectKey, input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.roles(projectKey) }),
+// A team's own roles, for the panel that manages them.
+export function useTeamRolesQuery(teamId: number | null) {
+  return useQuery({
+    queryKey: qk.teamRoles(teamId ?? 0),
+    queryFn: () => api.listTeamRoles(teamId!),
+    enabled: teamId != null,
   });
 }
 
-export function useUpdateRole(projectKey: string) {
+// A role belongs to the team, so a write to it changes what every project of that
+// team offers and what its members resolve to. The project-scoped lists are keyed by
+// project, so they are dropped wholesale rather than by key.
+function useRoleMutation<TInput, TResult>(
+  teamId: number,
+  mutationFn: (input: TInput) => Promise<TResult>,
+) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      roleId,
-      patch,
-    }: {
-      roleId: number;
-      patch: { name?: string; permissions?: Permissions };
-    }) => api.updateRole(projectKey, roleId, patch),
-    // A rename changes the role name shown on members, so refresh both lists.
+    mutationFn,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.roles(projectKey) });
-      qc.invalidateQueries({ queryKey: qk.members(projectKey) });
+      qc.invalidateQueries({ queryKey: qk.teamRoles(teamId) });
+      qc.invalidateQueries({ queryKey: qk.anyProjectRoles });
+      qc.invalidateQueries({ queryKey: qk.anyMembers });
     },
   });
 }
 
-export function useDeleteRole(projectKey: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (roleId: number) => api.deleteRole(projectKey, roleId),
-    // Deleting a role reassigns its members to the default role.
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.roles(projectKey) });
-      qc.invalidateQueries({ queryKey: qk.members(projectKey) });
-    },
-  });
+export function useCreateRole(teamId: number) {
+  return useRoleMutation(teamId, (input: { name: string; permissions: Permissions }) =>
+    api.createRole(teamId, input),
+  );
+}
+
+export function useUpdateRole(teamId: number) {
+  return useRoleMutation(
+    teamId,
+    ({ roleId, patch }: { roleId: number; patch: { name?: string; permissions?: Permissions } }) =>
+      api.updateRole(teamId, roleId, patch),
+  );
+}
+
+export function useDeleteRole(teamId: number) {
+  return useRoleMutation(teamId, (roleId: number) => api.deleteRole(teamId, roleId));
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { authedApi } from '#tests/helpers/app';
 import { signUpTestUser, type TestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
+import { createRole } from '#tests/helpers/roles';
 
 // Integration coverage for the invites feature: the owner-side routes that
 // create/list/revoke invites and the invitee-side routes that read, accept, or
@@ -84,9 +85,7 @@ describe('invites', () => {
 
     it('pins a custom role on a member invite', async () => {
       const owner = await setupOwner();
-      const role = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Editor', permissions: {} });
+      const role = await createRole(owner.api, 'MKT', { name: 'Editor', permissions: {} });
 
       const res = await owner.api
         .projects({ projectKey: 'MKT' })
@@ -98,9 +97,7 @@ describe('invites', () => {
 
     it('ignores roleId on an owner invite', async () => {
       const owner = await setupOwner();
-      const role = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Editor', permissions: {} });
+      const role = await createRole(owner.api, 'MKT', { name: 'Editor', permissions: {} });
 
       const res = await owner.api
         .projects({ projectKey: 'MKT' })
@@ -110,12 +107,13 @@ describe('invites', () => {
       expect(res.data).toMatchObject({ role: 'owner', roleId: null, roleName: null });
     });
 
-    it('rejects a roleId from another project with 400', async () => {
+    it('rejects a roleId from another team with 400', async () => {
       const owner = await setupOwner();
-      await owner.api.projects.post({ key: 'OPS', name: 'Operations' });
-      const foreign = await owner.api
-        .projects({ projectKey: 'OPS' })
-        .roles.post({ name: 'Ops', permissions: {} });
+      // Every project of a team shares its roles, so only a role of another team is
+      // out of reach here.
+      const stranger = authedApi((await signUpTestUser()).cookie);
+      await stranger.projects.post({ key: 'OPS', name: 'Operations' });
+      const foreign = await createRole(stranger, 'OPS', { name: 'Ops', permissions: {} });
 
       const res = await owner.api
         .projects({ projectKey: 'MKT' })
@@ -286,9 +284,7 @@ describe('invites', () => {
     it("joins the invitee on the invite's pinned custom role", async () => {
       const owner = await setupOwner();
       const invitee = await signUpTestUser();
-      const role = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Editor', permissions: {} });
+      const role = await createRole(owner.api, 'MKT', { name: 'Editor', permissions: {} });
       const created = await owner.api
         .projects({ projectKey: 'MKT' })
         .invites.post({ email: invitee.email, role: 'member', roleId: role.data!.id });

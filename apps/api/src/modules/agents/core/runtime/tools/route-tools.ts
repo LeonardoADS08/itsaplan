@@ -14,7 +14,7 @@ import { ALWAYS_ON_KEYS, normalizeToolKeys, toolMeta } from './catalog';
 // agent gets and binds them to its project.
 //
 // An agent's rights are therefore the intersection of two things: the actions it was
-// granted (catalog.ts, stored in ai_agent.tools) and what its project role permits.
+// granted (catalog.ts, stored in ai_agent.tools) and what its team role permits.
 // A tool it holds but its role forbids returns the route's normal 403.
 
 // Mastra accepts a JSON Schema wrapped in the ai-sdk schema protocol: an object

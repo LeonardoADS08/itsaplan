@@ -4,35 +4,39 @@ import { signUpTestUser, type TestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { PERMISSION_RESOURCES, PERMISSION_ACTIONS } from '#shared/permissions';
 
-// Integration coverage for the roles feature: the static permission catalog,
-// listing a project's roles (any member), and creating, updating, and deleting a
-// role (owner only). Roles are the per-project permission matrices assigned to
-// members; every project starts with one default "Member" role. Role management
-// is owner-only and deliberately not delegated through the permission matrix.
-// Real sessions against the real (test) database. See apps/api/AGENTS.md "Tests".
+// Integration coverage for the roles feature: the static permission catalog, the
+// two ways to list roles (a team's own list, and the list a project draws on), and
+// creating, updating, and deleting a role. Roles are the permission matrices a
+// team's projects assign to their members; every team starts with one default
+// "Member" role. Managing them is team-owner-only and deliberately not delegated
+// through the permission matrix. Real sessions against the real (test) database.
+// See apps/api/AGENTS.md "Tests".
 
-type Actor = { user: TestUser; api: ReturnType<typeof authedApi> };
+type Actor = { user: TestUser; api: ReturnType<typeof authedApi>; teamId: number };
 
-// Creates a project MKT owned by a fresh user and returns a Treaty client acting
-// as that owner. The first user in a reset DB is "god"; the owner still reaches
-// the project only through its project_member row, so this is a plain owner.
-async function setupOwner(): Promise<Actor> {
+// Creates a project MKT owned by a fresh user and returns a Treaty client acting as
+// that owner, with the team the account was registered with. The first user in a
+// reset DB is "god"; the owner still reaches the project only through its
+// project_member row, so this is a plain owner.
+async function setupOwner(projectKey = 'MKT'): Promise<Actor> {
   const user = await signUpTestUser();
-  const api = authedApi(user.cookie);
-  await api.projects.post({ key: 'MKT', name: 'Marketing' });
-  return { user, api };
+  const client = authedApi(user.cookie);
+  await client.projects.post({ key: projectKey, name: 'Marketing' });
+  const teams = await client.teams.get();
+  return { user, api: client, teamId: teams.data![0].id };
 }
 
 // Adds a fresh user to MKT on the default role by inviting them and accepting on
-// their behalf. Returns that user and a Treaty client acting as them.
+// their behalf. They join the project, not the team that owns it.
 async function addMember(owner: Actor): Promise<Actor> {
   const user = await signUpTestUser();
   const created = await owner.api
     .projects({ projectKey: 'MKT' })
     .invites.post({ email: user.email, role: 'member' });
-  const api = authedApi(user.cookie);
-  await api.invites({ token: created.data!.token }).accept.post();
-  return { user, api };
+  const client = authedApi(user.cookie);
+  await client.invites({ token: created.data!.token }).accept.post();
+  const teams = await client.teams.get();
+  return { user, api: client, teamId: teams.data![0].id };
 }
 
 describe('roles', () => {
@@ -52,11 +56,11 @@ describe('roles', () => {
     });
   });
 
-  describe('list — GET /projects/:projectKey/roles', () => {
-    it('returns the default Member role on a fresh project', async () => {
+  describe('list — GET /teams/:teamId/roles', () => {
+    it('returns the default Member role on a fresh team', async () => {
       const owner = await setupOwner();
 
-      const res = await owner.api.projects({ projectKey: 'MKT' }).roles.get();
+      const res = await owner.api.teams({ teamId: owner.teamId }).roles.get();
 
       expect(res.status).toBe(200);
       expect(res.data).toHaveLength(1);
@@ -69,20 +73,52 @@ describe('roles', () => {
 
     it('lists roles ordered by id, default first', async () => {
       const owner = await setupOwner();
-      await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Editor', permissions: {} });
-      await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Viewer', permissions: {} });
+      await owner.api.teams({ teamId: owner.teamId }).roles.post({
+        name: 'Editor',
+        permissions: {},
+      });
+      await owner.api.teams({ teamId: owner.teamId }).roles.post({
+        name: 'Viewer',
+        permissions: {},
+      });
 
-      const res = await owner.api.projects({ projectKey: 'MKT' }).roles.get();
+      const res = await owner.api.teams({ teamId: owner.teamId }).roles.get();
 
       expect(res.status).toBe(200);
       expect(res.data?.map((r) => r.name)).toEqual(['Member', 'Editor', 'Viewer']);
     });
 
-    it('is readable by a plain member', async () => {
+    it('denies someone outside the team with 404', async () => {
+      const owner = await setupOwner();
+      const member = await addMember(owner);
+
+      const res = await member.api.teams({ teamId: owner.teamId }).roles.get();
+      expect(res.status).toBe(404);
+    });
+
+    it('denies an anonymous request with 401', async () => {
+      const owner = await setupOwner();
+
+      const res = await api.teams({ teamId: owner.teamId }).roles.get();
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('list — GET /projects/:projectKey/roles', () => {
+    it("returns the roles of the project's team", async () => {
+      const owner = await setupOwner();
+      await owner.api.teams({ teamId: owner.teamId }).roles.post({
+        name: 'Editor',
+        permissions: {},
+      });
+
+      const res = await owner.api.projects({ projectKey: 'MKT' }).roles.get();
+
+      expect(res.status).toBe(200);
+      expect(res.data?.map((r) => r.name)).toEqual(['Member', 'Editor']);
+    });
+
+    it('is readable by a plain member, who is outside the team', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
 
@@ -99,20 +135,13 @@ describe('roles', () => {
       const res = await outsider.projects({ projectKey: 'MKT' }).roles.get();
       expect(res.status).toBe(403);
     });
-
-    it('denies an anonymous request with 401', async () => {
-      await setupOwner();
-
-      const res = await api.projects({ projectKey: 'MKT' }).roles.get();
-      expect(res.status).toBe(401);
-    });
   });
 
-  describe('create — POST /projects/:projectKey/roles', () => {
+  describe('create — POST /teams/:teamId/roles', () => {
     it('creates a non-default role, sanitizing the permission matrix', async () => {
       const owner = await setupOwner();
 
-      const res = await owner.api.projects({ projectKey: 'MKT' }).roles.post({
+      const res = await owner.api.teams({ teamId: owner.teamId }).roles.post({
         name: 'Editor',
         // Unknown keys are dropped; non-true values coerce to false; missing
         // entries default to false.
@@ -130,76 +159,72 @@ describe('roles', () => {
       expect((res.data?.permissions as Record<string, unknown>).not_a_resource).toBeUndefined();
     });
 
-    it('returns 409 for a duplicate role name in the same project', async () => {
+    it('returns 409 for a duplicate role name in the same team', async () => {
       const owner = await setupOwner();
-      await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Editor', permissions: {} });
+      await owner.api.teams({ teamId: owner.teamId }).roles.post({
+        name: 'Editor',
+        permissions: {},
+      });
 
-      const res = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Editor', permissions: {} });
+      const res = await owner.api.teams({ teamId: owner.teamId }).roles.post({
+        name: 'Editor',
+        permissions: {},
+      });
       expect(res.status).toBe(409);
     });
 
-    it('allows the same role name in a different project', async () => {
+    it('allows the same role name in a different team', async () => {
       const owner = await setupOwner();
-      await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Editor', permissions: {} });
-      await owner.api.projects.post({ key: 'OPS', name: 'Operations' });
+      await owner.api.teams({ teamId: owner.teamId }).roles.post({
+        name: 'Editor',
+        permissions: {},
+      });
+      const other = await setupOwner('OPS');
 
-      const res = await owner.api
-        .projects({ projectKey: 'OPS' })
-        .roles.post({ name: 'Editor', permissions: {} });
+      const res = await other.api.teams({ teamId: other.teamId }).roles.post({
+        name: 'Editor',
+        permissions: {},
+      });
       expect(res.status).toBe(201);
     });
 
     it('returns 400 for an empty name', async () => {
       const owner = await setupOwner();
 
-      const res = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: '', permissions: {} });
+      const res = await owner.api.teams({ teamId: owner.teamId }).roles.post({
+        name: '',
+        permissions: {},
+      });
       expect(res.status).toBe(400);
     });
 
-    it('denies a plain member with 403', async () => {
+    it('denies someone outside the team with 404', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
 
-      const res = await member.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Editor', permissions: {} });
-      expect(res.status).toBe(403);
-    });
-
-    it('denies a non-member with 403', async () => {
-      await setupOwner();
-      const outsider = authedApi((await signUpTestUser()).cookie);
-
-      const res = await outsider
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Editor', permissions: {} });
-      expect(res.status).toBe(403);
+      const res = await member.api.teams({ teamId: owner.teamId }).roles.post({
+        name: 'Editor',
+        permissions: {},
+      });
+      expect(res.status).toBe(404);
     });
   });
 
-  describe('update — PATCH /projects/:projectKey/roles/:roleId', () => {
-    // Creates a custom role on MKT and returns its id.
-    async function createRole(owner: Actor, name = 'Editor'): Promise<number> {
+  describe('update — PATCH /teams/:teamId/roles/:roleId', () => {
+    // Creates a custom role on the owner's team and returns its id.
+    async function makeRole(owner: Actor, name = 'Editor'): Promise<number> {
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles.post({ name, permissions: {} });
       return res.data!.id;
     }
 
     it('renames a role', async () => {
       const owner = await setupOwner();
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
 
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles({ roleId })
         .patch({ name: 'Reviewer' });
 
@@ -209,10 +234,10 @@ describe('roles', () => {
 
     it('replaces the permission matrix, sanitizing input', async () => {
       const owner = await setupOwner();
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
 
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles({ roleId })
         .patch({ permissions: { members_manage: { read: true, edit: 'no' } } });
 
@@ -223,9 +248,9 @@ describe('roles', () => {
 
     it('leaves the role unchanged for an empty body', async () => {
       const owner = await setupOwner();
-      const roleId = await createRole(owner, 'Editor');
+      const roleId = await makeRole(owner, 'Editor');
 
-      const res = await owner.api.projects({ projectKey: 'MKT' }).roles({ roleId }).patch({});
+      const res = await owner.api.teams({ teamId: owner.teamId }).roles({ roleId }).patch({});
 
       expect(res.status).toBe(200);
       expect(res.data).toMatchObject({ id: roleId, name: 'Editor' });
@@ -233,11 +258,11 @@ describe('roles', () => {
 
     it('can rename the default role', async () => {
       const owner = await setupOwner();
-      const list = await owner.api.projects({ projectKey: 'MKT' }).roles.get();
+      const list = await owner.api.teams({ teamId: owner.teamId }).roles.get();
       const defaultId = list.data!.find((r) => r.isDefault)!.id;
 
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles({ roleId: defaultId })
         .patch({ name: 'Contributor' });
 
@@ -249,33 +274,31 @@ describe('roles', () => {
       const owner = await setupOwner();
 
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles({ roleId: 999999 })
         .patch({ name: 'Nope' });
       expect(res.status).toBe(404);
     });
 
-    it('returns 404 for a role belonging to another project', async () => {
+    it('returns 404 for a role belonging to another team', async () => {
       const owner = await setupOwner();
-      await owner.api.projects.post({ key: 'OPS', name: 'Operations' });
-      const foreign = await owner.api
-        .projects({ projectKey: 'OPS' })
-        .roles.post({ name: 'Ops', permissions: {} });
+      const other = await setupOwner('OPS');
+      const foreign = await makeRole(other, 'Ops');
 
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles({ roleId: foreign.data!.id })
+        .teams({ teamId: owner.teamId })
+        .roles({ roleId: foreign })
         .patch({ name: 'Hijack' });
       expect(res.status).toBe(404);
     });
 
     it('returns 409 when renaming to an existing role name', async () => {
       const owner = await setupOwner();
-      await createRole(owner, 'Editor');
-      const viewerId = await createRole(owner, 'Viewer');
+      await makeRole(owner, 'Editor');
+      const viewerId = await makeRole(owner, 'Viewer');
 
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles({ roleId: viewerId })
         .patch({ name: 'Editor' });
       expect(res.status).toBe(409);
@@ -283,58 +306,58 @@ describe('roles', () => {
 
     it('returns 400 for an empty name', async () => {
       const owner = await setupOwner();
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
 
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles({ roleId })
         .patch({ name: '' });
       expect(res.status).toBe(400);
     });
 
-    it('denies a plain member with 403', async () => {
+    it('denies someone outside the team with 404', async () => {
       const owner = await setupOwner();
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
       const member = await addMember(owner);
 
       const res = await member.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles({ roleId })
         .patch({ name: 'Reviewer' });
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(404);
     });
   });
 
-  describe('delete — DELETE /projects/:projectKey/roles/:roleId', () => {
-    // Creates a custom role on MKT and returns its id.
-    async function createRole(owner: Actor, name = 'Editor'): Promise<number> {
+  describe('delete — DELETE /teams/:teamId/roles/:roleId', () => {
+    // Creates a custom role on the owner's team and returns its id.
+    async function makeRole(owner: Actor, name = 'Editor'): Promise<number> {
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles.post({ name, permissions: {} });
       return res.data!.id;
     }
 
     it('deletes a custom role', async () => {
       const owner = await setupOwner();
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
 
-      const res = await owner.api.projects({ projectKey: 'MKT' }).roles({ roleId }).delete();
+      const res = await owner.api.teams({ teamId: owner.teamId }).roles({ roleId }).delete();
       expect(res.status).toBe(204);
 
-      const list = await owner.api.projects({ projectKey: 'MKT' }).roles.get();
+      const list = await owner.api.teams({ teamId: owner.teamId }).roles.get();
       expect(list.data?.map((r) => r.id)).not.toContain(roleId);
     });
 
     it('reassigns members on the deleted role to the default role', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
       await owner.api
         .projects({ projectKey: 'MKT' })
         .members({ userId: member.user.userId })
         .patch({ role: 'member', roleId });
 
-      const res = await owner.api.projects({ projectKey: 'MKT' }).roles({ roleId }).delete();
+      const res = await owner.api.teams({ teamId: owner.teamId }).roles({ roleId }).delete();
       expect(res.status).toBe(204);
 
       // The member falls back to the default "Member" role rather than a dangling
@@ -347,17 +370,17 @@ describe('roles', () => {
 
     it('returns 400 when deleting the default role', async () => {
       const owner = await setupOwner();
-      const list = await owner.api.projects({ projectKey: 'MKT' }).roles.get();
+      const list = await owner.api.teams({ teamId: owner.teamId }).roles.get();
       const defaultId = list.data!.find((r) => r.isDefault)!.id;
 
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles({ roleId: defaultId })
         .delete();
       expect(res.status).toBe(400);
 
       // The default role is still there.
-      const after = await owner.api.projects({ projectKey: 'MKT' }).roles.get();
+      const after = await owner.api.teams({ teamId: owner.teamId }).roles.get();
       expect(after.data?.map((r) => r.id)).toContain(defaultId);
     });
 
@@ -365,42 +388,31 @@ describe('roles', () => {
       const owner = await setupOwner();
 
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
+        .teams({ teamId: owner.teamId })
         .roles({ roleId: 999999 })
         .delete();
       expect(res.status).toBe(404);
     });
 
-    it('returns 404 for a role belonging to another project', async () => {
+    it('returns 404 for a role belonging to another team', async () => {
       const owner = await setupOwner();
-      await owner.api.projects.post({ key: 'OPS', name: 'Operations' });
-      const foreign = await owner.api
-        .projects({ projectKey: 'OPS' })
-        .roles.post({ name: 'Ops', permissions: {} });
+      const other = await setupOwner('OPS');
+      const foreign = await makeRole(other, 'Ops');
 
       const res = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles({ roleId: foreign.data!.id })
+        .teams({ teamId: owner.teamId })
+        .roles({ roleId: foreign })
         .delete();
       expect(res.status).toBe(404);
     });
 
-    it('denies a plain member with 403', async () => {
+    it('denies someone outside the team with 404', async () => {
       const owner = await setupOwner();
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
       const member = await addMember(owner);
 
-      const res = await member.api.projects({ projectKey: 'MKT' }).roles({ roleId }).delete();
-      expect(res.status).toBe(403);
-    });
-
-    it('denies a non-member with 403', async () => {
-      const owner = await setupOwner();
-      const roleId = await createRole(owner);
-      const outsider = authedApi((await signUpTestUser()).cookie);
-
-      const res = await outsider.projects({ projectKey: 'MKT' }).roles({ roleId }).delete();
-      expect(res.status).toBe(403);
+      const res = await member.api.teams({ teamId: owner.teamId }).roles({ roleId }).delete();
+      expect(res.status).toBe(404);
     });
   });
 });

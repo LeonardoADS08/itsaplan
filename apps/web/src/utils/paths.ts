@@ -63,8 +63,6 @@ export const apiDocsPath = (key: string) => `${projectPath(key)}/api`;
 
 export const membersPath = (key: string) => `${projectPath(key)}/members`;
 
-export const rolesPath = (key: string) => `${projectPath(key)}/members/roles`;
-
 // Issues are addressed in the URL by their project-scoped number (the "42" in
 // "MKT-42"), not the internal database id: /project/MKT/issue/42.
 export const issuePath = (key: string, sequenceNumber: number) =>

@@ -40,28 +40,30 @@ function triState(values: boolean[]): boolean | 'indeterminate' {
   return false;
 }
 
-// Create or edit a custom role in a right-hand side panel (the same surface the
-// issue preview uses). Escape or a backdrop click closes it. The permission matrix
+// Create or edit a role of a team in a right-hand side panel, over the team panel
+// it was opened from. Escape or a backdrop click closes it. The permission matrix
 // groups resources and offers quick toggles per column (all resources) and per
 // group. On failure the reason is toasted globally and the panel stays open.
 export default function RoleEditorPanel({
-  projectKey,
+  teamId,
+  teamName,
   role,
   catalog,
   onClose,
 }: {
-  projectKey: string;
+  teamId: number;
+  teamName: string;
   role: Role | null;
   catalog: PermissionCatalog;
   onClose: () => void;
 }) {
-  const t = useTranslations('members.roles');
+  const t = useTranslations('teams.roles');
   const tCommon = useTranslations('common');
   const { actionLabel, resourceLabel, groupLabel } = usePermissionLabels();
   const [name, setName] = useState(role?.name ?? '');
   const [matrix, setMatrix] = useState<Permissions>(() => seedMatrix(catalog, role));
-  const createRole = useCreateRole(projectKey);
-  const updateRole = useUpdateRole(projectKey);
+  const createRole = useCreateRole(teamId);
+  const updateRole = useUpdateRole(teamId);
   const busy = createRole.isPending || updateRole.isPending;
 
   useExitOnEscape(onClose);
@@ -103,7 +105,7 @@ export default function RoleEditorPanel({
   return (
     <div
       data-role-editor
-      className="fixed inset-0 z-40 flex bg-black/20"
+      className="fixed inset-0 z-50 flex bg-black/20"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="ml-auto flex h-full w-full flex-col border-l bg-card sm:w-[680px] sm:max-w-[92vw]">
@@ -114,7 +116,7 @@ export default function RoleEditorPanel({
             </h2>
             <p className="text-xs text-muted-foreground">
               <span className="rounded bg-secondary px-1.5 py-0.5 font-medium text-secondary-foreground">
-                {projectKey}
+                {teamName}
               </span>{' '}
               {t('editorSubtitle')}
             </p>

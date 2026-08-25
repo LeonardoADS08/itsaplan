@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { authedApi } from '#tests/helpers/app';
 import { signUpTestUser, type TestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
+import { createRole } from '#tests/helpers/roles';
 
 // Integration coverage for the members feature: listing a project's members,
 // assigning a custom role to a member (owner only), and removing a member or
@@ -18,6 +19,15 @@ async function setupOwner(): Promise<Actor> {
   const user = await signUpTestUser();
   const api = authedApi(user.cookie);
   await api.projects.post({ key: 'MKT', name: 'Marketing' });
+  return { user, api };
+}
+
+// The owner of a project OPS in a team of their own, for the cases that need a role
+// no other team may assign.
+async function setupOwner2(): Promise<Actor> {
+  const user = await signUpTestUser();
+  const api = authedApi(user.cookie);
+  await api.projects.post({ key: 'OPS', name: 'Operations' });
   return { user, api };
 }
 
@@ -88,18 +98,16 @@ describe('members', () => {
   });
 
   describe('assign role — PATCH /projects/:projectKey/members/:userId', () => {
-    // Creates a custom role on MKT and returns its id.
-    async function createRole(owner: Actor, name = 'Editor'): Promise<number> {
-      const res = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name, permissions: {} });
+    // Creates a custom role on MKT's team and returns its id.
+    async function makeRole(owner: Actor, name = 'Editor'): Promise<number> {
+      const res = await createRole(owner.api, 'MKT', { name, permissions: {} });
       return res.data!.id;
     }
 
     it('assigns a custom role to a member', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
 
       const res = await owner.api
         .projects({ projectKey: 'MKT' })
@@ -115,7 +123,7 @@ describe('members', () => {
     it("clears a member's role with roleId null", async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
       await owner.api
         .projects({ projectKey: 'MKT' })
         .members({ userId: member.user.userId })
@@ -135,7 +143,7 @@ describe('members', () => {
     it('returns 404 for a userId that is not a member', async () => {
       const owner = await setupOwner();
       const stranger = await signUpTestUser();
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
 
       const res = await owner.api
         .projects({ projectKey: 'MKT' })
@@ -162,7 +170,7 @@ describe('members', () => {
     it('demotes an owner to a member role when another owner remains', async () => {
       const owner = await setupOwner();
       const other = await addMember(owner, 'owner');
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
 
       const res = await owner.api
         .projects({ projectKey: 'MKT' })
@@ -177,7 +185,7 @@ describe('members', () => {
 
     it('refuses to change your own role with 400', async () => {
       const owner = await setupOwner();
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
 
       const res = await owner.api
         .projects({ projectKey: 'MKT' })
@@ -191,14 +199,13 @@ describe('members', () => {
       expect(row).toMatchObject({ role: 'owner' });
     });
 
-    it('returns 400 when the role belongs to another project', async () => {
+    it('returns 400 when the role belongs to another team', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
-      // A role created under a different project must not be assignable here.
-      await owner.api.projects.post({ key: 'OPS', name: 'Operations' });
-      const foreign = await owner.api
-        .projects({ projectKey: 'OPS' })
-        .roles.post({ name: 'Ops', permissions: {} });
+      // Every project of a team shares its roles, so only a role of another team is
+      // out of reach here.
+      const stranger = await setupOwner2();
+      const foreign = await createRole(stranger.api, 'OPS', { name: 'Ops', permissions: {} });
 
       const res = await owner.api
         .projects({ projectKey: 'MKT' })
@@ -223,7 +230,7 @@ describe('members', () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
       const other = await addMember(owner);
-      const roleId = await createRole(owner);
+      const roleId = await makeRole(owner);
 
       const res = await member.api
         .projects({ projectKey: 'MKT' })

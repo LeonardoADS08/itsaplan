@@ -5,7 +5,7 @@ import { resetDb } from '#tests/helpers/db';
 import { untaggedRoutes } from '#tests/helpers/mcp';
 
 // AI agents attached to a project. Each agent is backed by a hidden bot user, owns a
-// better-auth API key, and is a project member acting under a project role. An
+// better-auth API key, and is a project member acting under a team role. An
 // external agent needs only a name + username, and its operator gets the key secret
 // (returned once on create and again on regenerate); an internal agent adds a model
 // configuration and its key stays server-side for its own runtime. Agents show up as
@@ -250,7 +250,7 @@ describe('ai agents', () => {
 
   it('assigns an authorization role to either kind of agent', async () => {
     const { asOwner } = await setup();
-    // The project ships with a default "Member" role; use its id.
+    // The team ships with a default "Member" role; use its id.
     const roles = await asOwner.projects({ projectKey: 'MKT' }).roles.get();
     const roleId = roles.data![0].id;
     const res = await agents(asOwner).post({
@@ -272,7 +272,7 @@ describe('ai agents', () => {
     expect(internal.data?.agent).toMatchObject({ kind: 'internal', roleId });
   });
 
-  it("puts an external agent on the project's default role when none is given", async () => {
+  it("puts an external agent on the team's default role when none is given", async () => {
     const { asOwner } = await setup();
     const roles = await asOwner.projects({ projectKey: 'MKT' }).roles.get();
     const defaultRole = roles.data!.find((r) => r.isDefault)!;
@@ -288,10 +288,13 @@ describe('ai agents', () => {
     expect(cleared.data).toMatchObject({ roleId: defaultRole.id });
   });
 
-  it('rejects a role from another project for an external agent', async () => {
+  it('rejects a role from another team for an external agent', async () => {
     const { asOwner } = await setup();
-    await asOwner.projects.post({ key: 'ENG', name: 'Engineering' });
-    const foreign = await asOwner.projects({ projectKey: 'ENG' }).roles.get();
+    // Every project of a team shares its roles, so only a role of another team is out
+    // of reach here.
+    const stranger = authedApi((await signUpTestUser({ name: 'Stranger' })).cookie);
+    await stranger.projects.post({ key: 'ENG', name: 'Engineering' });
+    const foreign = await stranger.projects({ projectKey: 'ENG' }).roles.get();
 
     const res = await agents(asOwner).post({
       name: 'Ext',

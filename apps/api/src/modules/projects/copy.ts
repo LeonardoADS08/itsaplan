@@ -2,7 +2,6 @@ import {
   db,
   project,
   projectMember,
-  projectRole,
   projectColumn,
   issueType,
   labelGroup,
@@ -19,8 +18,14 @@ import {
   projectSetting,
 } from '@repo/db';
 import { eq, inArray } from 'drizzle-orm';
-import { defaultMemberPermissions } from '#shared/permissions';
-import { DEFAULT_COLUMNS, mapProject, targetTeam, type ProjectRow } from './service';
+import { HttpError } from '#shared/lib';
+import {
+  DEFAULT_COLUMNS,
+  getProjectById,
+  mapProject,
+  targetTeam,
+  type ProjectRow,
+} from './service';
 import { GIT_SETTING_KEY } from '#modules/git/service';
 import { listAgents, createAgent, type NewAgentInput } from '#modules/agents/core/service';
 import {
@@ -49,7 +54,6 @@ export interface CopyProjectInclude {
   dashboards: boolean;
   actions: boolean;
   configuration: boolean;
-  roles: boolean;
   notificationProviders: boolean;
   webhooks: boolean;
   integrations: boolean;
@@ -68,7 +72,6 @@ export const COPY_INCLUDE_KEYS: (keyof CopyProjectInclude)[] = [
   'dashboards',
   'actions',
   'configuration',
-  'roles',
   'notificationProviders',
   'webhooks',
   'integrations',
@@ -228,7 +231,7 @@ async function readObjectBytes(key: string): Promise<{ bytes: Buffer; contentTyp
 // configuration, but none of its issues. The creator becomes the new project's owner.
 //
 // Pure-database entities (states, types, labels, custom fields, views, dashboards,
-// actions, roles, settings, webhooks, integration credentials, configured tools) are
+// actions, settings, webhooks, integration credentials, configured tools) are
 // copied in one transaction, recording old id → new id so the ids that views/actions
 // and tools/agents reference are remapped to the copied entities. Entities with side
 // effects outside the database are copied after that transaction commits: skills copy
@@ -251,12 +254,13 @@ export async function copyProject(
     field: new Map(),
     option: new Map(),
   };
-  const roleMap = new Map<number, number>();
   const integrationMap = new Map<number, number>();
   const toolMap = new Map<number, number>();
   const skillMap = new Map<number, number>();
   const agentMap = new Map<number, number>();
 
+  const source = await getProjectById(sourceProjectId);
+  if (!source) throw new HttpError(404, 'Project not found');
   const ownerTeam = await targetTeam(ownerId, teamId);
   const newProject = await db.transaction(async (tx) => {
     // The optional sections the source project shows and the estimate kinds it
@@ -290,45 +294,6 @@ export async function copyProject(
       .returning();
     const proj = mapProject({ ...row, teamName: ownerTeam.name });
     await tx.insert(projectMember).values({ projectId: proj.id, userId: ownerId, role: 'owner' });
-
-    // Roles. When copied, every source role is carried over (including which one is
-    // the default), so agents/members keep their role assignments. Otherwise the
-    // project starts with just the standard default "Member" role, as a fresh project
-    // does.
-    if (inc.roles) {
-      const roleRows = await tx
-        .select()
-        .from(projectRole)
-        .where(eq(projectRole.projectId, sourceProjectId));
-      for (const r of roleRows) {
-        const [created] = await tx
-          .insert(projectRole)
-          .values({
-            projectId: proj.id,
-            name: r.name,
-            isDefault: r.isDefault,
-            permissions: r.permissions,
-          })
-          .returning({ id: projectRole.id });
-        roleMap.set(r.id, created.id);
-      }
-      const hasDefault = roleRows.some((r) => r.isDefault);
-      if (!hasDefault) {
-        await tx.insert(projectRole).values({
-          projectId: proj.id,
-          name: 'Member',
-          isDefault: true,
-          permissions: defaultMemberPermissions(),
-        });
-      }
-    } else {
-      await tx.insert(projectRole).values({
-        projectId: proj.id,
-        name: 'Member',
-        isDefault: true,
-        permissions: defaultMemberPermissions(),
-      });
-    }
 
     // States (columns). When copied, every source column is carried over so views,
     // actions and issues have somewhere to map to. When not copied, the project is
@@ -649,6 +614,7 @@ export async function copyProject(
   // and cannot be recovered here — its operator resets it in the new project. Skill and
   // tool links are re-created only for the skills/tools that were also copied.
   if (inc.agents) {
+    const sameTeam = source.teamId === newProject.teamId;
     for (const a of await listAgents(sourceProjectId)) {
       const agentInput: NewAgentInput = {
         name: a.name,
@@ -670,7 +636,9 @@ export async function copyProject(
           return fieldId == null ? [] : [{ fieldId, delaySec: trigger.delaySec }];
         }),
         delegationDelaySec: a.delegationDelaySec,
-        roleId: a.roleId != null ? (roleMap.get(a.roleId) ?? null) : null,
+        // Roles belong to the team, so an agent keeps its own only inside the team
+        // it was copied from; elsewhere it starts on the target team's default role.
+        roleId: sameTeam ? a.roleId : null,
         // An 'owner'-scoped agent keeps its scope, bound to whoever made the copy —
         // the source owner need not be a member of the new project.
         runnerScope: a.runnerScope,

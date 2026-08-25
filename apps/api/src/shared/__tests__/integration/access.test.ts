@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { authedApi } from '../../../__tests__/helpers/app';
 import { signUpTestUser } from '../../../__tests__/helpers/auth';
 import { resetDb } from '../../../__tests__/helpers/db';
+import { createRole } from '#tests/helpers/roles';
 
 // Integration coverage for the shared access layer — the guard macros
 // (permission / projectMember / projectOwner / entityGuard) and the access.ts
@@ -73,9 +74,10 @@ describe('shared access', () => {
     it("resolves and enforces a custom role's matrix", async () => {
       const owner = await setupOwnerProject();
       // A role that grants reading actions but not creating them.
-      const role = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Auditor', permissions: { actions: { read: true, create: false } } });
+      const role = await createRole(owner.api, 'MKT', {
+        name: 'Auditor',
+        permissions: { actions: { read: true, create: false } },
+      });
       const member = await addMember(owner, { roleId: role.data!.id });
 
       const list = await member.api.projects({ projectKey: 'MKT' }).actions.get();
@@ -107,14 +109,10 @@ describe('shared access', () => {
       const owner = await setupOwnerProject();
       const member = await addMember(owner);
 
-      const asOwner = await owner.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Ops', permissions: {} });
-      expect(asOwner.status).toBe(201);
+      const asOwner = await owner.api.projects({ projectKey: 'MKT' }).patch({ name: 'Renamed' });
+      expect(asOwner.status).toBe(200);
 
-      const asMember = await member.api
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Sneaky', permissions: {} });
+      const asMember = await member.api.projects({ projectKey: 'MKT' }).patch({ name: 'Sneaky' });
       expect(asMember.status).toBe(403);
     });
   });

@@ -14,7 +14,7 @@
 // accepts and who may call it come from the route itself (see tools/route-tools.ts);
 // this file adds the allowlist, the UI copy, and the agent-only overrides (see
 // ToolMeta.overrides). An agent's effective rights are the intersection of these keys
-// and its project role.
+// and its team role.
 
 // The feature an action belongs to, so the config UI can group the catalog.
 export type ToolGroup = 'issues' | 'initiatives' | 'cycles' | 'notes' | 'project';

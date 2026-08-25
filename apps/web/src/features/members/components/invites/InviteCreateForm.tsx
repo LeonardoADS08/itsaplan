@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCreateInvite } from '@/services/members.service';
-import { useRolesQuery } from '@/services/roles.service';
+import { useProjectRolesQuery } from '@/services/roles.service';
 
 // Owner is not a custom role, so it sits outside the roles list under this value.
 const OWNER_VALUE = 'owner';
@@ -28,7 +28,7 @@ export default function InviteCreateForm({ projectKey }: { projectKey: string })
   const tCommon = useTranslations('common');
   const [email, setEmail] = useState('');
   const [roleValue, setRoleValue] = useState('');
-  const rolesQuery = useRolesQuery(projectKey);
+  const rolesQuery = useProjectRolesQuery(projectKey);
   const createInvite = useCreateInvite(projectKey);
 
   const roles = rolesQuery.data ?? [];

@@ -203,6 +203,13 @@
   box-shadow: var(--overlay-shadow);
 }
 
+/* A tooltip is never pointed at, so it must not take the pointer from what it
+   stands over. The rule sits on the popper wrapper, not on the tooltip itself: the
+   wrapper is the box that receives the events, and pointer-events is inherited. */
+[data-radix-popper-content-wrapper]:has(> [data-slot='tooltip-content']) {
+  pointer-events: none;
+}
+
 /* Dialogs and sheets cover a far larger area, so they carry a wider, deeper cast
    than a menu. */
 [data-slot='dialog-content'],

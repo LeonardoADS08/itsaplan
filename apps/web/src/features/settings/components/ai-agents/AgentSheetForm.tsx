@@ -12,7 +12,7 @@ import {
   useIntegrationModelsQuery,
   useIntegrationOptionsQuery,
 } from '@/services/integrations.service';
-import { useRolesQuery } from '@/services/roles.service';
+import { useProjectRolesQuery } from '@/services/roles.service';
 import {
   useSkillsQuery,
   useAgentSkillsQuery,
@@ -86,7 +86,7 @@ export function AgentSheetForm({
     projectKey,
     value.kind === 'internal' ? selectedProvider : null,
   );
-  const rolesQuery = useRolesQuery(projectKey, value.kind === 'external');
+  const rolesQuery = useProjectRolesQuery(projectKey, value.kind === 'external');
   const skillsLibraryQuery = useSkillsQuery(
     value.kind === 'internal' && canManageSkills ? projectKey : null,
   );

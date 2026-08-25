@@ -10,6 +10,7 @@ import { buildRouteTools } from '../../runtime/tools/route-tools';
 import { AGENT_ACTIONS, ALWAYS_ON_ACTIONS } from '../../runtime/tools/catalog';
 import { routeTools } from '#mcp/generate';
 import { getMcpApp } from '#mcp/app-ref';
+import { createRole } from '#tests/helpers/roles';
 
 // The tools an internal agent runs with, built from the routes tagged mcpTool() and
 // dispatched in process with the agent's own API key. What is asserted here is the
@@ -195,14 +196,14 @@ describe('internal agent route tools', () => {
     expect(await run(tools, 'get_project')).toMatchObject({ columns: expect.any(Array) });
   });
 
-  it("enforces the agent's project role: a forbidden action returns the route's error", async () => {
+  it("enforces the agent's role: a forbidden action returns the route's error", async () => {
     const { asOwner } = await setup();
     const view = await asOwner.projects({ projectKey: 'MKT' }).get();
     const columnId = view.data?.columns[0]?.id;
     if (columnId === undefined) throw new Error('Test project has no columns');
 
     // A role that may read work items but not create them.
-    const role = await asOwner.projects({ projectKey: 'MKT' }).roles.post({
+    const role = await createRole(asOwner, 'MKT', {
       name: 'Read only',
       permissions: { work_items: { create: false, edit: false, read: true, delete: false } },
     });

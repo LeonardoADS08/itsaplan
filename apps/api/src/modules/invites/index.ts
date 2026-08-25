@@ -46,13 +46,13 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
   .post(
     '/projects/:projectKey/invites',
     async ({ project, body, user, set }) => {
-      // For a member invite, an explicit roleId must name a role in this project;
-      // null (or omitted) falls back to the project's default role on accept. An
+      // For a member invite, an explicit roleId must name a role of this project's
+      // team; null (or omitted) falls back to the team's default role on accept. An
       // owner invite ignores roleId (owners bypass roles).
       const roleId = body.role === 'member' ? (body.roleId ?? null) : null;
       if (roleId != null) {
-        const role = await getRole(project.id, roleId);
-        if (!role) throw new HttpError(400, 'roleId does not belong to this project');
+        const role = await getRole(project.teamId, roleId);
+        if (!role) throw new HttpError(400, "roleId does not belong to this project's team");
       }
       const invite = await createInvite({
         projectId: project.id,

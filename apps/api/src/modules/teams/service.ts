@@ -1,7 +1,17 @@
-import { db, issue, issueActivity, project, projectMember, team, teamMember, user } from '@repo/db';
+import {
+  db,
+  issue,
+  issueActivity,
+  project,
+  projectMember,
+  team,
+  teamMember,
+  teamRole,
+  user,
+} from '@repo/db';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { HttpError, iso } from '#shared/lib';
-import type { Permissions } from '#shared/permissions';
+import { defaultMemberPermissions, type Permissions } from '#shared/permissions';
 import { listMemberContexts, listMembers, type MemberRole } from '#modules/members/service';
 import { getStats, type StatsDto } from '#modules/analytics/service';
 
@@ -38,6 +48,7 @@ export interface TeamProjectRow {
   name: string;
   description: string;
   memberCount: number;
+  owners: { userId: string; name: string; image: string | null }[];
   isMember: boolean;
   createdAt: string;
 }
@@ -143,7 +154,7 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
   const [row] = await loadTeamRows(userId, teamId);
   if (!row) return null;
 
-  const [members, projects] = await Promise.all([
+  const [members, projects, projectOwners] = await Promise.all([
     db
       .select({
         userId: user.id,
@@ -172,7 +183,26 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
       .where(eq(project.teamId, teamId))
       .groupBy(project.id)
       .orderBy(project.key),
+    db
+      .select({
+        projectId: projectMember.projectId,
+        userId: user.id,
+        name: user.name,
+        image: user.image,
+      })
+      .from(projectMember)
+      .innerJoin(project, eq(project.id, projectMember.projectId))
+      .innerJoin(user, eq(user.id, projectMember.userId))
+      .where(and(eq(project.teamId, teamId), eq(projectMember.role, 'owner')))
+      .orderBy(user.name),
   ]);
+
+  const ownersByProject = new Map<number, TeamProjectRow['owners']>();
+  for (const o of projectOwners) {
+    const owners = ownersByProject.get(o.projectId) ?? [];
+    owners.push({ userId: o.userId, name: o.name, image: o.image });
+    ownersByProject.set(o.projectId, owners);
+  }
 
   return {
     ...row,
@@ -190,6 +220,7 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
       name: p.name,
       description: p.description,
       memberCount: p.memberCount,
+      owners: ownersByProject.get(p.id) ?? [],
       isMember: p.isMember ?? false,
       createdAt: iso(p.createdAt),
     })),
@@ -268,6 +299,14 @@ export async function createTeam(name: string, ownerId: string): Promise<TeamRow
       .insert(teamMember)
       .values({ teamId: row.id, userId: ownerId, role: 'owner' })
       .returning();
+    // The roles the team's projects assign live on the team, so it starts with the
+    // default one, as the sign-up hook in @repo/auth does for the team it creates.
+    await tx.insert(teamRole).values({
+      teamId: row.id,
+      name: 'Member',
+      isDefault: true,
+      permissions: defaultMemberPermissions(),
+    });
     return {
       id: row.id,
       name: row.name,

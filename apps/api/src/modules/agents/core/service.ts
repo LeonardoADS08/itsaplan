@@ -3,8 +3,9 @@ import {
   aiAgent,
   user,
   apikey,
+  project,
   projectMember,
-  projectRole,
+  teamRole,
   agentSkillLink,
   agentToolLink,
   agentFieldTrigger,
@@ -26,7 +27,7 @@ import { listAgentMemberFieldIds } from '#modules/custom-fields/service';
 // (apikey.reference_id).
 //
 // Both kinds of agent act through the same API under the same authorization. Each
-// owns an API key and a project_member row carrying a project role, so its requests
+// owns an API key and a project_member row carrying a team role, so its requests
 // are checked by the normal permission matrix. The kinds differ in who drives them:
 // an external agent is driven over HTTP by its operator, who holds the key; an
 // internal agent is driven by the built-in runtime, carries a model configuration,
@@ -76,8 +77,8 @@ export interface AiAgentRow {
   fieldTriggers: FieldTrigger[];
   // How long a delegation run waits before it can be claimed.
   delegationDelaySec: number;
-  // The project_role the bot user acts under. NULL falls back to the project's
-  // default member permissions.
+  // The team_role the bot user acts under. NULL falls back to the built-in default
+  // member permissions.
   roleId: number | null;
   // The member who created the agent, and whose runs an 'owner'-scoped runner is
   // limited to. 'project' scope lets the runner take any member's runs.
@@ -382,30 +383,33 @@ async function assertModelCredential(
   }
 }
 
-// The role an external agent acts under. It is always an explicit role of the
-// project — the operator drives it over HTTP, so what it may do has to be visible on
-// the Roles page rather than resolved from a built-in default. A role from another
-// project is rejected; no role given means the project's default one ("Member").
+// The role an external agent acts under. It is always an explicit role of the team
+// that owns the project — the operator drives it over HTTP, so what it may do has to
+// be visible on the team's roles list rather than resolved from a built-in default. A
+// role of another team is rejected; no role given means the team's default one
+// ("Member").
 async function resolveExternalRoleId(
   projectId: number,
   roleId: number | null | undefined,
 ): Promise<number> {
-  if (roleId != null) {
-    const rows = await db
-      .select({ id: projectRole.id })
-      .from(projectRole)
-      .where(and(eq(projectRole.id, roleId), eq(projectRole.projectId, projectId)))
-      .limit(1);
-    if (!rows[0]) throw new HttpError(400, 'Role not found in this project');
-    return rows[0].id;
-  }
   const rows = await db
-    .select({ id: projectRole.id })
-    .from(projectRole)
-    .where(and(eq(projectRole.projectId, projectId), eq(projectRole.isDefault, true)))
+    .select({ id: teamRole.id })
+    .from(teamRole)
+    .innerJoin(project, eq(project.teamId, teamRole.teamId))
+    .where(
+      and(
+        eq(project.id, projectId),
+        roleId != null ? eq(teamRole.id, roleId) : eq(teamRole.isDefault, true),
+      ),
+    )
     .limit(1);
-  if (!rows[0]) throw new HttpError(400, 'This project has no default role');
-  return rows[0].id;
+  if (rows[0]) return rows[0].id;
+  throw new HttpError(
+    400,
+    roleId != null
+      ? "Role not found in this project's team"
+      : "This project's team has no default role",
+  );
 }
 
 export interface NewAgentInput {
@@ -486,10 +490,10 @@ export async function createAgent(
   await assertUsernameFree(projectId, input.username);
   if (isInternal) await assertModelCredential(projectId, input.modelCredentialId);
 
-  // Every agent acts under a project role and so needs a project_member row for the
+  // Every agent acts under a team role and so needs a project_member row for the
   // permission checks to apply to its requests. An external agent always carries an
-  // explicit role of the project; an internal one may leave it NULL and fall back to
-  // the built-in default member permissions.
+  // explicit role of the project's team; an internal one may leave it NULL and fall
+  // back to the built-in default member permissions.
   const roleId = isInternal
     ? (input.roleId ?? null)
     : await resolveExternalRoleId(projectId, input.roleId);

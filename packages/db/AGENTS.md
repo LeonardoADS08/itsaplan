@@ -10,6 +10,9 @@ See root `AGENTS.md` for monorepo-wide rules.
   regenerate with `bun run auth:generate` (from the auth package / root).
 - `src/schema/app.ts` — hand-written application tables. Add domain tables here.
 - `src/schema/index.ts` — re-exports every table; `drizzle.config.ts` points at it.
+- `src/permissions.ts` — the permission matrix stored in `team_role.permissions`: the
+  resource/action catalog, the default member role, and the normalizer. It lives here
+  because the API and the sign-up hook in `@repo/auth` both write it.
 - `src/migrate.ts` — programmatic migrator run on api container startup (no drizzle-kit in prod).
 - `drizzle/` — generated SQL migrations (committed).
 

@@ -52,11 +52,17 @@ export const qk = {
   analytics: (projectKey: string, kind: string, params?: unknown) =>
     ['analytics', projectKey, kind, params ?? {}] as const,
   analyticsForProject: (projectKey: string) => ['analytics', projectKey] as const,
-  // Project membership, invite links, and custom roles (the Members section). The
-  // permission catalog is app-static, so it is not project-scoped.
+  // Project membership and invite links (the Members section).
   members: (projectKey: string) => ['members', projectKey] as const,
+  // Every project's member list, for a write that changes what any of them resolves
+  // to (a role edited on the team they belong to).
+  anyMembers: ['members'] as const,
   invites: (projectKey: string) => ['invites', projectKey] as const,
-  roles: (projectKey: string) => ['roles', projectKey] as const,
+  // The roles a project assigns from, and the list its team manages. The permission
+  // catalog is app-static, so it is scoped to neither.
+  projectRoles: (projectKey: string) => ['projectRoles', projectKey] as const,
+  anyProjectRoles: ['projectRoles'] as const,
+  teamRoles: (teamId: number) => ['teamRoles', teamId] as const,
   permissionCatalog: ['permissionCatalog'] as const,
   // A project's AI agents (the AI Agents settings section). The tool catalog is
   // project-scoped on the API, so it hangs off the same key with an 'tools' tail.

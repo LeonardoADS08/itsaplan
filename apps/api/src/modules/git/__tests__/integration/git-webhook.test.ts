@@ -4,6 +4,7 @@ import { app } from '../../../../app';
 import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
+import { createRole } from '#tests/helpers/roles';
 
 // The inbound repository webhook: a verified pull request delivery moves the issues
 // its magic words name, through the same path a user's move takes (activity entries,
@@ -364,7 +365,7 @@ describe('Repository webhook', () => {
         { create: false, edit: false, read: false, delete: false },
       ]),
     );
-    const role = await asOwner.projects({ projectKey: 'MKT' }).roles.post({
+    const role = await createRole(asOwner, 'MKT', {
       name: 'Integrations viewer',
       permissions: {
         ...emptyMatrix,

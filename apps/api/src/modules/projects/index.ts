@@ -12,6 +12,7 @@ import { listColumns } from '#modules/columns/service';
 import { listIssueTypes } from '#modules/issue-types/service';
 import { listLabels, listLabelGroups } from '#modules/labels/service';
 import { listCustomFields } from '#modules/custom-fields/service';
+import { getTeamMembership } from '#modules/teams/service';
 import {
   AutoArchiveResponse,
   EstimatesResponse,
@@ -130,7 +131,8 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
   .get(
     '/projects/:projectKey',
     async ({ project, user }) => {
-      const [columns, issueTypes, labels, labelGroups, assignees, customFields, viewer] =
+      const userId = requireUser(user).id;
+      const [columns, issueTypes, labels, labelGroups, assignees, customFields, viewer, teamRole] =
         await Promise.all([
           listColumns(project.id),
           listIssueTypes(project.id),
@@ -138,7 +140,8 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
           listLabelGroups(project.id),
           listAssigneeCandidates(project.id),
           listCustomFields(project.id, { allTypes: true }),
-          getMemberContext(project.id, requireUser(user).id),
+          getMemberContext(project.id, userId),
+          getTeamMembership(project.teamId, userId),
         ]);
       // The permission guard already asserted membership, so a context always
       // exists here; guard against a race (membership revoked mid-request).
@@ -151,7 +154,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
         labelGroups,
         assignees,
         customFields,
-        viewer: { role: viewer.role },
+        viewer: { role: viewer.role, teamRole },
         permissions: viewer.permissions,
       };
     },
@@ -207,8 +210,9 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
 
   // Updates the project's settings. Each field is optional; only the supplied ones
   // change. mcpEnabled toggles MCP access to the project. features turns the
-  // optional sections on or off. Owner-only. Not an MCP tool: it governs MCP
-  // access, so an agent must not change it.
+  // optional sections on or off. Open to the project's owner and to an owner or
+  // manager of the team that runs it. Not an MCP tool: it governs MCP access, so an
+  // agent must not change it.
   .patch(
     '/projects/:projectKey/settings',
     async ({ project, body }) => {
@@ -227,7 +231,7 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
     },
     {
       body: updateProjectSettingsBody,
-      projectOwner: true,
+      projectAdmin: true,
       response: { 200: ProjectSettingsResponse, ...commonErrors },
       detail: { summary: "Update a project's settings" },
     },

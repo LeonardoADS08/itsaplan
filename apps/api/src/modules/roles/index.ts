@@ -12,13 +12,15 @@ import {
   createRoleBody,
   projectKeyParams,
   roleParams,
+  teamParams,
   updateRoleBody,
 } from './model';
 
-// Roles CRUD. Listing is open to any member; creating, editing, and deleting a
-// role are owner-only. Role management is deliberately not delegated through the
-// permission matrix (a member with members_manage could otherwise grant itself a
-// more powerful role) — only owners manage roles.
+// Roles CRUD. A role belongs to a team and every project the team owns assigns from
+// that one list, so the project route only reads them. Creating, editing and
+// deleting a role is team-owner-only: role management is deliberately not delegated
+// through the permission matrix, since a member with members_manage could otherwise
+// grant itself a more powerful role.
 export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] } })
   .use(guards)
 
@@ -36,38 +38,47 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
     },
   )
 
-  .get('/projects/:projectKey/roles', ({ project }) => listRoles(project.id), {
+  // The roles a project assigns from — its team's. Open to any project member, who
+  // needs the names to read the member list even without access to the team.
+  .get('/projects/:projectKey/roles', ({ project }) => listRoles(project.teamId), {
     params: projectKeyParams,
     projectMember: true,
     response: { 200: t.Array(RoleResponse), ...accessErrors },
-    detail: { summary: "List a project's roles", ...mcpTool('list_roles') },
+    detail: { summary: "List the roles a project's team offers", ...mcpTool('list_roles') },
+  })
+
+  .get('/teams/:teamId/roles', ({ membership }) => listRoles(membership.teamId), {
+    params: teamParams,
+    teamMember: true,
+    response: { 200: t.Array(RoleResponse), ...accessErrors },
+    detail: { summary: "List a team's roles" },
   })
 
   .post(
-    '/projects/:projectKey/roles',
-    async ({ project, body, set }) => {
+    '/teams/:teamId/roles',
+    async ({ membership, body, set }) => {
       try {
         set.status = 201;
-        return await createRole(project.id, body);
+        return await createRole(membership.teamId, body);
       } catch (err) {
         rethrowDuplicate(err, 'role');
       }
     },
     {
-      params: projectKeyParams,
+      params: teamParams,
       body: createRoleBody,
-      projectOwner: true,
+      teamOwner: true,
       response: { 201: RoleResponse, ...commonErrors, ...errors(409) },
       detail: { summary: 'Create a role', ...mcpTool('create_role') },
     },
   )
 
   .patch(
-    '/projects/:projectKey/roles/:roleId',
-    async ({ project, params, body }) => {
+    '/teams/:teamId/roles/:roleId',
+    async ({ membership, params, body }) => {
       let role;
       try {
-        role = await updateRole(project.id, params.roleId, body);
+        role = await updateRole(membership.teamId, params.roleId, body);
       } catch (err) {
         rethrowDuplicate(err, 'role');
       }
@@ -77,7 +88,7 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
     {
       params: roleParams,
       body: updateRoleBody,
-      projectOwner: true,
+      teamOwner: true,
       response: { 200: RoleResponse, ...commonErrors, ...errors(409) },
       detail: {
         summary: 'Update a role',
@@ -90,17 +101,17 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
   // Deletes a custom role. The default role cannot be deleted. Members on the
   // role are reassigned to the default role.
   .delete(
-    '/projects/:projectKey/roles/:roleId',
-    async ({ project, params }) => {
-      const role = await getRole(project.id, params.roleId);
+    '/teams/:teamId/roles/:roleId',
+    async ({ membership, params }) => {
+      const role = await getRole(membership.teamId, params.roleId);
       if (!role) throw new HttpError(404, 'Role not found');
       if (role.isDefault) throw new HttpError(400, 'The default role cannot be deleted');
-      await deleteRole(project.id, params.roleId);
+      await deleteRole(membership.teamId, params.roleId);
       return noContent();
     },
     {
       params: roleParams,
-      projectOwner: true,
+      teamOwner: true,
       response: { 204: t.Void(), ...commonErrors },
       detail: {
         summary: 'Delete a role',

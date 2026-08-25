@@ -18,7 +18,7 @@ export function toPublicProjectDetail(
     labelGroups: scaffold.labelGroups,
     assignees: scaffold.assignees.map((a) => ({ ...a, email: '', username: null })),
     customFields: scaffold.customFields,
-    viewer: { role: 'member' },
+    viewer: { role: 'member', teamRole: null },
     permissions: {} as Permissions,
     issues,
     // A share bundle carries no cycle list; a view grouped by cycle gets its lanes

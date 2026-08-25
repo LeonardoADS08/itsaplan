@@ -48,6 +48,14 @@ export const TeamDetailResponse = t.Composite([
         name: t.String(),
         description: t.String(),
         memberCount: t.Number(),
+        owners: t.Array(
+          t.Object({
+            userId: t.String(),
+            name: t.String(),
+            image: t.Nullable(t.String()),
+          }),
+          { description: 'The project members who own it.' },
+        ),
         isMember: t.Boolean(),
         createdAt: t.String(),
       }),

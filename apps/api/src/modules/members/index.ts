@@ -55,8 +55,8 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
 
       const roleId = body.roleId ?? null;
       if (roleId != null) {
-        const role = await getRole(project.id, roleId);
-        if (!role) throw new HttpError(400, 'roleId does not belong to this project');
+        const role = await getRole(project.teamId, roleId);
+        if (!role) throw new HttpError(400, "roleId does not belong to this project's team");
       }
       // Demoting an owner to a member must keep at least one owner on the project.
       if (target === 'owner' && (await countOwners(project.id)) === 1) {

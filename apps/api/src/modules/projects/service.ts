@@ -4,7 +4,7 @@ import {
   project,
   projectColumn,
   projectMember,
-  projectRole,
+  teamRole,
   projectSetting,
   team,
   teamMember,
@@ -110,12 +110,12 @@ export async function listProjects(
     .select({
       ...projectWithTeam,
       memberRole: projectMember.role,
-      rolePermissions: projectRole.permissions,
+      rolePermissions: teamRole.permissions,
     })
     .from(project)
     .innerJoin(team, eq(team.id, project.teamId))
     .innerJoin(projectMember, eq(projectMember.projectId, project.id))
-    .leftJoin(projectRole, eq(projectRole.id, projectMember.roleId))
+    .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
     .where(where)
     .orderBy(project.key);
   return rows.map(({ memberRole, rolePermissions, ...row }) => {
@@ -281,14 +281,6 @@ export async function createProject(
       })
       .returning();
     await tx.insert(projectMember).values({ projectId: row.id, userId: ownerId, role: 'owner' });
-    // Every project starts with a default "Member" role, assigned to members that
-    // join through an invite.
-    await tx.insert(projectRole).values({
-      projectId: row.id,
-      name: 'Member',
-      isDefault: true,
-      permissions: defaultMemberPermissions(),
-    });
     for (const [position, column] of DEFAULT_COLUMNS.entries()) {
       await tx.insert(projectColumn).values({
         projectId: row.id,

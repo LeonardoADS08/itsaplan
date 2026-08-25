@@ -32,6 +32,53 @@
       "member": "Участник"
     }
   },
+  "roles": {
+    "title": "Роли проектов",
+    "ownerOnly": "Управлять ролями может только владелец команды.",
+    "empty": "Ролей пока нет. Создайте роль, чтобы выдать ограниченный доступ.",
+    "default": "По умолчанию",
+    "editAction": "Редактировать роль",
+    "deleteAction": "Удалить роль",
+    "defaultUndeletable": "Роль по умолчанию удалить нельзя",
+    "deleteTitle": "Удалить роль «{name}»",
+    "deleteDescription": "Участники с этой ролью будут переведены на роль по умолчанию. Действие нельзя отменить.",
+    "newRole": "Новая роль",
+    "editorTitleEdit": "Редактировать роль",
+    "editorTitleNew": "Новая роль",
+    "editorSubtitle": "права роли",
+    "namePlaceholder": "напр. Contributor",
+    "resourceColumn": "Ресурс",
+    "toggleActionAll": "Переключить «{action}» для всех ресурсов",
+    "toggleGroupAll": "Переключить все права группы {group}",
+    "toggleActionGroup": "Переключить «{action}» для {group}",
+    "cellAria": "{resource}: {action}",
+    "saveRole": "Сохранить роль",
+    "createRole": "Создать роль",
+    "copyRoles": "Скопировать роли",
+    "pasteRoles": "Вставить роли",
+    "nothingToCopy": "Нет своих ролей для копирования.",
+    "copiedRoles": "Скопировано {count, plural, one {# роль} few {# роли} many {# ролей} other {# роли}}.",
+    "copyFailed": "Не удалось скопировать в буфер обмена.",
+    "readFailed": "Не удалось прочитать буфер обмена.",
+    "parseFailed": "Не удалось прочитать роли из буфера обмена.",
+    "import": {
+      "title": "Применить роли из буфера обмена",
+      "summary": "Будет применено {count, plural, one {# роль} few {# роли} many {# ролей} other {# роли}}. Перезапись роли заменяет её матрицу прав; участники сохраняют роль.",
+      "preview": "Предпросмотр прав",
+      "apply": "Применить {count, plural, =0 {роли} one {# роль} few {# роли} many {# ролей} other {# роли}}",
+      "applied": "Роли применены: создано {created}, обновлено {updated}{skipped, plural, =0 {} other {, пропущено #}}.",
+      "actions": {
+        "create": "Новая",
+        "update": "Перезаписать",
+        "skip": "Пропустить (по умолчанию)"
+      }
+    },
+    "transferErrors": {
+      "invalidJson": "В буфере обмена нет корректного JSON.",
+      "notAnExport": "В буфере обмена нет экспорта ролей.",
+      "empty": "Экспорт ролей пуст."
+    }
+  },
   "panel": {
     "created": "создана {date}",
     "projects": "Проекты",
@@ -40,6 +87,7 @@
     "teamMembers": "Участники команды",
     "projectMembers": "Участники проекта",
     "memberCount": "{count, plural, one {# участник} few {# участника} many {# участников} other {# участника}}",
+    "owners": "Владельцы: {names}",
     "joined": "с {date}",
     "openProject": "Открыть проект",
     "noProjectMembers": "К этому проекту пока ни у кого нет доступа.",

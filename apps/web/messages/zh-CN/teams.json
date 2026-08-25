@@ -32,6 +32,53 @@
       "member": "成员"
     }
   },
+  "roles": {
+    "title": "项目角色",
+    "ownerOnly": "只有团队所有者可以管理角色。",
+    "empty": "暂无角色。创建一个角色以授予有限访问权限。",
+    "default": "默认",
+    "editAction": "编辑角色",
+    "deleteAction": "删除角色",
+    "defaultUndeletable": "无法删除默认角色",
+    "deleteTitle": "删除角色“{name}”",
+    "deleteDescription": "使用此角色的成员将改为默认角色。此操作无法撤销。",
+    "newRole": "新建角色",
+    "editorTitleEdit": "编辑角色",
+    "editorTitleNew": "新建角色",
+    "editorSubtitle": "角色权限",
+    "namePlaceholder": "例如：贡献者",
+    "resourceColumn": "资源",
+    "toggleActionAll": "切换所有资源的“{action}”权限",
+    "toggleGroupAll": "切换“{group}”的所有权限",
+    "toggleActionGroup": "切换“{group}”的“{action}”权限",
+    "cellAria": "{resource}：{action}",
+    "saveRole": "保存角色",
+    "createRole": "新建角色",
+    "copyRoles": "复制角色",
+    "pasteRoles": "粘贴角色",
+    "nothingToCopy": "没有可复制的自定义角色。",
+    "copiedRoles": "已复制 {count, plural, other {# 个角色}}。",
+    "copyFailed": "无法复制到剪贴板。",
+    "readFailed": "无法读取剪贴板。",
+    "parseFailed": "无法从剪贴板读取角色。",
+    "import": {
+      "title": "应用剪贴板中的角色",
+      "summary": "将应用 {count, plural, other {# 个角色}}。覆盖角色会替换其权限矩阵，成员仍保留该角色。",
+      "preview": "预览权限",
+      "apply": "{count, plural, =0 {应用角色} one {应用 # 个角色} other {应用 # 个角色}}",
+      "applied": "已应用角色：新建 {created} 个，更新 {updated} 个{skipped, plural, =0 {} other {，跳过 # 个}}。",
+      "actions": {
+        "create": "新建",
+        "update": "覆盖",
+        "skip": "跳过（默认）"
+      }
+    },
+    "transferErrors": {
+      "invalidJson": "剪贴板中不是有效的 JSON。",
+      "notAnExport": "剪贴板中不是角色导出数据。",
+      "empty": "角色导出数据为空。"
+    }
+  },
   "panel": {
     "created": "创建于 {date}",
     "projects": "项目",
@@ -40,6 +87,7 @@
     "teamMembers": "团队成员",
     "projectMembers": "项目成员",
     "memberCount": "{count, plural, other {# 位成员}}",
+    "owners": "所有者：{names}",
     "joined": "加入于 {date}",
     "openProject": "打开项目",
     "noProjectMembers": "目前还没有人可以访问该项目。",

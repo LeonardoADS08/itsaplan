@@ -10,7 +10,7 @@ import McpConnectionGuide from './components/McpConnectionGuide';
 export default function McpServerPage() {
   const t = useTranslations('mcp');
   const { project } = useShell();
-  const { isOwner } = usePermissions();
+  const { isAdmin } = usePermissions();
 
   return (
     <SectionPageView
@@ -24,7 +24,7 @@ export default function McpServerPage() {
           projectKey={project?.project.key ?? ''}
           enabled={project?.project.mcpEnabled ?? false}
           isLoading={!project}
-          canManage={isOwner}
+          canManage={isAdmin}
         />
         <McpConnectionGuide />
       </div>

@@ -11,12 +11,14 @@ import { useTeamQuery } from '@/services/teams.service';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import NewProjectModal from '@/components/layout/NewProjectModal';
 import TeamMemberRow from './TeamMemberRow';
 import TeamProjectRow from './TeamProjectRow';
+import TeamRolesSection from './roles/TeamRolesSection';
 
-// One team in a right-hand side panel: the projects it owns and its members.
-// Escape or a backdrop click closes it.
+// One team in a right-hand side panel: the projects it owns, the roles those projects
+// assign from, and its members. Escape or a backdrop click closes it.
 export default function TeamDetailPanel({
   teamId,
   onClose,
@@ -30,10 +32,15 @@ export default function TeamDetailPanel({
   const { data: team } = useTeamQuery(teamId);
   const router = useRouter();
   const [creating, setCreating] = useState(false);
+  // The role editor is a panel over this one, so it takes Escape while it is open.
+  const [roleEditorOpen, setRoleEditorOpen] = useState(false);
   // Owners and managers run the team's projects; a plain member only reads them.
   const canCreateProject = !!team && team.role !== 'member';
+  // Roles decide what a member of any project of the team may do, so only the owner
+  // manages them.
+  const canManageRoles = team?.role === 'owner';
 
-  useExitOnEscape(onClose);
+  useExitOnEscape(onClose, !roleEditorOpen);
 
   return (
     <div
@@ -78,15 +85,20 @@ export default function TeamDetailPanel({
                   <h3 className="text-sm font-medium">{t('projects')}</h3>
                   <span className="text-xs text-muted-foreground">{team.projectCount}</span>
                   {canCreateProject && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ms-auto h-7 gap-1.5 text-muted-foreground hover:text-foreground"
-                      onClick={() => setCreating(true)}
-                    >
-                      <Plus className="size-4" />
-                      {t('newProject')}
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="ms-auto size-7 text-muted-foreground hover:text-foreground"
+                          aria-label={t('newProject')}
+                          onClick={() => setCreating(true)}
+                        >
+                          <Plus className="size-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('newProject')}</TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
                 {team.projects.length === 0 ? (
@@ -104,6 +116,13 @@ export default function TeamDetailPanel({
                   </div>
                 )}
               </section>
+
+              <TeamRolesSection
+                teamId={team.id}
+                teamName={team.name}
+                canManage={canManageRoles}
+                onEditorOpenChange={setRoleEditorOpen}
+              />
 
               <section className="space-y-3">
                 <div className="flex items-baseline gap-2">

@@ -3,7 +3,9 @@ import { PermissionMatrixSchema } from '#shared/permissions';
 
 export const projectKeyParams = t.Object({ projectKey: t.String() });
 
-export const roleParams = t.Object({ projectKey: t.String(), roleId: t.Numeric() });
+export const teamParams = t.Object({ teamId: t.Numeric() });
+
+export const roleParams = t.Object({ teamId: t.Numeric(), roleId: t.Numeric() });
 
 // Permission matrix carried on create/update. Kept loose (a jsonb blob) and
 // sanitized by normalizePermissions in the service: unknown keys are dropped,

@@ -77,7 +77,7 @@ export default function TeamProjectActions({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {canLeave && (
-              <DropdownMenuItem variant="destructive" onSelect={() => setLeaving(true)}>
+              <DropdownMenuItem onSelect={() => setLeaving(true)}>
                 <LogOut />
                 {t('leaveAction')}
               </DropdownMenuItem>

@@ -1,6 +1,7 @@
 import { HttpError } from './lib';
 import { getProjectByKey, type ProjectRow } from '#modules/projects/service';
 import { getMembership, getMemberContext } from '#modules/members/service';
+import { getTeamMembership, type TeamRole } from '#modules/teams/service';
 import { hasPermission, type PermissionAction, type PermissionResource } from './permissions';
 
 // The authenticated user carried on the request context. Populated by the
@@ -67,6 +68,23 @@ export async function requireProjectOwner(
   if (!role) throw new HttpError(403, 'You do not have access to this project');
   if (role !== 'owner') throw new HttpError(403, 'Only a project owner can do this');
   return project;
+}
+
+// Resolves the :projectKey path param to a project the caller administers: an owner
+// of the project, or an owner or manager of the team that owns it. That is the
+// standing the project's own settings need — MCP access and the optional sections —
+// which the role matrix does not express. Wrapped by the projectAdmin guard. Throws
+// 404 for an unknown project and 403 for anyone else.
+export async function requireProjectAdmin(
+  projectKey: string,
+  user: AuthUser | undefined | null,
+): Promise<ProjectRow> {
+  const current = requireUser(user);
+  const project = await requireProject(projectKey);
+  if ((await getMembership(project.id, current.id)) === 'owner') return project;
+  const standing = await getTeamMembership(project.teamId, current.id);
+  if (standing === 'owner' || standing === 'manager') return project;
+  throw new HttpError(403, 'Only a project owner or a team owner or manager can do this');
 }
 
 // Denies an MCP tool call against a project that has MCP disabled. A no-op for
@@ -144,4 +162,25 @@ export async function requireProjectPermission(
   const project = await requireProject(projectKey);
   await assertPermission(project.id, current, resource, action);
   return project;
+}
+
+// The caller's standing in the team a :teamId route addresses.
+export interface TeamMembership {
+  teamId: number;
+  role: TeamRole;
+  userId: string;
+}
+
+// Resolves the :teamId path param to the caller's membership in it. 404 for an
+// unknown team and for one the caller is not a member of: a team the caller cannot
+// see should not be distinguishable from one that does not exist. Wrapped by the
+// teamMember, teamManager and teamOwner guards.
+export async function requireTeamMembership(
+  teamId: number,
+  user: AuthUser | undefined | null,
+): Promise<TeamMembership> {
+  const current = requireUser(user);
+  const role = await getTeamMembership(teamId, current.id);
+  if (!role) throw new HttpError(404, 'Team not found');
+  return { teamId, role, userId: current.id };
 }

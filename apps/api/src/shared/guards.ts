@@ -4,6 +4,8 @@ import {
   requireProjectAccess,
   requireProjectPermission,
   requireProjectOwner,
+  requireProjectAdmin,
+  requireTeamMembership,
   assertPermission,
   assertMcpEnabled,
   type AuthUser,
@@ -69,6 +71,14 @@ export async function assertMcpAllowed(projectId: number, headers: Headers): Pro
 // runtime even on routes that do not declare a params schema.
 type ProjectKeyParams = { projectKey: string };
 
+// The path param carried by every team-scoped route, and its resolution to the
+// caller's membership — shared by the three team macros below.
+type TeamIdParams = { teamId: string };
+
+function resolveTeam(params: unknown, user: AuthUser | undefined | null) {
+  return requireTeamMembership(Number((params as TeamIdParams).teamId), user);
+}
+
 // Declarative access guards for routes whose path carries :projectKey. Each
 // macro resolves the project once, enforces access, and injects the resolved
 // `project` row into the handler context, so a handler reads `project` instead
@@ -112,15 +122,62 @@ export const guards = new Elysia({ name: 'guards' }).use(authContext).macro({
     };
   },
 
-  // Owner-only actions (role and member management). A non-member gets 403 for
-  // access rather than leaking owner-ness, since membership is resolved before
-  // the owner check.
+  // Owner-only actions (member management). A non-member gets 403 for access
+  // rather than leaking owner-ness, since membership is resolved before the owner
+  // check.
   projectOwner(_enabled: boolean) {
     return {
       async resolve({ params, user, request }) {
         const project = await requireProjectOwner((params as ProjectKeyParams).projectKey, user);
         assertMcpEnabled(project, isMcpRequest(request.headers));
         return { project };
+      },
+    };
+  },
+
+  // The project's own settings — MCP access and the optional sections — which its
+  // owner and the team that runs it both govern.
+  projectAdmin(_enabled: boolean) {
+    return {
+      async resolve({ params, user, request }) {
+        const project = await requireProjectAdmin((params as ProjectKeyParams).projectKey, user);
+        assertMcpEnabled(project, isMcpRequest(request.headers));
+        return { project };
+      },
+    };
+  },
+
+  // Any member of the team may proceed. The three team macros inject the resolved
+  // `membership` into the handler context.
+  teamMember(_enabled: boolean) {
+    return {
+      async resolve({ params, user }) {
+        return { membership: await resolveTeam(params, user) };
+      },
+    };
+  },
+
+  // Owner or manager. They run the team's projects: create, copy and update one.
+  teamManager(_enabled: boolean) {
+    return {
+      async resolve({ params, user }) {
+        const membership = await resolveTeam(params, user);
+        if (membership.role === 'member')
+          throw new HttpError(403, 'Only a team owner or manager can do this');
+        return { membership };
+      },
+    };
+  },
+
+  // Owner-only actions (renaming the team, its roles, deleting a project). A
+  // non-member gets the same 404 as for an unknown team, since membership is
+  // resolved before the owner check.
+  teamOwner(_enabled: boolean) {
+    return {
+      async resolve({ params, user }) {
+        const membership = await resolveTeam(params, user);
+        if (membership.role !== 'owner') throw new HttpError(403, 'Only a team owner can do this');
+        return { membership };
       },
     };
   },

@@ -37,7 +37,6 @@
     "dashboards": "仪表盘",
     "actions": "操作",
     "configuration": "配置",
-    "roles": "角色",
     "notificationProviders": "通知提供商",
     "webhooks": "Webhook",
     "integrations": "集成",

@@ -1,5 +1,4 @@
 {
-  "viewPermissions": "Посмотреть права",
   "none": "Права не предоставлены",
   "grantedCount": "Предоставлено {count, plural, one {# право} few {# права} many {# прав} other {# права}}",
   "resources": {

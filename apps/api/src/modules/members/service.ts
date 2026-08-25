@@ -1,7 +1,7 @@
 import {
   db,
   projectMember,
-  projectRole,
+  teamRole,
   projectColumn,
   user,
   aiAgent,
@@ -85,10 +85,10 @@ export async function getMemberContext(
   const rows = await db
     .select({
       role: projectMember.role,
-      permissions: projectRole.permissions,
+      permissions: teamRole.permissions,
     })
     .from(projectMember)
-    .leftJoin(projectRole, eq(projectRole.id, projectMember.roleId))
+    .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
     .where(and(eq(projectMember.projectId, projectId), eq(projectMember.userId, userId)));
   const r = rows[0];
   return r ? toMemberContext(r.role as MemberRole, r.permissions) : null;
@@ -102,10 +102,10 @@ export async function listMemberContexts(projectId: number): Promise<Map<string,
     .select({
       userId: projectMember.userId,
       role: projectMember.role,
-      permissions: projectRole.permissions,
+      permissions: teamRole.permissions,
     })
     .from(projectMember)
-    .leftJoin(projectRole, eq(projectRole.id, projectMember.roleId))
+    .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
     .where(eq(projectMember.projectId, projectId));
   return new Map(rows.map((r) => [r.userId, toMemberContext(r.role as MemberRole, r.permissions)]));
 }
@@ -203,7 +203,7 @@ export async function listMembers(projectId: number): Promise<MemberRow[]> {
       timezone: userPreference.timezone,
       role: projectMember.role,
       roleId: projectMember.roleId,
-      roleName: projectRole.name,
+      roleName: teamRole.name,
       description: projectMember.description,
       agentId: aiAgent.id,
       agentUsername: aiAgent.username,
@@ -211,7 +211,7 @@ export async function listMembers(projectId: number): Promise<MemberRow[]> {
     })
     .from(projectMember)
     .innerJoin(user, eq(user.id, projectMember.userId))
-    .leftJoin(projectRole, eq(projectRole.id, projectMember.roleId))
+    .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
     .leftJoin(aiAgent, eq(aiAgent.userId, projectMember.userId))
     .leftJoin(userPreference, eq(userPreference.userId, projectMember.userId))
     .where(eq(projectMember.projectId, projectId))

@@ -89,7 +89,7 @@ async function buildAgent(row: AiAgentRow, contextPreamble: string): Promise<Age
     instructions,
     model,
     // The agent acts as its own bot user, scoped to its project. Route tools call the
-    // real API with its key, so its project role applies; get_current_date is the one
+    // real API with its key, so its role applies; get_current_date is the one
     // tool with no route; read_skill loads any enabled skills on demand; custom tools
     // are the external integrations configured on the project and enabled here.
     tools: {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { api, authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
+import { createRole } from '#tests/helpers/roles';
 
 // GET /sync/rev is the one poll behind live refresh: it answers with the change
 // marker of every scope a client watches. The markers are written by database
@@ -316,9 +317,7 @@ describe('sync', () => {
       expect(await rev(asMember, board)).not.toBe('0');
 
       // A role that grants nothing, work items included.
-      const role = (
-        await asOwner.projects({ projectKey: 'MKT' }).roles.post({ name: 'Guest', permissions: {} })
-      ).data!;
+      const role = (await createRole(asOwner, 'MKT', { name: 'Guest', permissions: {} })).data!;
       await asOwner
         .projects({ projectKey: 'MKT' })
         .members({ userId })

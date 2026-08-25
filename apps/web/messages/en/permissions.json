@@ -1,5 +1,4 @@
 {
-  "viewPermissions": "View permissions",
   "none": "No permissions granted",
   "grantedCount": "{count, plural, one {# permission} other {# permissions}} granted",
   "resources": {

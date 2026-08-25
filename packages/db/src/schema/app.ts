@@ -200,33 +200,34 @@ export const userPreference = pgTable(
   ],
 );
 
-// Custom roles per project. A role carries a permission matrix: for each
-// resource (work_items, dashboards, ...) the create/edit/read/delete flags. The
-// matrix is a jsonb blob owned and enforced by the API (see
-// apps/api/src/shared/permissions.ts). Exactly one role per project is the
-// default ("Member"): it is assigned to members that join through an invite and
-// is the fallback for a member row with no explicit role. Owners bypass roles
+// Custom roles per team, shared by every project the team owns. A role carries a
+// permission matrix: for each resource (work_items, dashboards, ...) the
+// create/edit/read/delete flags. The matrix is a jsonb blob owned and enforced by
+// the API (see apps/api/src/shared/permissions.ts). Exactly one role per team is
+// the default ("Member"): it is assigned to members that join through an invite
+// and is the fallback for a member row with no explicit role. Owners bypass roles
 // entirely (they always have full access), so their project_member.role_id stays
-// NULL.
-export const projectRole = pgTable(
-  'project_role',
+// NULL. A member of a project may only be put on a role of that project's team;
+// the API checks it, no foreign key can.
+export const teamRole = pgTable(
+  'team_role',
   {
     id: serial('id').primaryKey(),
-    projectId: integer('project_id')
+    teamId: integer('team_id')
       .notNull()
-      .references(() => project.id, { onDelete: 'cascade' }),
+      .references(() => team.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     isDefault: boolean('is_default').notNull().default(false),
     permissions: jsonb('permissions').notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique().on(t.projectId, t.name),
-    // At most one default role per project.
-    uniqueIndex('project_role_default_uq')
-      .on(t.projectId)
+    unique().on(t.teamId, t.name),
+    // At most one default role per team.
+    uniqueIndex('team_role_default_uq')
+      .on(t.teamId)
       .where(sql`${t.isDefault}`),
-    index('project_role_project_idx').on(t.projectId),
+    index('team_role_team_idx').on(t.teamId),
   ],
 );
 
@@ -235,9 +236,9 @@ export const projectRole = pgTable(
 // project-scoped entity only through a row here. The creator is inserted as
 // "owner"; a project can have several owners. Owners always have full access and
 // manage the member list. A "member" row carries role_id pointing at a
-// project_role whose permission matrix decides what that member may do; a NULL
-// role_id falls back to the project's default role. Access checks resolve the
-// owning project of any entity and look for the current user here.
+// team_role of the project's team, whose permission matrix decides what that member
+// may do; a NULL role_id falls back to the team's default role. Access checks resolve
+// the owning project of any entity and look for the current user here.
 export const projectMember = pgTable(
   'project_member',
   {
@@ -248,7 +249,7 @@ export const projectMember = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     role: text('role').notNull().default('member'),
-    roleId: integer('role_id').references(() => projectRole.id, {
+    roleId: integer('role_id').references(() => teamRole.id, {
       onDelete: 'set null',
     }),
     // What this member does in the project. Free text set by an owner, shown on the
@@ -282,10 +283,10 @@ export const projectInvite = pgTable(
       .references(() => project.id, { onDelete: 'cascade' }),
     email: text('email').notNull(),
     role: text('role').notNull().default('member'),
-    // The custom role the invitee joins on when role is "member". NULL falls back
-    // to the project's default role. Owners bypass roles, so an owner invite keeps
-    // this NULL.
-    roleId: integer('role_id').references(() => projectRole.id, {
+    // The team role the invitee joins on when role is "member". NULL falls back to
+    // the team's default role. Owners bypass roles, so an owner invite keeps this
+    // NULL.
+    roleId: integer('role_id').references(() => teamRole.id, {
       onDelete: 'set null',
     }),
     status: text('status').notNull().default('pending'),
@@ -400,7 +401,7 @@ export const label = pgTable(
 // apikey.reference_id points at it). An external agent needs only a name (on the
 // bot user) + username and a key; an internal agent additionally carries a model
 // configuration (provider/model/instructions/tools) used to run it. What an agent
-// may do is governed by the tools it is granted, not by a project role — an agent
+// may do is governed by the tools it is granted, not by a team role — an agent
 // is not a project_member.
 export const aiAgent = pgTable(
   'ai_agent',
@@ -436,11 +437,11 @@ export const aiAgent = pgTable(
     // to keep editing the issue after delegating it. Applies to delegation only: a
     // mention is a question already asked, and its author waits for the reply.
     delegationDelaySec: integer('delegation_delay_sec').notNull().default(120),
-    // Authorization: the project_role the bot user acts under. Every agent request
+    // Authorization: the team_role the bot user acts under. Every agent request
     // carries its API key and is enforced by this role through the normal permission
     // checks — an external agent's HTTP calls and an internal agent's in-process tool
     // dispatch alike. NULL means the bot user has no membership yet and cannot act.
-    roleId: integer('role_id').references(() => projectRole.id, { onDelete: 'set null' }),
+    roleId: integer('role_id').references(() => teamRole.id, { onDelete: 'set null' }),
     // The agent's own API key, encrypted at rest (AES-256-GCM, see shared/crypto).
     // An internal agent replays it on every tool call, so unlike better-auth's
     // hashed apikey row it has to stay recoverable. Set for internal agents only:

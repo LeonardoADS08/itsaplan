@@ -139,6 +139,7 @@ export interface TeamProject {
   name: string;
   description: string;
   memberCount: number;
+  owners: { userId: string; name: string; image: string | null }[];
   isMember: boolean;
   createdAt: string;
 }
@@ -218,7 +219,6 @@ export type CopyProjectIncludeKey =
   | 'dashboards'
   | 'actions'
   | 'configuration'
-  | 'roles'
   | 'notificationProviders'
   | 'webhooks'
   | 'integrations'
@@ -324,7 +324,7 @@ export interface AiAgent {
   fieldTriggers: AgentFieldTrigger[];
   // How long a delegation run waits before the agent may pick it up.
   delegationDelaySec: number;
-  // External-agent authorization role (a project_role id, or null for the default).
+  // External-agent authorization role (a team_role id, or null for the default).
   roleId: number | null;
   // The member who created the agent, and whose runs an 'owner'-scoped runner is
   // limited to; 'project' scope serves any member's runs.
@@ -1840,6 +1840,10 @@ export interface IssueFieldValueInput {
 // usePermissions.
 export interface ProjectViewer {
   role: MemberRole;
+  // The caller's standing in the team that owns the project, null when they are not
+  // a member of it. An owner or manager governs the project's settings alongside the
+  // project's own owner.
+  teamRole: TeamRole | null;
 }
 
 // How an issue carries the initiative and the cycle it belongs to: the id plus
@@ -3243,23 +3247,25 @@ export const api = {
       body: JSON.stringify({ agentToolIds }),
     }),
 
-  // Roles: a project's custom roles and the permission catalog behind the role
-  // editor. Any member can list; create/update/delete are owner-only on the API.
+  // Roles: a team's roles and the permission catalog behind the role editor. Roles
+  // belong to the team, so a project only lists the ones it assigns from; managing
+  // them is team-owner-only on the API.
   getPermissionCatalog: () => request<PermissionCatalog>('/permission-catalog'),
-  listRoles: (projectKey: string) => request<Role[]>(`/projects/${projectKey}/roles`),
-  createRole: (projectKey: string, input: { name: string; permissions: Permissions }) =>
-    request<Role>(`/projects/${projectKey}/roles`, { method: 'POST', body: JSON.stringify(input) }),
+  listProjectRoles: (projectKey: string) => request<Role[]>(`/projects/${projectKey}/roles`),
+  listTeamRoles: (teamId: number) => request<Role[]>(`/teams/${teamId}/roles`),
+  createRole: (teamId: number, input: { name: string; permissions: Permissions }) =>
+    request<Role>(`/teams/${teamId}/roles`, { method: 'POST', body: JSON.stringify(input) }),
   updateRole: (
-    projectKey: string,
+    teamId: number,
     roleId: number,
     patch: { name?: string; permissions?: Permissions },
   ) =>
-    request<Role>(`/projects/${projectKey}/roles/${roleId}`, {
+    request<Role>(`/teams/${teamId}/roles/${roleId}`, {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
-  deleteRole: (projectKey: string, roleId: number) =>
-    request<void>(`/projects/${projectKey}/roles/${roleId}`, { method: 'DELETE' }),
+  deleteRole: (teamId: number, roleId: number) =>
+    request<void>(`/teams/${teamId}/roles/${roleId}`, { method: 'DELETE' }),
 
   // Invites — owner side: create, list, and revoke a project's invite links.
   listInvites: (projectKey: string) => request<InviteRow[]>(`/projects/${projectKey}/invites`),

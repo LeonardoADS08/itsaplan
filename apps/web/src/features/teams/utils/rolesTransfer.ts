@@ -1,8 +1,8 @@
-// Serialize/parse a project's custom roles for the copy/paste transfer between
-// projects. The clipboard payload is a small JSON envelope; parsing validates it and
+// Serialize/parse a team's custom roles for the copy/paste transfer between teams.
+// The clipboard payload is a small JSON envelope; parsing validates it and
 // normalizes each role's matrix against the permission catalog so an import stays
-// robust across catalog changes. Default roles are never included — they are managed
-// per project, not transferred.
+// robust across catalog changes. The default role is never included — every team has
+// one of its own.
 
 import type {
   PermissionAction,
@@ -26,7 +26,7 @@ interface RolesEnvelope {
   roles: RoleTransfer[];
 }
 
-// A parsed role paired with what applying it would do to the current project.
+// A parsed role paired with what applying it would do to the current team.
 export interface PlannedRole extends RoleTransfer {
   // 'create' — no role with this name yet. 'update' — a custom role with this name is
   // overwritten. 'skip' — a default role has this name and is left untouched.
@@ -34,7 +34,7 @@ export interface PlannedRole extends RoleTransfer {
   existingId?: number;
 }
 
-// The clipboard text for the project's non-default roles.
+// The clipboard text for the team's non-default roles.
 export function serializeRoles(roles: Role[]): string {
   const envelope: RolesEnvelope = {
     type: PAYLOAD_TYPE,
@@ -101,4 +101,15 @@ export function planRolesImport(incoming: RoleTransfer[], existing: Role[]): Pla
     if (match.isDefault) return { ...role, action: 'skip', existingId: match.id };
     return { ...role, action: 'update', existingId: match.id };
   });
+}
+
+// A cheap check that clipboard text carries a roles payload, used to decide whether
+// the paste action is offered at all.
+export function looksLikeRoles(text: string): boolean {
+  try {
+    const data = JSON.parse(text) as Partial<RolesEnvelope>;
+    return data?.type === PAYLOAD_TYPE && Array.isArray(data.roles);
+  } catch {
+    return false;
+  }
 }

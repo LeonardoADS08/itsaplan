@@ -13,7 +13,7 @@ import {
   project,
   projectDashboard,
   projectMember,
-  projectRole,
+  teamRole,
   projectView,
 } from '@repo/db';
 import {
@@ -237,13 +237,13 @@ export async function getInstanceUser(userId: string): Promise<InstanceUserDetai
         projectName: project.name,
         role: projectMember.role,
         roleId: projectMember.roleId,
-        roleName: projectRole.name,
-        permissions: projectRole.permissions,
+        roleName: teamRole.name,
+        permissions: teamRole.permissions,
         joinedAt: projectMember.createdAt,
       })
       .from(projectMember)
       .innerJoin(project, eq(project.id, projectMember.projectId))
-      .leftJoin(projectRole, eq(projectRole.id, projectMember.roleId))
+      .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
       .where(eq(projectMember.userId, userId))
       .orderBy(project.name),
   ]);

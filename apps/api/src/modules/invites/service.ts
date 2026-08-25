@@ -1,4 +1,4 @@
-import { db, projectInvite, projectMember, projectRole, project, user } from '@repo/db';
+import { db, projectInvite, projectMember, teamRole, project, user } from '@repo/db';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { HttpError, iso, pgErrorCode } from '#shared/lib';
 import type { MemberRole } from '#modules/members/service';
@@ -94,7 +94,7 @@ export async function getInviteById(projectId: number, id: number): Promise<Invi
       email: projectInvite.email,
       role: projectInvite.role,
       roleId: projectInvite.roleId,
-      roleName: projectRole.name,
+      roleName: teamRole.name,
       status: projectInvite.status,
       createdAt: projectInvite.createdAt,
       respondedAt: projectInvite.respondedAt,
@@ -103,7 +103,7 @@ export async function getInviteById(projectId: number, id: number): Promise<Invi
     })
     .from(projectInvite)
     .leftJoin(user, eq(user.id, projectInvite.invitedByUserId))
-    .leftJoin(projectRole, eq(projectRole.id, projectInvite.roleId))
+    .leftJoin(teamRole, eq(teamRole.id, projectInvite.roleId))
     .where(and(eq(projectInvite.projectId, projectId), eq(projectInvite.id, id)));
   const r = rows[0];
   if (!r) return null;
@@ -130,7 +130,7 @@ export async function listInvites(projectId: number): Promise<InviteRow[]> {
       email: projectInvite.email,
       role: projectInvite.role,
       roleId: projectInvite.roleId,
-      roleName: projectRole.name,
+      roleName: teamRole.name,
       status: projectInvite.status,
       createdAt: projectInvite.createdAt,
       respondedAt: projectInvite.respondedAt,
@@ -139,7 +139,7 @@ export async function listInvites(projectId: number): Promise<InviteRow[]> {
     })
     .from(projectInvite)
     .leftJoin(user, eq(user.id, projectInvite.invitedByUserId))
-    .leftJoin(projectRole, eq(projectRole.id, projectInvite.roleId))
+    .leftJoin(teamRole, eq(teamRole.id, projectInvite.roleId))
     .where(eq(projectInvite.projectId, projectId))
     .orderBy(desc(projectInvite.createdAt));
   return rows.map((r) => ({
@@ -178,13 +178,13 @@ export async function getInviteByToken(token: string): Promise<InviteView | null
       email: projectInvite.email,
       role: projectInvite.role,
       roleId: projectInvite.roleId,
-      roleName: projectRole.name,
+      roleName: teamRole.name,
       status: projectInvite.status,
       createdAt: projectInvite.createdAt,
     })
     .from(projectInvite)
     .innerJoin(project, eq(project.id, projectInvite.projectId))
-    .leftJoin(projectRole, eq(projectRole.id, projectInvite.roleId))
+    .leftJoin(teamRole, eq(teamRole.id, projectInvite.roleId))
     .where(eq(projectInvite.token, token));
   const r = rows[0];
   if (!r) return null;
@@ -233,17 +233,18 @@ export async function acceptInvite(
   userId: string,
 ): Promise<AcceptedInvite> {
   return db.transaction(async (tx) => {
-    // A member joins on the invite's chosen role, falling back to the project's
-    // default role when none was set; an owner bypasses roles.
+    // A member joins on the invite's chosen role, falling back to the default role
+    // of the project's team when none was set; an owner bypasses roles.
     let roleId: number | null = null;
     if (invite.role === 'member') {
       if (invite.roleId != null) {
         roleId = invite.roleId;
       } else {
         const [def] = await tx
-          .select({ id: projectRole.id })
-          .from(projectRole)
-          .where(and(eq(projectRole.projectId, invite.projectId), eq(projectRole.isDefault, true)));
+          .select({ id: teamRole.id })
+          .from(teamRole)
+          .innerJoin(project, eq(project.teamId, teamRole.teamId))
+          .where(and(eq(project.id, invite.projectId), eq(teamRole.isDefault, true)));
         roleId = def?.id ?? null;
       }
     }

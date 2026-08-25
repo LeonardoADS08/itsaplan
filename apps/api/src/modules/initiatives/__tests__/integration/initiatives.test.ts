@@ -3,6 +3,7 @@ import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { addProjectMember } from '#tests/helpers/members';
+import { createRole } from '#tests/helpers/roles';
 
 // Initiatives are a project-scoped grouping of issues. Issues link to one through
 // issue.initiativeId. status is a fixed lifecycle enum; progress and health are
@@ -384,9 +385,10 @@ describe('initiatives', () => {
     it('reads under work items, so a role without initiative access can link an issue', async () => {
       const { asOwner } = await setup();
       await createInitiative(asOwner, { title: 'Q3 Launch' });
-      const role = await asOwner
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Issues only', permissions: { work_items: { read: true } } });
+      const role = await createRole(asOwner, 'MKT', {
+        name: 'Issues only',
+        permissions: { work_items: { read: true } },
+      });
       const asMember = await addProjectMember(asOwner, 'MKT', role.data!.id);
 
       const options = await initiatives(asMember).options.get();
@@ -399,9 +401,7 @@ describe('initiatives', () => {
 
     it('denies a role without work item access', async () => {
       const { asOwner } = await setup();
-      const role = await asOwner
-        .projects({ projectKey: 'MKT' })
-        .roles.post({ name: 'Nothing', permissions: {} });
+      const role = await createRole(asOwner, 'MKT', { name: 'Nothing', permissions: {} });
       const asMember = await addProjectMember(asOwner, 'MKT', role.data!.id);
       expect((await initiatives(asMember).options.get()).status).toBe(403);
     });
