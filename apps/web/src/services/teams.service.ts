@@ -10,6 +10,15 @@ export function useTeamQuery(teamId: number) {
   return useQuery({ queryKey: qk.team(teamId), queryFn: () => api.getTeam(teamId) });
 }
 
+// One project the team owns. Fetched when the project's row is opened, so a team
+// with many projects loads no stats or permission matrix it does not show.
+export function useTeamProjectQuery(teamId: number, projectId: number) {
+  return useQuery({
+    queryKey: qk.teamProject(teamId, projectId),
+    queryFn: () => api.getTeamProject(teamId, projectId),
+  });
+}
+
 export function useCreateTeam() {
   const qc = useQueryClient();
   return useMutation({

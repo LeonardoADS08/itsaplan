@@ -1,6 +1,10 @@
 import { t } from 'elysia';
+import { PermissionMatrixSchema } from '#shared/permissions';
+import { StatsDto } from '#modules/analytics/model';
 
 export const teamParams = t.Object({ teamId: t.Numeric() });
+
+export const teamProjectParams = t.Object({ teamId: t.Numeric(), projectId: t.Numeric() });
 
 export const createTeamBody = t.Object({
   name: t.String({ minLength: 1, maxLength: 60 }),
@@ -32,7 +36,7 @@ export const TeamDetailResponse = t.Composite([
         userId: t.String(),
         name: t.String(),
         email: t.String(),
-        image: t.Union([t.String(), t.Null()]),
+        image: t.Nullable(t.String()),
         role: t.Union([t.Literal('owner'), t.Literal('manager'), t.Literal('member')]),
         joinedAt: t.String(),
       }),
@@ -50,3 +54,23 @@ export const TeamDetailResponse = t.Composite([
     ),
   }),
 ]);
+
+// One project the team owns: how its issues stand, and the members with the access
+// each membership resolves to.
+export const TeamProjectDetailResponse = t.Object({
+  lastActivityAt: t.Nullable(t.String()),
+  stats: StatsDto,
+  members: t.Array(
+    t.Object({
+      userId: t.String(),
+      name: t.String(),
+      email: t.String(),
+      username: t.Nullable(t.String()),
+      image: t.Nullable(t.String()),
+      isAgent: t.Boolean(),
+      role: t.Union([t.Literal('owner'), t.Literal('member')]),
+      roleName: t.Nullable(t.String()),
+      permissions: PermissionMatrixSchema,
+    }),
+  ),
+});

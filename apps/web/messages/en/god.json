@@ -6,12 +6,6 @@
     "previous": "Previous page",
     "next": "Next page"
   },
-  "access": {
-    "owner": "An owner has full access: the role matrix is not consulted.",
-    "role": "Resolved from the \"{role}\" role.",
-    "default": "No role assigned: the default member permissions apply.",
-    "joined": "joined {date}"
-  },
   "providers": {
     "credential": "Password",
     "google": "Google",

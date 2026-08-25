@@ -7,15 +7,18 @@ import { errors } from '#shared/responses';
 import {
   TeamDetailResponse,
   TeamListResponse,
+  TeamProjectDetailResponse,
   TeamResponse,
   createTeamBody,
   teamParams,
+  teamProjectParams,
   updateTeamBody,
 } from './model';
 import {
   createTeam,
   getTeam,
   getTeamMembership,
+  getTeamProject,
   leaveTeam,
   listTeams,
   renameTeam,
@@ -89,6 +92,25 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
       detail: {
         summary: 'Get a team',
         description: 'A team with its members and the projects it owns.',
+      },
+    },
+  )
+
+  .get(
+    '/teams/:teamId/projects/:projectId',
+    async ({ membership, params }) => {
+      const detail = await getTeamProject(membership.teamId, params.projectId);
+      if (!detail) throw new HttpError(404, 'Project not found');
+      return detail;
+    },
+    {
+      teamMember: true,
+      params: teamProjectParams,
+      response: { 200: TeamProjectDetailResponse, ...errors(401, 404) },
+      detail: {
+        summary: 'Get a project the team owns',
+        description:
+          'How one project of the team is doing and who can reach it, with what each membership resolves to. Any team member may read it, including for a project they do not belong to.',
       },
     },
   )

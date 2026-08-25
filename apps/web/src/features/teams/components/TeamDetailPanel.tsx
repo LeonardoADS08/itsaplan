@@ -32,7 +32,7 @@ export default function TeamDetailPanel({
       className="fixed inset-0 z-40 flex bg-black/20"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="ml-auto flex h-full w-full flex-col border-l bg-card sm:w-[560px] sm:max-w-[92vw]">
+      <div className="ml-auto flex h-full w-full flex-col border-l bg-card sm:w-[680px] sm:max-w-[92vw]">
         <div className="flex shrink-0 items-start justify-between gap-3 bg-muted/30 px-6 pt-5 pb-4">
           <div className="min-w-0 space-y-1.5">
             <h2 className="truncate text-base font-semibold">
@@ -75,7 +75,7 @@ export default function TeamDetailPanel({
                 ) : (
                   <div className="space-y-2">
                     {team.projects.map((project) => (
-                      <TeamProjectRow key={project.id} project={project} />
+                      <TeamProjectRow key={project.id} teamId={team.id} project={project} />
                     ))}
                   </div>
                 )}
@@ -83,7 +83,7 @@ export default function TeamDetailPanel({
 
               <section className="space-y-3">
                 <div className="flex items-baseline gap-2">
-                  <h3 className="text-sm font-medium">{t('members')}</h3>
+                  <h3 className="text-sm font-medium">{t('teamMembers')}</h3>
                   <span className="text-xs text-muted-foreground">{team.memberCount}</span>
                 </div>
                 <div className="space-y-2">

@@ -10,7 +10,7 @@ import { usePermissionLabels } from '@/hooks/usePermissionLabels';
 // A read-only permission matrix: resources down, actions across, a check where the
 // membership grants it. The role editor owns the editable version; this one only
 // reports what a user's access resolves to, so it renders icons, not checkboxes.
-export default function GodPermissionMatrix({
+export default function PermissionMatrix({
   catalog,
   permissions,
 }: {

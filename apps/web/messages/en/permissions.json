@@ -42,5 +42,11 @@
   },
   "resourceColumn": "Resource",
   "allowed": "allowed",
-  "notAllowed": "not allowed"
+  "notAllowed": "not allowed",
+  "source": {
+    "owner": "An owner has full access: the role matrix is not consulted.",
+    "role": "Resolved from the \"{role}\" role.",
+    "default": "No role assigned: the default member permissions apply."
+  },
+  "joined": "joined {date}"
 }

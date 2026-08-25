@@ -13,7 +13,7 @@
   "manage": {
     "label": "إدارة الفرق",
     "title": "إدارة الفرق",
-    "description": "كل فريق تنتمي إليه، مع دورك فيه والمشاريع التي يملكها. افتح فريقًا لعرض مشاريعه وأعضائه. يمكن للمالك إعادة تسمية الفريق، ويمكن للعضو مغادرته.",
+    "description": "فِرقك والمشاريع التي تملكها.",
     "empty": "لا تنتمي إلى أي فريق بعد.",
     "columns": {
       "team": "الفريق",
@@ -35,9 +35,22 @@
     "created": "أُنشئ في {date}",
     "projects": "المشاريع",
     "noProjects": "لا توجد مشاريع في هذا الفريق بعد.",
-    "members": "الأعضاء",
+    "teamMembers": "أعضاء الفريق",
+    "projectMembers": "أعضاء المشروع",
     "memberCount": "{count, plural, zero {# عضو} one {عضو واحد} two {عضوان} few {# أعضاء} many {# عضوًا} other {# عضو}}",
-    "joined": "انضم في {date}"
+    "joined": "انضم في {date}",
+    "openProject": "فتح المشروع",
+    "noProjectMembers": "لا يمكن لأحد الوصول إلى هذا المشروع بعد.",
+    "lastActivity": "آخر نشاط: {value}",
+    "noActivity": "لا يوجد بعد",
+    "stats": {
+      "open": "مفتوحة",
+      "inProgress": "قيد التنفيذ",
+      "backlog": "قائمة الانتظار",
+      "overdue": "متأخرة",
+      "unassigned": "بدون مسؤول",
+      "closedLast7d": "أُغلقت خلال ٧ أيام"
+    }
   },
   "leaveDialog": {
     "title": "مغادرة {name}؟",

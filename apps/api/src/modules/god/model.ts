@@ -180,6 +180,7 @@ export const InstanceProjectDetailResponse = t.Composite([
         userId: t.String(),
         name: t.String(),
         email: t.String(),
+        username: t.Nullable(t.String()),
         image: t.Nullable(t.String()),
         isAgent: t.Boolean(),
         role: t.UnionEnum(['owner', 'member']),

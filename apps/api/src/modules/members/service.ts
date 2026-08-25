@@ -27,8 +27,8 @@ export interface MemberRow {
   userId: string;
   name: string;
   email: string;
-  // The sign-in name, shown next to the address in the members list. Null for an
-  // agent's bot user, which is written by a direct insert and never gets one.
+  // The handle they are mentioned by, @username. An agent's bot user is written by
+  // a direct insert and never gets one of its own, so it carries the agent's handle.
   username: string | null;
   // The zone this member reads timestamps in. Falls back to the same default as
   // their preferences do while they have not chosen one.
@@ -206,6 +206,7 @@ export async function listMembers(projectId: number): Promise<MemberRow[]> {
       roleName: projectRole.name,
       description: projectMember.description,
       agentId: aiAgent.id,
+      agentUsername: aiAgent.username,
       createdAt: projectMember.createdAt,
     })
     .from(projectMember)
@@ -219,7 +220,7 @@ export async function listMembers(projectId: number): Promise<MemberRow[]> {
     userId: r.userId,
     name: r.name,
     email: r.email,
-    username: r.username,
+    username: r.username ?? r.agentUsername,
     image: r.image,
     timezone: r.timezone ?? DEFAULT_TIMEZONE,
     role: r.role as MemberRole,

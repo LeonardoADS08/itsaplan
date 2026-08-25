@@ -6,12 +6,6 @@
     "previous": "上一页",
     "next": "下一页"
   },
-  "access": {
-    "owner": "所有者拥有完整访问权限，不受角色权限矩阵限制。",
-    "role": "根据“{role}”角色确定。",
-    "default": "未分配角色，使用默认成员权限。",
-    "joined": "加入于 {date}"
-  },
   "providers": {
     "credential": "密码",
     "google": "Google",

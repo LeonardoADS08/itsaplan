@@ -38,6 +38,7 @@ import {
   normalizePermissions,
   type Permissions,
 } from '#shared/permissions';
+import { listMemberContexts, listMembers } from '#modules/members/service';
 
 // Data access for the instance directories (god mode): every account and every
 // project on this instance. It reads across the better-auth tables (user, session,
@@ -321,6 +322,9 @@ export interface InstanceProjectMember {
   userId: string;
   name: string;
   email: string;
+  // The handle they are mentioned by, @username. An agent's bot user carries the
+  // agent's handle, not one of its own.
+  username: string | null;
   image: string | null;
   isAgent: boolean;
   role: 'owner' | 'member';
@@ -486,44 +490,32 @@ export async function getInstanceProject(projectId: number): Promise<InstancePro
   const row = rows[0];
   if (!row) return null;
 
-  const [facts, memberships, agentRows] = await Promise.all([
+  const [facts, memberships, contexts] = await Promise.all([
     loadProjectFacts([row.id]),
-    db
-      .select({
-        userId: user.id,
-        name: user.name,
-        email: user.email,
-        image: user.image,
-        role: projectMember.role,
-        roleId: projectMember.roleId,
-        roleName: projectRole.name,
-        permissions: projectRole.permissions,
-        joinedAt: projectMember.createdAt,
-      })
-      .from(projectMember)
-      .innerJoin(user, eq(user.id, projectMember.userId))
-      .leftJoin(projectRole, eq(projectRole.id, projectMember.roleId))
-      .where(eq(projectMember.projectId, projectId))
-      .orderBy(user.name),
-    db.select({ userId: aiAgent.userId }).from(aiAgent).where(eq(aiAgent.projectId, projectId)),
+    listMembers(projectId),
+    listMemberContexts(projectId),
   ]);
 
-  const agentUserIds = new Set(agentRows.map((r) => r.userId));
-  const members: InstanceProjectMember[] = memberships.map((m) => {
-    const role = m.role === 'owner' ? 'owner' : 'member';
-    return {
-      userId: m.userId,
-      name: m.name,
-      email: m.email,
-      image: m.image,
-      isAgent: agentUserIds.has(m.userId),
-      role,
-      roleId: m.roleId,
-      roleName: m.roleName,
-      permissions: resolvePermissions(role, m.permissions),
-      joinedAt: iso(m.joinedAt),
-    };
+  const members: InstanceProjectMember[] = memberships.flatMap((m) => {
+    const context = contexts.get(m.userId);
+    if (!context) return [];
+    return [
+      {
+        userId: m.userId,
+        name: m.name,
+        email: m.email,
+        username: m.username,
+        image: m.image,
+        isAgent: m.isAgent,
+        role: m.role,
+        roleId: m.roleId,
+        roleName: m.roleName,
+        permissions: context.permissions,
+        joinedAt: m.createdAt,
+      },
+    ];
   });
+  members.sort((a, b) => a.name.localeCompare(b.name));
 
   return { ...toProjectRow(row, facts(row.id)), members };
 }

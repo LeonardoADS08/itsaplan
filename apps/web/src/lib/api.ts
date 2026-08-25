@@ -148,6 +148,30 @@ export interface TeamDetail extends Team {
   projects: TeamProject[];
 }
 
+// One project the team owns, as its row in the team panel opens it: how its issues
+// stand, and who can reach it.
+export interface TeamProjectDetail {
+  lastActivityAt: string | null;
+  stats: AnalyticsStats;
+  members: TeamProjectMember[];
+}
+
+// One member of a project the team owns, with the access their project membership
+// resolves to.
+export interface TeamProjectMember {
+  userId: string;
+  name: string;
+  email: string;
+  // The handle they are mentioned by, @username. An agent's bot user carries the
+  // agent's handle.
+  username: string | null;
+  image: string | null;
+  isAgent: boolean;
+  role: MemberRole;
+  roleName: string | null;
+  permissions: Permissions;
+}
+
 export interface Project {
   id: number;
   teamId: number;
@@ -1213,6 +1237,7 @@ export interface InstanceProjectMember {
   userId: string;
   name: string;
   email: string;
+  username: string | null;
   image: string | null;
   isAgent: boolean;
   role: MemberRole;
@@ -2464,6 +2489,8 @@ function subtaskQuery(disposition?: SubtaskDisposition): string {
 export const api = {
   listTeams: () => request<Team[]>('/teams'),
   getTeam: (teamId: number) => request<TeamDetail>(`/teams/${teamId}`),
+  getTeamProject: (teamId: number, projectId: number) =>
+    request<TeamProjectDetail>(`/teams/${teamId}/projects/${projectId}`),
   createTeam: (input: { name: string }) =>
     request<Team>('/teams', { method: 'POST', body: JSON.stringify(input) }),
   renameTeam: (teamId: number, input: { name: string }) =>

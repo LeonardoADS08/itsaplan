@@ -1,6 +1,9 @@
-import { db, project, projectMember, team, teamMember, user } from '@repo/db';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { db, issue, issueActivity, project, projectMember, team, teamMember, user } from '@repo/db';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { HttpError, iso } from '#shared/lib';
+import type { Permissions } from '#shared/permissions';
+import { listMemberContexts, listMembers, type MemberRole } from '#modules/members/service';
+import { getStats, type StatsDto } from '#modules/analytics/service';
 
 export type TeamRole = 'owner' | 'manager' | 'member';
 
@@ -37,6 +40,31 @@ export interface TeamProjectRow {
   memberCount: number;
   isMember: boolean;
   createdAt: string;
+}
+
+// One member of a project the team owns, with the access their project membership
+// resolves to. The same facts the god project panel shows, read by a team member.
+export interface TeamProjectMemberRow {
+  userId: string;
+  name: string;
+  email: string;
+  // The handle they are mentioned by, @username. An agent's bot user carries the
+  // agent's handle, not one of its own.
+  username: string | null;
+  image: string | null;
+  isAgent: boolean;
+  role: MemberRole;
+  roleName: string | null;
+  permissions: Permissions;
+}
+
+// One project of the team, opened: how it is doing and who can reach it.
+export interface TeamProjectDetail {
+  // The most recent entry in the project's issue feed, or null when nothing has
+  // happened in it yet.
+  lastActivityAt: string | null;
+  stats: StatsDto;
+  members: TeamProjectMemberRow[];
 }
 
 export interface TeamDetail extends TeamRow {
@@ -165,6 +193,65 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
       isMember: p.isMember ?? false,
       createdAt: iso(p.createdAt),
     })),
+  };
+}
+
+// When the project's issue feed last moved. Read as the newest row rather than a
+// max(), which the driver returns as a formatted string instead of a Date.
+async function lastActivityAt(projectId: number): Promise<string | null> {
+  const rows = await db
+    .select({ createdAt: issueActivity.createdAt })
+    .from(issueActivity)
+    .innerJoin(issue, eq(issue.id, issueActivity.issueId))
+    .where(eq(issue.projectId, projectId))
+    .orderBy(desc(issueActivity.createdAt))
+    .limit(1);
+  return rows[0] ? iso(rows[0].createdAt) : null;
+}
+
+// One project the team owns, with its issue stats and its members. Returns null
+// when the project is not owned by the team, so the route answers 404 for a
+// project of another team.
+export async function getTeamProject(
+  teamId: number,
+  projectId: number,
+): Promise<TeamProjectDetail | null> {
+  const owned = await db
+    .select({ id: project.id })
+    .from(project)
+    .where(and(eq(project.id, projectId), eq(project.teamId, teamId)));
+  if (owned.length === 0) return null;
+
+  const [activity, stats, members, contexts] = await Promise.all([
+    lastActivityAt(projectId),
+    getStats(projectId),
+    listMembers(projectId),
+    listMemberContexts(projectId),
+  ]);
+  const memberRows = members.flatMap((m) => {
+    const context = contexts.get(m.userId);
+    if (!context) return [];
+    return [
+      {
+        userId: m.userId,
+        name: m.name,
+        email: m.email,
+        username: m.username,
+        image: m.image,
+        isAgent: m.isAgent,
+        role: m.role,
+        roleName: m.roleName,
+        permissions: context.permissions,
+      },
+    ];
+  });
+
+  return {
+    lastActivityAt: activity,
+    stats,
+    // Owners first, the rest in the order they joined: who runs the project is the
+    // first thing the list has to answer.
+    members: memberRows.sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')),
   };
 }
 

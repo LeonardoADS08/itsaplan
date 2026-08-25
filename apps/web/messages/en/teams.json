@@ -13,7 +13,7 @@
   "manage": {
     "label": "Manage teams",
     "title": "Manage teams",
-    "description": "Every team you belong to, with your role in each and the projects it owns. Open a team to see its projects and members. Owners can rename a team; members can leave one.",
+    "description": "Your teams and the projects they own.",
     "empty": "You do not belong to any team yet.",
     "columns": {
       "team": "Team",
@@ -35,9 +35,22 @@
     "created": "created {date}",
     "projects": "Projects",
     "noProjects": "This team has no projects yet.",
-    "members": "Members",
+    "teamMembers": "Team members",
+    "projectMembers": "Project members",
     "memberCount": "{count, plural, one {# member} other {# members}}",
-    "joined": "joined {date}"
+    "joined": "joined {date}",
+    "openProject": "Open project",
+    "noProjectMembers": "Nobody can reach this project yet.",
+    "lastActivity": "Last activity: {value}",
+    "noActivity": "none yet",
+    "stats": {
+      "open": "Open",
+      "inProgress": "In progress",
+      "backlog": "Backlog",
+      "overdue": "Overdue",
+      "unassigned": "Unassigned",
+      "closedLast7d": "Closed in 7 days"
+    }
   },
   "leaveDialog": {
     "title": "Leave {name}?",

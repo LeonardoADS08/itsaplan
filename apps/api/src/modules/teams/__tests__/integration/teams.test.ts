@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { api as anonApi, authedApi } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
+import { addProjectMember } from '#tests/helpers/members';
 
 // The teams feature owns list, create, detail, rename, and leave. Every account is
 // given a team at registration, named after its username, so a fresh account already
@@ -124,6 +125,94 @@ describe('teams', () => {
       const { api } = await signUpClient();
 
       expect((await api.teams({ teamId: 999999 }).get()).status).toBe(404);
+    });
+  });
+
+  describe('project detail', () => {
+    it('returns the members of a project the team owns with their resolved access', async () => {
+      const { user, api } = await signUpClient();
+      const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      await addProjectMember(api, 'MKT');
+      const teamId = (await api.teams.get()).data![0].id;
+
+      const detail = await api.teams({ teamId }).projects({ projectId: project.data!.id }).get();
+      expect(detail.status).toBe(200);
+      expect(detail.data?.members).toHaveLength(2);
+
+      const owner = detail.data!.members.find((m) => m.email === user.email)!;
+      expect(owner).toMatchObject({ role: 'owner', roleName: null, isAgent: false });
+      expect(owner.permissions.work_items.delete).toBe(true);
+
+      const member = detail.data!.members.find((m) => m.email !== user.email)!;
+      expect(member.role).toBe('member');
+      expect(member.permissions.danger_zone.delete).toBe(false);
+    });
+
+    it('lists the owners of the project before its members', async () => {
+      const { user, api } = await signUpClient();
+      const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const promoted = await addProjectMember(api, 'MKT');
+      const promotedUserId = (await api.projects({ projectKey: 'MKT' }).members.get()).data!.find(
+        (m) => m.email !== user.email,
+      )!.userId;
+      await api
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: promotedUserId })
+        .patch({ role: 'owner' });
+      // The account that created the project joined first, so it heads the list until
+      // the other owner demotes it.
+      await promoted
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: user.userId })
+        .patch({ role: 'member' });
+      const teamId = (await api.teams.get()).data![0].id;
+
+      const detail = await api.teams({ teamId }).projects({ projectId: project.data!.id }).get();
+      expect(detail.data?.members.map((m) => m.role)).toEqual(['owner', 'member']);
+      expect(detail.data?.members[0].userId).toBe(promotedUserId);
+    });
+
+    it('counts the open issues of the project and reports its last activity', async () => {
+      const { api } = await signUpClient();
+      const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const teamId = (await api.teams.get()).data![0].id;
+
+      const empty = await api.teams({ teamId }).projects({ projectId: project.data!.id }).get();
+      expect(empty.data?.stats).toMatchObject({ open: 0 });
+      expect(empty.data?.lastActivityAt).toBeNull();
+
+      const columnId = (await api.projects({ projectKey: 'MKT' }).get()).data!.columns[0].id;
+      await api.projects({ projectKey: 'MKT' }).issues.post({ columnId, title: 'First' });
+
+      const detail = await api.teams({ teamId }).projects({ projectId: project.data!.id }).get();
+      expect(detail.data?.stats).toMatchObject({ open: 1 });
+      expect(detail.data?.lastActivityAt).not.toBeNull();
+    });
+
+    it("404s for a project of another account's team", async () => {
+      const { api } = await signUpClient();
+      const other = await signUpClient();
+      const otherProject = await other.api.projects.post({ key: 'OTH', name: 'Other' });
+      const teamId = (await api.teams.get()).data![0].id;
+
+      const detail = await api
+        .teams({ teamId })
+        .projects({ projectId: otherProject.data!.id })
+        .get();
+      expect(detail.status).toBe(404);
+    });
+
+    it('404s for a team the caller is not a member of', async () => {
+      const { api } = await signUpClient();
+      const other = await signUpClient();
+      const otherProject = await other.api.projects.post({ key: 'OTH', name: 'Other' });
+      const otherTeamId = (await other.api.teams.get()).data![0].id;
+
+      const detail = await api
+        .teams({ teamId: otherTeamId })
+        .projects({ projectId: otherProject.data!.id })
+        .get();
+      expect(detail.status).toBe(404);
     });
   });
 

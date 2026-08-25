@@ -8,10 +8,10 @@ import { useExitOnEscape } from '@/hooks/useExitOnEscape';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import MemberAccessCard from '@/components/common/permissions/MemberAccessCard';
 import { usePermissionCatalogQuery } from '@/services/roles.service';
 import { useInstanceProjectQuery } from '../../services/god.service';
 import { compactCount } from '../../utils/numbers';
-import GodProjectMemberCard from './GodProjectMemberCard';
 
 // One number from the project, with a quiet label under it. The counts read as a
 // grid so the size of a project is one glance rather than a list of sentences.
@@ -140,7 +140,7 @@ export default function GodProjectDetailPanel({
                 ) : (
                   <div className="space-y-2">
                     {project.members.map((m) => (
-                      <GodProjectMemberCard key={m.userId} member={m} catalog={catalogQuery.data} />
+                      <MemberAccessCard key={m.userId} member={m} catalog={catalogQuery.data} />
                     ))}
                   </div>
                 )}
