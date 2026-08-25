@@ -5,7 +5,7 @@ import type { ProjectDetail } from '@/lib/api';
 import { issuePath, projectPath } from '@/utils/paths';
 import type { useOverlays } from '@/hooks/useOverlays';
 import NewProjectModal from '@/components/layout/NewProjectModal';
-import NewTeamModal from '@/components/layout/NewTeamModal';
+import NewTeamModal from '@/features/teams/components/NewTeamModal';
 import NewIssueModal from '@/features/issue/components/create/NewIssueModal';
 import IssueDetail from '@/features/issue/components/detail/IssueDetail';
 

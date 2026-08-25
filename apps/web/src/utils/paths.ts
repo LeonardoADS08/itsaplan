@@ -137,6 +137,10 @@ export const startPagePath = (key: string, startPage: StartPage) => {
 // delete one.
 export const manageProjectsPath = () => '/account/projects';
 
+// The standalone Manage teams page, reached from the project switcher. Lists the
+// teams the user belongs to; an owner renames one, a member leaves.
+export const manageTeamsPath = () => '/account/teams';
+
 // The invitee-facing link an owner shares. Points at this web app's public
 // /invite/:token page, which reads the token and shows the accept screen.
 export const inviteLink = (origin: string, token: string) => `${origin}/invite/${token}`;

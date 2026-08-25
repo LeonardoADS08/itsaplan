@@ -1,10 +1,13 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-export default function ManageProjectsRowAction({
+// An icon button for a table row's actions cell. The label is both the tooltip
+// and the accessible name, so the cell carries no visible text.
+export default function RowAction({
   icon: Icon,
   label,
   destructive,
@@ -21,11 +24,10 @@ export default function ManageProjectsRowAction({
         <Button
           variant="ghost"
           size="icon"
-          className={
-            destructive
-              ? 'size-8 text-muted-foreground hover:text-destructive'
-              : 'size-8 text-muted-foreground hover:text-foreground'
-          }
+          className={cn(
+            'size-8 text-muted-foreground',
+            destructive ? 'hover:text-destructive' : 'hover:text-foreground',
+          )}
           aria-label={label}
           onClick={onClick}
         >

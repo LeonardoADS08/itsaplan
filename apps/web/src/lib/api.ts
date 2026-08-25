@@ -111,8 +111,41 @@ export interface Team {
   id: number;
   name: string;
   // The caller's rank in the team.
-  role: 'owner' | 'manager' | 'member';
+  role: TeamRole;
+  joinedAt: string;
+  projectCount: number;
+  memberCount: number;
+  // How many of those members are owners: the last one cannot leave.
+  ownerCount: number;
   createdAt: string;
+}
+
+export type TeamRole = 'owner' | 'manager' | 'member';
+
+export interface TeamMember {
+  userId: string;
+  name: string;
+  email: string;
+  image: string | null;
+  role: TeamRole;
+  joinedAt: string;
+}
+
+// A project the team owns. `isMember` is the caller's own access to it: a team
+// member sees every project of the team, but only opens the ones they belong to.
+export interface TeamProject {
+  id: number;
+  key: string;
+  name: string;
+  description: string;
+  memberCount: number;
+  isMember: boolean;
+  createdAt: string;
+}
+
+export interface TeamDetail extends Team {
+  members: TeamMember[];
+  projects: TeamProject[];
 }
 
 export interface Project {
@@ -2430,8 +2463,12 @@ function subtaskQuery(disposition?: SubtaskDisposition): string {
 
 export const api = {
   listTeams: () => request<Team[]>('/teams'),
+  getTeam: (teamId: number) => request<TeamDetail>(`/teams/${teamId}`),
   createTeam: (input: { name: string }) =>
     request<Team>('/teams', { method: 'POST', body: JSON.stringify(input) }),
+  renameTeam: (teamId: number, input: { name: string }) =>
+    request<Team>(`/teams/${teamId}`, { method: 'PATCH', body: JSON.stringify(input) }),
+  leaveTeam: (teamId: number) => request<void>(`/teams/${teamId}/leave`, { method: 'POST' }),
   listProjects: (opts?: { permissions?: boolean }) =>
     request<Project[]>(`/projects${opts?.permissions ? '?permissions=true' : ''}`),
   createProject: (input: { key: string; name: string; description?: string; preset?: string }) =>

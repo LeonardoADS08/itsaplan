@@ -1,25 +1,41 @@
+'use client';
+
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Users } from 'lucide-react';
-import { useCreateTeam } from '@/services/teams.service';
 import Modal from '@/components/common/overlay/Modal';
 import { Button } from '@/components/ui/button';
 
-// Creates a team with the current user as its owner. Name only: everything else a
-// team carries (its members, its projects) is added afterwards.
-export default function NewTeamModal({ onClose }: { onClose: () => void }) {
-  const t = useTranslations('teams.create');
-  const [name, setName] = useState('');
-  const createTeam = useCreateTeam();
-  const canSubmit = !createTeam.isPending && name.trim() !== '';
+// The name form both team dialogs use: create and rename differ only in their
+// labels and what they do with the name.
+export default function TeamNameModal({
+  title,
+  placeholder,
+  submitLabel,
+  hint,
+  initialName = '',
+  busy,
+  onSubmit,
+  onClose,
+}: {
+  title: string;
+  placeholder: string;
+  submitLabel: string;
+  hint?: string;
+  initialName?: string;
+  busy: boolean;
+  onSubmit: (name: string) => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const canSubmit = !busy && name.trim() !== '';
 
   function submit() {
     if (!canSubmit) return;
-    createTeam.mutate({ name: name.trim() }, { onSuccess: onClose });
+    onSubmit(name.trim());
   }
 
   return (
-    <Modal title={t('title')} onClose={onClose} className="pb-3">
+    <Modal title={title} onClose={onClose} className="pb-3">
       <div className="flex flex-col">
         <div className="flex items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
@@ -28,7 +44,7 @@ export default function NewTeamModal({ onClose }: { onClose: () => void }) {
           <input
             dir={name ? 'auto' : undefined}
             className="w-full bg-transparent text-lg font-semibold outline-none placeholder:text-muted-foreground"
-            placeholder={t('namePlaceholder')}
+            placeholder={placeholder}
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {
@@ -38,11 +54,11 @@ export default function NewTeamModal({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        <p className="mt-3 text-sm text-muted-foreground">{t('hint')}</p>
+        {hint && <p className="mt-3 text-sm text-muted-foreground">{hint}</p>}
 
         <div className="mt-4 flex items-center border-t pt-3">
           <Button className="ms-auto" disabled={!canSubmit} onClick={submit}>
-            {t('submit')}
+            {submitLabel}
           </Button>
         </div>
       </div>

@@ -4,6 +4,8 @@
 export const qk = {
   projects: ['projects'] as const,
   teams: ['teams'] as const,
+  // One team with its members and the projects it owns.
+  team: (teamId: number) => ['team', teamId] as const,
   // The board scaffold (columns/types/labels/fields/viewer) for a project.
   project: (projectKey: string) => ['workItems', projectKey] as const,
   // The board's issues, their relations and the change marker for a project.

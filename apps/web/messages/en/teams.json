@@ -4,5 +4,44 @@
     "namePlaceholder": "Team name",
     "hint": "You'll be the owner of this team.",
     "submit": "Create team"
+  },
+  "rename": {
+    "title": "Rename team",
+    "namePlaceholder": "Team name",
+    "submit": "Save"
+  },
+  "manage": {
+    "label": "Manage teams",
+    "title": "Manage teams",
+    "description": "Every team you belong to, with your role in each and the projects it owns. Open a team to see its projects and members. Owners can rename a team; members can leave one.",
+    "empty": "You do not belong to any team yet.",
+    "columns": {
+      "team": "Team",
+      "role": "Role",
+      "members": "Members",
+      "projects": "Projects",
+      "joined": "Joined",
+      "actions": "Actions"
+    },
+    "renameAction": "Rename team",
+    "leaveAction": "Leave team",
+    "roles": {
+      "owner": "Owner",
+      "manager": "Manager",
+      "member": "Member"
+    }
+  },
+  "panel": {
+    "created": "created {date}",
+    "projects": "Projects",
+    "noProjects": "This team has no projects yet.",
+    "members": "Members",
+    "memberCount": "{count, plural, one {# member} other {# members}}",
+    "joined": "joined {date}"
+  },
+  "leaveDialog": {
+    "title": "Leave {name}?",
+    "confirm": "Leave team",
+    "description": "You will no longer be a member of <strong>{name}</strong>. Its projects stay with the team, and you keep the ones you are a member of. To join again you need an owner to add you back."
   }
 }

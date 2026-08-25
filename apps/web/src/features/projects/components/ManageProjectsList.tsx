@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PermissionsPopover } from '@/components/common/permissions/PermissionsPopover';
-import ManageProjectsRowAction from './ManageProjectsRowAction';
+import RowAction from '@/components/common/RowAction';
 
 export default function ManageProjectsList({
   projects,
@@ -101,20 +101,16 @@ export default function ManageProjectsList({
             </TableCell>
             <TableCell className="px-3 py-2 align-top">
               <div className="flex items-center justify-end gap-1">
-                <ManageProjectsRowAction
-                  icon={Copy}
-                  label={t('copyAction')}
-                  onClick={() => onCopy(project)}
-                />
+                <RowAction icon={Copy} label={t('copyAction')} onClick={() => onCopy(project)} />
                 {project.role === 'owner' ? (
-                  <ManageProjectsRowAction
+                  <RowAction
                     icon={Trash2}
                     label={t('deleteAction')}
                     destructive
                     onClick={() => onDelete(project)}
                   />
                 ) : (
-                  <ManageProjectsRowAction
+                  <RowAction
                     icon={LogOut}
                     label={t('leaveAction')}
                     destructive

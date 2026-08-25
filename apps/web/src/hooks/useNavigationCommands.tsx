@@ -22,6 +22,7 @@ import {
   inboxPath,
   initiativesPath,
   manageProjectsPath,
+  manageTeamsPath,
   mcpServerPath,
   membersPath,
   notificationsPath,
@@ -131,6 +132,7 @@ export function useNavigationCommands(projectKey: string | null): CommandSection
     manageProjectsPath(),
     'account leave delete copy',
   );
+  add('nav.manage-teams', t('manageTeams'), <Users />, manageTeamsPath(), 'account rename leave');
   for (const s of ACCOUNT_SECTIONS) {
     add(`nav.account.${s.slug}`, accountLabel(s.slug), <s.icon />, accountPath(s.slug), 'account');
   }

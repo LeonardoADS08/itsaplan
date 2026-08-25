@@ -4,5 +4,44 @@
     "namePlaceholder": "团队名称",
     "hint": "你将成为该团队的所有者。",
     "submit": "创建团队"
+  },
+  "rename": {
+    "title": "重命名团队",
+    "namePlaceholder": "团队名称",
+    "submit": "保存"
+  },
+  "manage": {
+    "label": "管理团队",
+    "title": "管理团队",
+    "description": "你所属的每个团队，包括你在其中的角色和团队拥有的项目。打开团队可查看其项目和成员。所有者可以重命名团队，成员可以退出团队。",
+    "empty": "你还没有加入任何团队。",
+    "columns": {
+      "team": "团队",
+      "role": "角色",
+      "members": "成员",
+      "projects": "项目",
+      "joined": "加入时间",
+      "actions": "操作"
+    },
+    "renameAction": "重命名团队",
+    "leaveAction": "退出团队",
+    "roles": {
+      "owner": "所有者",
+      "manager": "管理者",
+      "member": "成员"
+    }
+  },
+  "panel": {
+    "created": "创建于 {date}",
+    "projects": "项目",
+    "noProjects": "该团队还没有项目。",
+    "members": "成员",
+    "memberCount": "{count, plural, other {# 位成员}}",
+    "joined": "加入于 {date}"
+  },
+  "leaveDialog": {
+    "title": "退出 {name}？",
+    "confirm": "退出团队",
+    "description": "你将不再是 <strong>{name}</strong> 的成员。团队的项目仍归团队所有，你仍保留自己参与的项目。若要重新加入，需要所有者再次将你添加进来。"
   }
 }

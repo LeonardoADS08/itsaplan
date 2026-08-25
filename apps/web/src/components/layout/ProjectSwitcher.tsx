@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { ChevronsUpDown, Plus, Settings2, SquareKanban, UserPlus, Users } from 'lucide-react';
 import type { Project, Team } from '@/lib/api';
 import { useTeamsQuery } from '@/services/teams.service';
-import { manageProjectsPath } from '@/utils/paths';
+import { manageProjectsPath, manageTeamsPath } from '@/utils/paths';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -142,11 +142,13 @@ export default function ProjectSwitcher({
               </div>
               <span className="font-medium text-muted-foreground">{t('newTeam')}</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 p-2">
-              <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                <Users className="size-4" />
-              </div>
-              <span className="font-medium text-muted-foreground">{t('manageTeams')}</span>
+            <DropdownMenuItem asChild className="gap-2 p-2">
+              <Link href={manageTeamsPath()}>
+                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                  <Users className="size-4" />
+                </div>
+                <span className="font-medium text-muted-foreground">{t('manageTeams')}</span>
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
