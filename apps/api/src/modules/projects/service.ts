@@ -151,10 +151,24 @@ export async function getProjectById(id: number): Promise<ProjectRow | null> {
   return rows[0] ? mapProject(rows[0]) : null;
 }
 
-// The team a project the user creates belongs to: the one they own. Every account is
-// given one when it is created, so a caller without one is a broken account rather
-// than a state the UI can reach.
-export async function ownedTeam(userId: string): Promise<{ id: number; name: string }> {
+// The team a new project belongs to. `teamId` names it explicitly (the caller's
+// rank in it is checked by the route); without one it is the team the caller owns.
+export async function targetTeam(
+  userId: string,
+  teamId?: number,
+): Promise<{ id: number; name: string }> {
+  if (teamId == null) return ownedTeam(userId);
+  const [row] = await db
+    .select({ id: team.id, name: team.name })
+    .from(team)
+    .where(eq(team.id, teamId));
+  if (!row) throw new HttpError(404, 'Team not found');
+  return row;
+}
+
+// The team the caller owns. Every account is given one when it is created, so a
+// caller without one is a broken account rather than a state the UI can reach.
+async function ownedTeam(userId: string): Promise<{ id: number; name: string }> {
   const [row] = await db
     .select({ id: team.id, name: team.name })
     .from(teamMember)
@@ -253,8 +267,9 @@ export async function createProject(
     preset?: string;
   },
   ownerId: string,
+  teamId?: number,
 ): Promise<ProjectRow> {
-  const ownerTeam = await ownedTeam(ownerId);
+  const ownerTeam = await targetTeam(ownerId, teamId);
   return db.transaction(async (tx) => {
     const [row] = await tx
       .insert(project)

@@ -201,17 +201,14 @@ export interface Project {
   timeLoggingEnabled: boolean;
   createdAt: string;
   // The caller's role in this project. Only present on the /projects list
-  // response (used to gate owner-only actions like deletion); absent on the
-  // create/copy responses.
+  // response; absent on the create/copy responses.
   role?: MemberRole;
-  // The caller's permission matrix in this project. Present only when the list is
-  // requested with permissions (listProjects({ permissions: true })).
-  permissions?: Permissions;
 }
 
 // Parts of a source project the copy can carry over, one key per project settings
-// section. Passed to copyProject as an include map; omitted keys are not copied. The
-// API force-enables dependencies (a view needs its states/types/labels/fields).
+// section. Passed to copyTeamProject as an include map; omitted keys are not
+// copied. The API force-enables dependencies (a view needs its
+// states/types/labels/fields).
 export type CopyProjectIncludeKey =
   | 'states'
   | 'issueTypes'
@@ -2496,12 +2493,19 @@ export const api = {
   renameTeam: (teamId: number, input: { name: string }) =>
     request<Team>(`/teams/${teamId}`, { method: 'PATCH', body: JSON.stringify(input) }),
   leaveTeam: (teamId: number) => request<void>(`/teams/${teamId}/leave`, { method: 'POST' }),
-  listProjects: (opts?: { permissions?: boolean }) =>
-    request<Project[]>(`/projects${opts?.permissions ? '?permissions=true' : ''}`),
-  createProject: (input: { key: string; name: string; description?: string; preset?: string }) =>
-    request<Project>('/projects', { method: 'POST', body: JSON.stringify(input) }),
-  copyProject: (
-    projectKey: string,
+  // The projects a team owns: created, copied, and deleted by the team's own ranks
+  // (owner/manager create and copy, owner deletes) rather than by project membership.
+  createTeamProject: (
+    teamId: number,
+    input: { key: string; name: string; description?: string; preset?: string },
+  ) =>
+    request<Project>(`/teams/${teamId}/projects`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  copyTeamProject: (
+    teamId: number,
+    projectId: number,
     input: {
       key: string;
       name: string;
@@ -2509,15 +2513,27 @@ export const api = {
       include?: Partial<Record<CopyProjectIncludeKey, boolean>>;
     },
   ) =>
-    request<Project>(`/projects/${projectKey}/copy`, {
+    request<Project>(`/teams/${teamId}/projects/${projectId}/copy`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+  updateTeamProject: (
+    teamId: number,
+    projectId: number,
+    patch: { name?: string; description?: string },
+  ) =>
+    request<Project>(`/teams/${teamId}/projects/${projectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  deleteTeamProject: (teamId: number, projectId: number) =>
+    request<void>(`/teams/${teamId}/projects/${projectId}`, { method: 'DELETE' }),
+  listProjects: () => request<Project[]>('/projects'),
+  createProject: (input: { key: string; name: string; description?: string; preset?: string }) =>
+    request<Project>('/projects', { method: 'POST', body: JSON.stringify(input) }),
   // Update a project's name/description. The key is immutable, so it is not sent.
   updateProject: (projectKey: string, patch: { name?: string; description?: string }) =>
     request<Project>(`/projects/${projectKey}`, { method: 'PATCH', body: JSON.stringify(patch) }),
-  deleteProject: (projectKey: string) =>
-    request<void>(`/projects/${projectKey}`, { method: 'DELETE' }),
   // The board scaffold (no issues). The issues come from getBoardIssues.
   getProject: (projectKey: string) => request<ProjectScaffold>(`/projects/${projectKey}`),
   // The board's issues and their relations.

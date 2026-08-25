@@ -28,7 +28,7 @@ export default function Modal({
   title,
   crumb,
   description,
-  projectKey,
+  scope,
   onClose,
   children,
   wide = false,
@@ -40,7 +40,8 @@ export default function Modal({
   // Trailing breadcrumb naming what the dialog was opened for.
   crumb?: string;
   description?: string;
-  projectKey?: string;
+  // Leading breadcrumb naming what the dialog acts in: a project key, a team.
+  scope?: ReactNode;
   onClose: () => void;
   children: ReactNode;
   wide?: boolean | 'xl';
@@ -76,10 +77,10 @@ export default function Modal({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {projectKey && (
+            {scope && (
               <>
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-sm font-medium text-secondary-foreground">
-                  {projectKey}
+                <span className="flex items-center gap-1.5 rounded-full bg-secondary px-2 py-0.5 text-sm font-medium text-secondary-foreground">
+                  {scope}
                 </span>
                 <span className="font-normal text-muted-foreground">›</span>
               </>

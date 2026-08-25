@@ -9,6 +9,9 @@ export const qk = {
   // One project the team owns, loaded when its row is opened.
   teamProject: (teamId: number, projectId: number) =>
     ['team', teamId, 'project', projectId] as const,
+  // Every team detail and every project of one, for a write that changes what any
+  // of them shows (a project gained or lost a member).
+  anyTeam: ['team'] as const,
   // The board scaffold (columns/types/labels/fields/viewer) for a project.
   project: (projectKey: string) => ['workItems', projectKey] as const,
   // The board's issues, their relations and the change marker for a project.

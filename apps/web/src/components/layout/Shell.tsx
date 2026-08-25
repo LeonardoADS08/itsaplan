@@ -144,7 +144,6 @@ export default function Shell({
           projects={projects}
           currentProjectKey={projectKey}
           onSelectProject={(key) => router.push(projectPath(key))}
-          onNewProject={() => overlays.setShowNewProject(true)}
           onNewTeam={() => overlays.setShowNewTeam(true)}
         />
         <SidebarInset className="min-w-0">

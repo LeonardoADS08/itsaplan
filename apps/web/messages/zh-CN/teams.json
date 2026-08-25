@@ -34,6 +34,7 @@
   "panel": {
     "created": "创建于 {date}",
     "projects": "项目",
+    "newProject": "新建项目",
     "noProjects": "该团队还没有项目。",
     "teamMembers": "团队成员",
     "projectMembers": "项目成员",
@@ -41,6 +42,7 @@
     "joined": "加入于 {date}",
     "openProject": "打开项目",
     "noProjectMembers": "目前还没有人可以访问该项目。",
+    "info": "信息",
     "lastActivity": "最近活动：{value}",
     "noActivity": "暂无",
     "stats": {

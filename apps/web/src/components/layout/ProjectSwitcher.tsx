@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ChevronsUpDown, Plus, Settings2, SquareKanban, UserPlus, Users } from 'lucide-react';
+import { ChevronsUpDown, SquareKanban, UserPlus, Users } from 'lucide-react';
 import type { Project, Team } from '@/lib/api';
 import { useTeamsQuery } from '@/services/teams.service';
-import { manageProjectsPath, manageTeamsPath } from '@/utils/paths';
+import { manageTeamsPath } from '@/utils/paths';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -51,13 +51,11 @@ export default function ProjectSwitcher({
   projects,
   currentProjectKey,
   onSelectProject,
-  onNewProject,
   onNewTeam,
 }: {
   projects: Project[];
   currentProjectKey: string | null;
   onSelectProject: (key: string) => void;
-  onNewProject: () => void;
   onNewTeam: () => void;
 }) {
   const t = useTranslations('nav');
@@ -120,21 +118,6 @@ export default function ProjectSwitcher({
                 onSelectProject={onSelectProject}
               />
             ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onNewProject} className="gap-2 p-2">
-              <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                <Plus className="size-4" />
-              </div>
-              <span className="font-medium text-muted-foreground">{t('newProject')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="gap-2 p-2">
-              <Link href={manageProjectsPath()}>
-                <div className="flex size-6 items-center justify-center rounded-md border bg-background">
-                  <Settings2 className="size-4" />
-                </div>
-                <span className="font-medium text-muted-foreground">{t('manageProjects')}</span>
-              </Link>
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onNewTeam} className="gap-2 p-2">
               <div className="flex size-6 items-center justify-center rounded-md border bg-background">

@@ -26,8 +26,6 @@
   "integrations": "Integrations",
   "projects": "Projects",
   "noProjects": "No projects yet",
-  "newProject": "New project",
-  "manageProjects": "Manage projects",
   "newTeam": "New team",
   "manageTeams": "Manage teams",
   "role": "Role: {role}",

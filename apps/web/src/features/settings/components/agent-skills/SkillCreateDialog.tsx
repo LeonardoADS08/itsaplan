@@ -174,7 +174,7 @@ export function SkillCreateDialog({
   // The GitHub selection step replaces the rest of the form once skills are found.
   if (source === 'github' && candidates) {
     return (
-      <Modal title={t('importTitle')} projectKey={projectKey} onClose={onClose} wide>
+      <Modal title={t('importTitle')} scope={projectKey} onClose={onClose} wide>
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
@@ -263,7 +263,7 @@ export function SkillCreateDialog({
   }
 
   return (
-    <Modal title={t('newSkill')} projectKey={projectKey} onClose={onClose} wide>
+    <Modal title={t('newSkill')} scope={projectKey} onClose={onClose} wide>
       <Tabs value={source} onValueChange={(v) => setSource(v as Source)}>
         <TabsList variant="line">
           <TabsTrigger value="inline">{t('tabInline')}</TabsTrigger>

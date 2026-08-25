@@ -2,21 +2,23 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { Project } from '@/lib/api';
-import { useDeleteProject } from '@/services/projects.service';
+import type { TeamProject } from '@/lib/api';
+import { useDeleteTeamProject } from '@/services/projects.service';
 import ConfirmDialog from '@/components/common/overlay/ConfirmDialog';
 import { Input } from '@/components/ui/input';
 
-export default function ManageProjectsDeleteDialog({
+export default function TeamProjectDeleteDialog({
+  teamId,
   project,
   onClose,
 }: {
-  project: Project;
+  teamId: number;
+  project: TeamProject;
   onClose: () => void;
 }) {
   const t = useTranslations('projects.deleteDialog');
   const [confirmText, setConfirmText] = useState('');
-  const deleteProject = useDeleteProject();
+  const deleteProject = useDeleteTeamProject();
   const matches = confirmText.trim() === project.key;
 
   return (
@@ -26,7 +28,7 @@ export default function ManageProjectsDeleteDialog({
       confirmDisabled={!matches}
       onClose={onClose}
       onConfirm={async () => {
-        await deleteProject.mutateAsync(project.key);
+        await deleteProject.mutateAsync({ teamId, projectId: project.id, projectKey: project.key });
         onClose();
       }}
     >

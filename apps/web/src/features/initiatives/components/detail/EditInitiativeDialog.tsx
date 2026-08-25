@@ -37,7 +37,7 @@ export default function EditInitiativeDialog({
   };
 
   return (
-    <Modal title={t('form.editTitle')} projectKey={projectKey} onClose={onClose}>
+    <Modal title={t('form.editTitle')} scope={projectKey} onClose={onClose}>
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="edit-initiative-title">{t('form.title')}</Label>

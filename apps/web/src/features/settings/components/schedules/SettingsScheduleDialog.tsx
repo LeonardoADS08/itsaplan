@@ -69,7 +69,7 @@ export function SettingsScheduleDialog({
     <Modal
       title={initial ? t('editTitle') : t('newTitle')}
       description={t('dialogDescription')}
-      projectKey={projectKey}
+      scope={projectKey}
       onClose={onClose}
       wide
     >

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ArrowUpRight, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { TeamProject } from '@/lib/api';
+import type { TeamProject, TeamRole } from '@/lib/api';
 import { projectPath } from '@/utils/paths';
 import DisclosureCard from '@/components/common/DisclosureCard';
 import { Badge } from '@/components/ui/badge';
@@ -15,9 +15,11 @@ import TeamProjectDetail from './TeamProjectDetail';
 // team but only opens the ones they are a member of.
 export default function TeamProjectRow({
   teamId,
+  teamRole,
   project,
 }: {
   teamId: number;
+  teamRole: TeamRole;
   project: TeamProject;
 }) {
   const t = useTranslations('teams.panel');
@@ -32,14 +34,7 @@ export default function TeamProjectRow({
           >
             {project.key}
           </Badge>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium">{project.name}</span>
-            {project.description && (
-              <span className="block truncate text-xs text-muted-foreground">
-                {project.description}
-              </span>
-            )}
-          </span>
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">{project.name}</span>
           <span
             className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
             title={t('memberCount', { count: project.memberCount })}
@@ -66,7 +61,7 @@ export default function TeamProjectRow({
         )
       }
     >
-      <TeamProjectDetail teamId={teamId} projectId={project.id} />
+      <TeamProjectDetail teamId={teamId} teamRole={teamRole} project={project} />
     </DisclosureCard>
   );
 }

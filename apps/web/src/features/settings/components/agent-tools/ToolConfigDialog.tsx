@@ -51,7 +51,7 @@ export function ToolConfigDialog({
   const [tools, setTools] = useState<ToolOption[]>([]);
 
   return (
-    <Modal title={t('add')} projectKey={projectKey} onClose={onClose} wide>
+    <Modal title={t('add')} scope={projectKey} onClose={onClose} wide>
       {tools.length > 0 ? (
         <ToolCredentialStep
           projectKey={projectKey}

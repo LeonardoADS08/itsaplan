@@ -26,8 +26,6 @@
   "integrations": "Интеграции",
   "projects": "Проекты",
   "noProjects": "Проектов пока нет",
-  "newProject": "Новый проект",
-  "manageProjects": "Управление проектами",
   "newTeam": "Новая команда",
   "manageTeams": "Управление командами",
   "role": "Роль: {role}",

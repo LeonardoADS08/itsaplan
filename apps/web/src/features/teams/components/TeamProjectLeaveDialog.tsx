@@ -1,16 +1,16 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import type { Project } from '@/lib/api';
+import type { TeamProject } from '@/lib/api';
 import { useLeaveProject } from '@/services/projects.service';
 import ConfirmDialog from '@/components/common/overlay/ConfirmDialog';
 
-export default function ManageProjectsLeaveDialog({
+export default function TeamProjectLeaveDialog({
   project,
   userId,
   onClose,
 }: {
-  project: Project;
+  project: TeamProject;
   userId: string;
   onClose: () => void;
 }) {

@@ -2,7 +2,6 @@ import { useRouter } from 'next/navigation';
 import {
   Bell,
   Braces,
-  FolderKanban,
   Inbox,
   LayoutDashboard,
   Server,
@@ -21,7 +20,6 @@ import {
   godPath,
   inboxPath,
   initiativesPath,
-  manageProjectsPath,
   manageTeamsPath,
   mcpServerPath,
   membersPath,
@@ -126,13 +124,12 @@ export function useNavigationCommands(projectKey: string | null): CommandSection
   }
 
   add(
-    'nav.manage-projects',
-    t('manageProjects'),
-    <FolderKanban />,
-    manageProjectsPath(),
-    'account leave delete copy',
+    'nav.manage-teams',
+    t('manageTeams'),
+    <Users />,
+    manageTeamsPath(),
+    'account rename leave projects delete copy',
   );
-  add('nav.manage-teams', t('manageTeams'), <Users />, manageTeamsPath(), 'account rename leave');
   for (const s of ACCOUNT_SECTIONS) {
     add(`nav.account.${s.slug}`, accountLabel(s.slug), <s.icon />, accountPath(s.slug), 'account');
   }

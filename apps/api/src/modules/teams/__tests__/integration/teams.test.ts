@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { api as anonApi, authedApi } from '#tests/helpers/app';
+import { api as anonApi, authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { addProjectMember } from '#tests/helpers/members';
@@ -213,6 +213,166 @@ describe('teams', () => {
         .projects({ projectId: otherProject.data!.id })
         .get();
       expect(detail.status).toBe(404);
+    });
+  });
+
+  describe('team projects', () => {
+    // The team the account was registered with, which owns the projects it creates.
+    async function ownTeamId(api: Api): Promise<number> {
+      return (await api.teams.get()).data![0].id;
+    }
+
+    describe('create', () => {
+      it('creates a project the team owns, with the caller as its owner', async () => {
+        const { user, api } = await signUpClient();
+        const teamId = await ownTeamId(api);
+
+        const created = await api
+          .teams({ teamId })
+          .projects.post({ key: 'MKT', name: 'Marketing' });
+        expect(created.status).toBe(201);
+        expect(created.data).toMatchObject({ key: 'MKT', teamId, teamName: user.username });
+
+        const detail = await api.teams({ teamId }).get();
+        expect(detail.data?.projects).toMatchObject([{ key: 'MKT', isMember: true }]);
+      });
+
+      it('rejects a duplicate project key', async () => {
+        const { api } = await signUpClient();
+        const teamId = await ownTeamId(api);
+        await api.teams({ teamId }).projects.post({ key: 'MKT', name: 'Marketing' });
+
+        const dup = await api.teams({ teamId }).projects.post({ key: 'MKT', name: 'Other' });
+        expect(dup.status).toBe(409);
+      });
+
+      it("404s for another account's team", async () => {
+        const { api } = await signUpClient();
+        const other = await signUpClient();
+        const otherTeamId = await ownTeamId(other.api);
+
+        const created = await api
+          .teams({ teamId: otherTeamId })
+          .projects.post({ key: 'MKT', name: 'Marketing' });
+        expect(created.status).toBe(404);
+        expect((await other.api.teams({ teamId: otherTeamId }).get()).data?.projects).toHaveLength(
+          0,
+        );
+      });
+    });
+
+    describe('copy', () => {
+      it("copies a project of the team into the same team's new project", async () => {
+        const { api } = await signUpClient();
+        const teamId = await ownTeamId(api);
+        const source = await api.teams({ teamId }).projects.post({ key: 'SRC', name: 'Source' });
+        await api.projects({ projectKey: 'SRC' }).labels.post({ name: 'bug', color: '#ff0000' });
+
+        const copied = await api
+          .teams({ teamId })
+          .projects({ projectId: source.data!.id })
+          .copy.post({ key: 'DST', name: 'Destination' });
+        expect(copied.status).toBe(201);
+        expect(copied.data).toMatchObject({ key: 'DST', teamId });
+
+        const view = await api.projects({ projectKey: 'DST' }).get();
+        expect(view.data?.labels.map((l) => l.name)).toEqual(['bug']);
+      });
+
+      it("404s for a project of another account's team", async () => {
+        const { api } = await signUpClient();
+        const other = await signUpClient();
+        const otherProject = await other.api.projects.post({ key: 'OTH', name: 'Other' });
+        const teamId = await ownTeamId(api);
+
+        const copied = await api
+          .teams({ teamId })
+          .projects({ projectId: otherProject.data!.id })
+          .copy.post({ key: 'DST', name: 'Destination' });
+        expect(copied.status).toBe(404);
+      });
+    });
+
+    describe('update', () => {
+      it('renames a project the team owns', async () => {
+        const { api } = await signUpClient();
+        const teamId = await ownTeamId(api);
+        const project = await api
+          .teams({ teamId })
+          .projects.post({ key: 'MKT', name: 'Marketing' });
+
+        const updated = await api
+          .teams({ teamId })
+          .projects({ projectId: project.data!.id })
+          .patch({ name: 'Growth', description: 'What we ship' });
+        expect(updated.status).toBe(200);
+        expect(updated.data).toMatchObject({ key: 'MKT', name: 'Growth' });
+
+        const detail = await api.teams({ teamId }).get();
+        expect(detail.data?.projects).toMatchObject([
+          { key: 'MKT', name: 'Growth', description: 'What we ship' },
+        ]);
+      });
+
+      it("404s for a project of another account's team", async () => {
+        const { api } = await signUpClient();
+        const other = await signUpClient();
+        const otherProject = await other.api.projects.post({ key: 'OTH', name: 'Other' });
+        const teamId = await ownTeamId(api);
+
+        const updated = await api
+          .teams({ teamId })
+          .projects({ projectId: otherProject.data!.id })
+          .patch({ name: 'Growth' });
+        expect(updated.status).toBe(404);
+        expect((await other.api.projects.get()).data?.[0]).toMatchObject({ name: 'Other' });
+      });
+
+      it('rejects an empty name', async () => {
+        const { api } = await signUpClient();
+        const teamId = await ownTeamId(api);
+        const project = await api
+          .teams({ teamId })
+          .projects.post({ key: 'MKT', name: 'Marketing' });
+
+        const updated = await api
+          .teams({ teamId })
+          .projects({ projectId: project.data!.id })
+          .patch({ name: '' });
+        expect(updated.status).toBe(400);
+      });
+    });
+
+    describe('delete', () => {
+      it('deletes a project the team owns', async () => {
+        const { api } = await signUpClient();
+        const teamId = await ownTeamId(api);
+        const project = await api
+          .teams({ teamId })
+          .projects.post({ key: 'MKT', name: 'Marketing' });
+
+        const deleted = await api
+          .teams({ teamId })
+          .projects({ projectId: project.data!.id })
+          .delete();
+        expect(deleted.status).toBe(204);
+        expect((await api.teams({ teamId }).get()).data?.projects).toHaveLength(0);
+        expect((await api.projects.get()).data).toHaveLength(0);
+      });
+
+      it('404s for a project of another team, leaving it in place', async () => {
+        const { api } = await signUpClient();
+        const other = await signUpClient();
+        const otherProject = await other.api.projects.post({ key: 'OTH', name: 'Other' });
+        const teamId = await ownTeamId(api);
+
+        const deleted = await api
+          .teams({ teamId })
+          .projects({ projectId: otherProject.data!.id })
+          .delete();
+        expect(deleted.status).toBe(404);
+        expect((await other.api.projects.get()).data).toHaveLength(1);
+      });
     });
   });
 

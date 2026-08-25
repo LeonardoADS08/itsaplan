@@ -34,6 +34,7 @@
   "panel": {
     "created": "created {date}",
     "projects": "Projects",
+    "newProject": "New project",
     "noProjects": "This team has no projects yet.",
     "teamMembers": "Team members",
     "projectMembers": "Project members",
@@ -41,6 +42,7 @@
     "joined": "joined {date}",
     "openProject": "Open project",
     "noProjectMembers": "Nobody can reach this project yet.",
+    "info": "Info",
     "lastActivity": "Last activity: {value}",
     "noActivity": "none yet",
     "stats": {

@@ -20,7 +20,7 @@ import {
 } from '@repo/db';
 import { eq, inArray } from 'drizzle-orm';
 import { defaultMemberPermissions } from '#shared/permissions';
-import { DEFAULT_COLUMNS, mapProject, ownedTeam, type ProjectRow } from './service';
+import { DEFAULT_COLUMNS, mapProject, targetTeam, type ProjectRow } from './service';
 import { GIT_SETTING_KEY } from '#modules/git/service';
 import { listAgents, createAgent, type NewAgentInput } from '#modules/agents/core/service';
 import {
@@ -239,6 +239,7 @@ export async function copyProject(
   input: { key: string; name: string; description?: string },
   ownerId: string,
   rawInclude?: Partial<CopyProjectInclude>,
+  teamId?: number,
 ): Promise<ProjectRow> {
   const inc = normalizeInclude(rawInclude);
 
@@ -256,7 +257,7 @@ export async function copyProject(
   const skillMap = new Map<number, number>();
   const agentMap = new Map<number, number>();
 
-  const ownerTeam = await ownedTeam(ownerId);
+  const ownerTeam = await targetTeam(ownerId, teamId);
   const newProject = await db.transaction(async (tx) => {
     // The optional sections the source project shows and the estimate kinds it
     // carries are part of its configuration, so the copy starts with the same ones.

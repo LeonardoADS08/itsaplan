@@ -29,7 +29,7 @@ export function CredentialDialog({
 
   if (!isEdit && !meta) {
     return (
-      <Modal title={t('add')} projectKey={projectKey} onClose={onClose} wide>
+      <Modal title={t('add')} scope={projectKey} onClose={onClose} wide>
         <IntegrationPicker catalog={catalog} onSelect={setIntegrationKey} />
       </Modal>
     );
@@ -39,7 +39,7 @@ export function CredentialDialog({
   if (!meta) return null;
 
   return (
-    <Modal title={isEdit ? t('edit') : t('add')} projectKey={projectKey} onClose={onClose}>
+    <Modal title={isEdit ? t('edit') : t('add')} scope={projectKey} onClose={onClose}>
       <CredentialForm
         projectKey={projectKey}
         meta={meta}

@@ -132,11 +132,6 @@ export const startPagePath = (key: string, startPage: StartPage) => {
   }
 };
 
-// The standalone Manage projects page (outside the project shell), reached from
-// the project switcher. Lists every project the user belongs to and lets an owner
-// delete one.
-export const manageProjectsPath = () => '/account/projects';
-
 // The standalone Manage teams page, reached from the project switcher. Lists the
 // teams the user belongs to; an owner renames one, a member leaves.
 export const manageTeamsPath = () => '/account/teams';

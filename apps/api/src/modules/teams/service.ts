@@ -209,6 +209,16 @@ async function lastActivityAt(projectId: number): Promise<string | null> {
   return rows[0] ? iso(rows[0].createdAt) : null;
 }
 
+// Whether the project is one the team owns. The team-scoped project routes check it
+// so a project of another team answers 404 rather than being acted on.
+export async function teamOwnsProject(teamId: number, projectId: number): Promise<boolean> {
+  const rows = await db
+    .select({ id: project.id })
+    .from(project)
+    .where(and(eq(project.id, projectId), eq(project.teamId, teamId)));
+  return rows.length > 0;
+}
+
 // One project the team owns, with its issue stats and its members. Returns null
 // when the project is not owned by the team, so the route answers 404 for a
 // project of another team.
@@ -216,11 +226,7 @@ export async function getTeamProject(
   teamId: number,
   projectId: number,
 ): Promise<TeamProjectDetail | null> {
-  const owned = await db
-    .select({ id: project.id })
-    .from(project)
-    .where(and(eq(project.id, projectId), eq(project.teamId, teamId)));
-  if (owned.length === 0) return null;
+  if (!(await teamOwnsProject(teamId, projectId))) return null;
 
   const [activity, stats, members, contexts] = await Promise.all([
     lastActivityAt(projectId),

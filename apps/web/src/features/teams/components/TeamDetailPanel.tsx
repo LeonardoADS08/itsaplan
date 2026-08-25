@@ -1,13 +1,17 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Plus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { formatDate } from '@/utils/dates';
+import { projectPath } from '@/utils/paths';
 import { useExitOnEscape } from '@/hooks/useExitOnEscape';
 import { useTeamQuery } from '@/services/teams.service';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import NewProjectModal from '@/components/layout/NewProjectModal';
 import TeamMemberRow from './TeamMemberRow';
 import TeamProjectRow from './TeamProjectRow';
 
@@ -24,6 +28,10 @@ export default function TeamDetailPanel({
   const tManage = useTranslations('teams.manage');
   const tCommon = useTranslations('common');
   const { data: team } = useTeamQuery(teamId);
+  const router = useRouter();
+  const [creating, setCreating] = useState(false);
+  // Owners and managers run the team's projects; a plain member only reads them.
+  const canCreateProject = !!team && team.role !== 'member';
 
   useExitOnEscape(onClose);
 
@@ -66,16 +74,32 @@ export default function TeamDetailPanel({
           ) : (
             <>
               <section className="space-y-3">
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-center gap-2">
                   <h3 className="text-sm font-medium">{t('projects')}</h3>
                   <span className="text-xs text-muted-foreground">{team.projectCount}</span>
+                  {canCreateProject && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ms-auto h-7 gap-1.5 text-muted-foreground hover:text-foreground"
+                      onClick={() => setCreating(true)}
+                    >
+                      <Plus className="size-4" />
+                      {t('newProject')}
+                    </Button>
+                  )}
                 </div>
                 {team.projects.length === 0 ? (
                   <p className="text-sm text-muted-foreground">{t('noProjects')}</p>
                 ) : (
                   <div className="space-y-2">
                     {team.projects.map((project) => (
-                      <TeamProjectRow key={project.id} teamId={team.id} project={project} />
+                      <TeamProjectRow
+                        key={project.id}
+                        teamId={team.id}
+                        teamRole={team.role}
+                        project={project}
+                      />
                     ))}
                   </div>
                 )}
@@ -96,6 +120,17 @@ export default function TeamDetailPanel({
           )}
         </div>
       </div>
+
+      {creating && (
+        <NewProjectModal
+          teamId={teamId}
+          onClose={() => setCreating(false)}
+          onCreated={(key) => {
+            setCreating(false);
+            router.push(projectPath(key));
+          }}
+        />
+      )}
     </div>
   );
 }

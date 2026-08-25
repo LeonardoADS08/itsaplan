@@ -299,7 +299,7 @@ export default function NewIssueModal({
     <Modal
       title={t('title')}
       crumb={crumb}
-      projectKey={project.project.key}
+      scope={project.project.key}
       onClose={onClose}
       wide
       fullscreen={fullscreen}

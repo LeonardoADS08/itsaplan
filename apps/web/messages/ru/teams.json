@@ -34,6 +34,7 @@
   "panel": {
     "created": "создана {date}",
     "projects": "Проекты",
+    "newProject": "Новый проект",
     "noProjects": "У этой команды пока нет проектов.",
     "teamMembers": "Участники команды",
     "projectMembers": "Участники проекта",
@@ -41,6 +42,7 @@
     "joined": "с {date}",
     "openProject": "Открыть проект",
     "noProjectMembers": "К этому проекту пока ни у кого нет доступа.",
+    "info": "Информация",
     "lastActivity": "Последняя активность: {value}",
     "noActivity": "пока не было",
     "stats": {
