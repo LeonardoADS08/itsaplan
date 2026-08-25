@@ -5,11 +5,21 @@ import { guards } from '#shared/guards';
 import { HttpError, rethrowDuplicate } from '#shared/lib';
 import { PERMISSION_RESOURCES, PERMISSION_ACTIONS } from '#shared/permissions';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
-import { listRoles, getRole, createRole, updateRole, deleteRole } from './service';
+import {
+  listRoles,
+  getRole,
+  getRoleUsage,
+  isRoleInUse,
+  createRole,
+  updateRole,
+  deleteRole,
+} from './service';
 import {
   PermissionCatalogResponse,
   RoleResponse,
+  RoleUsageResponse,
   createRoleBody,
+  deleteRoleQuery,
   projectKeyParams,
   roleParams,
   teamParams,
@@ -98,24 +108,66 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
     },
   )
 
-  // Deletes a custom role. The default role cannot be deleted. Members on the
-  // role are reassigned to the default role.
-  .delete(
-    '/teams/:teamId/roles/:roleId',
+  // What a role would take with it if deleted, so the caller can name where to move
+  // it before asking for the deletion.
+  .get(
+    '/teams/:teamId/roles/:roleId/usage',
     async ({ membership, params }) => {
       const role = await getRole(membership.teamId, params.roleId);
       if (!role) throw new HttpError(404, 'Role not found');
-      if (role.isDefault) throw new HttpError(400, 'The default role cannot be deleted');
-      await deleteRole(membership.teamId, params.roleId);
-      return noContent();
+      return getRoleUsage(params.roleId);
     },
     {
       params: roleParams,
       teamOwner: true,
+      response: { 200: RoleUsageResponse, ...commonErrors },
+      detail: {
+        summary: 'Count what a role is assigned to',
+        description:
+          'Count the project members, AI agents and pending invites on a role. They have to be moved to another role before it can be deleted.',
+        ...mcpTool('get_role_usage'),
+      },
+    },
+  )
+
+  // Deletes a custom role. The default role cannot be deleted. A role that members,
+  // agents or pending invites are on is deleted only together with targetRoleId,
+  // the role they are all moved to.
+  .delete(
+    '/teams/:teamId/roles/:roleId',
+    async ({ membership, params, query }) => {
+      const role = await getRole(membership.teamId, params.roleId);
+      if (!role) throw new HttpError(404, 'Role not found');
+      if (role.isDefault) throw new HttpError(400, 'The default role cannot be deleted');
+
+      let targetRoleId: number | null = null;
+      if (isRoleInUse(await getRoleUsage(params.roleId))) {
+        if (query.targetRoleId === undefined) {
+          throw new HttpError(
+            400,
+            'This role is in use. Pass targetRoleId to move its members, agents and pending invites to another role.',
+          );
+        }
+        if (query.targetRoleId === params.roleId) {
+          throw new HttpError(400, 'Move to a role other than the one being deleted');
+        }
+        const target = await getRole(membership.teamId, query.targetRoleId);
+        if (!target) throw new HttpError(404, 'Target role not found');
+        targetRoleId = target.id;
+      }
+
+      await deleteRole(membership.teamId, params.roleId, targetRoleId);
+      return noContent();
+    },
+    {
+      params: roleParams,
+      query: deleteRoleQuery,
+      teamOwner: true,
       response: { 204: t.Void(), ...commonErrors },
       detail: {
         summary: 'Delete a role',
-        description: 'Delete a custom role. The default role cannot be deleted.',
+        description:
+          'Delete a custom role. The default role cannot be deleted. A role in use requires targetRoleId, the role its members, agents and pending invites are moved to.',
         ...mcpTool('delete_role'),
       },
     },

@@ -2344,6 +2344,14 @@ export interface Role {
   createdAt: string;
 }
 
+// What a role is assigned to. Everything counted here is moved to another role
+// before the role can be deleted.
+export interface RoleUsage {
+  members: number;
+  agents: number;
+  invites: number;
+}
+
 // The resources and actions the role editor renders. Fetched so the UI matches the
 // API's matrix without hardcoding the list in two places.
 export interface PermissionCatalog {
@@ -3305,8 +3313,12 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
-  deleteRole: (teamId: number, roleId: number) =>
-    request<void>(`/teams/${teamId}/roles/${roleId}`, { method: 'DELETE' }),
+  getRoleUsage: (teamId: number, roleId: number) =>
+    request<RoleUsage>(`/teams/${teamId}/roles/${roleId}/usage`),
+  deleteRole: (teamId: number, roleId: number, targetRoleId?: number) => {
+    const qs = targetRoleId === undefined ? '' : `?targetRoleId=${targetRoleId}`;
+    return request<void>(`/teams/${teamId}/roles/${roleId}${qs}`, { method: 'DELETE' });
+  },
 
   // Invites — the managing side: create, list, and revoke the invite links of a
   // project or of a team. A project invite joins the team as well; a team invite

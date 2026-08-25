@@ -58,19 +58,24 @@ export const qk = {
   // to (a role edited on the team they belong to).
   anyMembers: ['members'] as const,
   invites: (projectKey: string) => ['invites', projectKey] as const,
+  anyInvites: ['invites'] as const,
   // Who a project can be filled from: the members of its team who are not in it yet.
   memberCandidates: (projectKey: string) => ['members', projectKey, 'candidates'] as const,
   // The invites of a team, including the ones into its projects.
   teamInvites: (teamId: number) => ['teamInvites', teamId] as const,
+  anyTeamInvites: ['teamInvites'] as const,
   // The roles a project assigns from, and the list its team manages. The permission
   // catalog is app-static, so it is scoped to neither.
   projectRoles: (projectKey: string) => ['projectRoles', projectKey] as const,
   anyProjectRoles: ['projectRoles'] as const,
   teamRoles: (teamId: number) => ['teamRoles', teamId] as const,
+  roleUsage: (teamId: number, roleId: number) => ['roleUsage', teamId, roleId] as const,
+  anyRoleUsage: ['roleUsage'] as const,
   permissionCatalog: ['permissionCatalog'] as const,
   // A project's AI agents (the AI Agents settings section). The tool catalog is
   // project-scoped on the API, so it hangs off the same key with an 'tools' tail.
   aiAgents: (projectKey: string) => ['aiAgents', projectKey] as const,
+  anyAiAgents: ['aiAgents'] as const,
   agentTools: (projectKey: string) => ['aiAgents', projectKey, 'tools'] as const,
   // The skills enabled on one agent (the agent editor's Skills tab).
   agentSkillLinks: (projectKey: string, agentId: number) =>

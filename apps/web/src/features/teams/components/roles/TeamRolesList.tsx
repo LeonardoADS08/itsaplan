@@ -4,16 +4,16 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { Role } from '@/lib/api';
-import ConfirmDialog from '@/components/common/overlay/ConfirmDialog';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useDeleteRole } from '@/services/roles.service';
 import { PermissionsPopover } from '@/components/common/permissions/PermissionsPopover';
+import DeleteRoleDialog from './DeleteRoleDialog';
 
 // The team's roles, one row each: what it grants, and the actions to edit or delete
-// it. The default role cannot be deleted; members on a deleted one fall back to it.
+// it. The default role cannot be deleted; deleting any other one moves what is on it
+// to a role the dialog asks for.
 export default function TeamRolesList({
   teamId,
   roles,
@@ -28,7 +28,6 @@ export default function TeamRolesList({
   onEdit: (role: Role) => void;
 }) {
   const t = useTranslations('teams.roles');
-  const deleteRole = useDeleteRole(teamId);
   const [deleting, setDeleting] = useState<Role | null>(null);
 
   if (pending) return <ListSkeleton rows={2} rowClassName="h-12" />;
@@ -79,17 +78,12 @@ export default function TeamRolesList({
       ))}
 
       {deleting && (
-        <ConfirmDialog
-          title={t('deleteTitle', { name: deleting.name })}
-          confirmLabel={t('deleteAction')}
-          onConfirm={async () => {
-            await deleteRole.mutateAsync(deleting.id);
-            setDeleting(null);
-          }}
+        <DeleteRoleDialog
+          teamId={teamId}
+          role={deleting}
+          roles={roles}
           onClose={() => setDeleting(null)}
-        >
-          <div className="text-sm text-muted-foreground">{t('deleteDescription')}</div>
-        </ConfirmDialog>
+        />
       )}
     </div>
   );

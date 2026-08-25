@@ -328,6 +328,56 @@ describe('roles', () => {
     });
   });
 
+  describe('usage — GET /teams/:teamId/roles/:roleId/usage', () => {
+    it('counts the members on a role', async () => {
+      const owner = await setupOwner();
+      const created = await owner.api
+        .teams({ teamId: owner.teamId })
+        .roles.post({ name: 'Editor', permissions: {} });
+      const roleId = created.data!.id;
+
+      const empty = await owner.api.teams({ teamId: owner.teamId }).roles({ roleId }).usage.get();
+      expect(empty.status).toBe(200);
+      expect(empty.data).toMatchObject({ members: 0, agents: 0, invites: 0 });
+
+      const member = await addMember(owner);
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: member.user.userId })
+        .patch({ role: 'member', roleId });
+
+      const res = await owner.api.teams({ teamId: owner.teamId }).roles({ roleId }).usage.get();
+      expect(res.data).toMatchObject({ members: 1, agents: 0, invites: 0 });
+    });
+
+    it('counts an agent on the role once, as an agent', async () => {
+      const owner = await setupOwner();
+      const created = await owner.api
+        .teams({ teamId: owner.teamId })
+        .roles.post({ name: 'Editor', permissions: {} });
+      const roleId = created.data!.id;
+
+      // The agent's bot user also gets a project_member row on the role, which must
+      // not show up as a member of its own.
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        ['ai-agents'].post({ name: 'Ext', username: 'ext', kind: 'external', roleId });
+
+      const res = await owner.api.teams({ teamId: owner.teamId }).roles({ roleId }).usage.get();
+      expect(res.data).toMatchObject({ members: 0, agents: 1, invites: 0 });
+    });
+
+    it('returns 404 for a role that does not exist', async () => {
+      const owner = await setupOwner();
+
+      const res = await owner.api
+        .teams({ teamId: owner.teamId })
+        .roles({ roleId: 999999 })
+        .usage.get();
+      expect(res.status).toBe(404);
+    });
+  });
+
   describe('delete — DELETE /teams/:teamId/roles/:roleId', () => {
     // Creates a custom role on the owner's team and returns its id.
     async function makeRole(owner: Actor, name = 'Editor'): Promise<number> {
@@ -348,24 +398,71 @@ describe('roles', () => {
       expect(list.data?.map((r) => r.id)).not.toContain(roleId);
     });
 
-    it('reassigns members on the deleted role to the default role', async () => {
-      const owner = await setupOwner();
+    // Puts a fresh member of MKT on the role, so it counts as in use.
+    async function putMemberOn(owner: Actor, roleId: number): Promise<Actor> {
       const member = await addMember(owner);
-      const roleId = await makeRole(owner);
       await owner.api
         .projects({ projectKey: 'MKT' })
         .members({ userId: member.user.userId })
         .patch({ role: 'member', roleId });
+      return member;
+    }
+
+    it('returns 400 for a role in use without a target role', async () => {
+      const owner = await setupOwner();
+      const roleId = await makeRole(owner);
+      await putMemberOn(owner, roleId);
 
       const res = await owner.api.teams({ teamId: owner.teamId }).roles({ roleId }).delete();
+      expect(res.status).toBe(400);
+
+      const after = await owner.api.teams({ teamId: owner.teamId }).roles.get();
+      expect(after.data?.map((r) => r.id)).toContain(roleId);
+    });
+
+    it('moves the members on the role to the target role and deletes it', async () => {
+      const owner = await setupOwner();
+      const roleId = await makeRole(owner);
+      const target = await makeRole(owner, 'Reviewer');
+      const member = await putMemberOn(owner, roleId);
+
+      const res = await owner.api
+        .teams({ teamId: owner.teamId })
+        .roles({ roleId })
+        .delete(undefined, { query: { targetRoleId: target } });
       expect(res.status).toBe(204);
 
-      // The member falls back to the default "Member" role rather than a dangling
-      // reference.
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      const row = list.data?.find((m) => m.userId === member.user.userId);
-      expect(row).toMatchObject({ roleName: 'Member' });
-      expect(row?.roleId).not.toBe(roleId);
+      expect(list.data?.find((m) => m.userId === member.user.userId)).toMatchObject({
+        roleId: target,
+        roleName: 'Reviewer',
+      });
+    });
+
+    it('returns 400 when the target role is the role being deleted', async () => {
+      const owner = await setupOwner();
+      const roleId = await makeRole(owner);
+      await putMemberOn(owner, roleId);
+
+      const res = await owner.api
+        .teams({ teamId: owner.teamId })
+        .roles({ roleId })
+        .delete(undefined, { query: { targetRoleId: roleId } });
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 404 when the target role is another team's", async () => {
+      const owner = await setupOwner();
+      const other = await setupOwner('OPS');
+      const roleId = await makeRole(owner);
+      const foreign = await makeRole(other, 'Ops');
+      await putMemberOn(owner, roleId);
+
+      const res = await owner.api
+        .teams({ teamId: owner.teamId })
+        .roles({ roleId })
+        .delete(undefined, { query: { targetRoleId: foreign } });
+      expect(res.status).toBe(404);
     });
 
     it('returns 400 when deleting the default role', async () => {

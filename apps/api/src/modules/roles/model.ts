@@ -7,6 +7,10 @@ export const teamParams = t.Object({ teamId: t.Numeric() });
 
 export const roleParams = t.Object({ teamId: t.Numeric(), roleId: t.Numeric() });
 
+// The role everything on the deleted one is moved to. Required when the role is in
+// use, ignored otherwise.
+export const deleteRoleQuery = t.Object({ targetRoleId: t.Optional(t.Numeric()) });
+
 // Permission matrix carried on create/update. Kept loose (a jsonb blob) and
 // sanitized by normalizePermissions in the service: unknown keys are dropped,
 // values coerced to booleans, missing entries defaulted to false.
@@ -29,6 +33,12 @@ export const RoleResponse = t.Object({
   isDefault: t.Boolean(),
   permissions: PermissionMatrixSchema,
   createdAt: t.String(),
+});
+
+export const RoleUsageResponse = t.Object({
+  members: t.Number(),
+  agents: t.Number(),
+  invites: t.Number(),
 });
 
 export const PermissionCatalogResponse = t.Object({

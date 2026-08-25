@@ -1,5 +1,5 @@
-import { db, teamRole, projectMember } from '@repo/db';
-import { and, asc, eq } from 'drizzle-orm';
+import { db, teamRole, projectMember, aiAgent, teamInvite } from '@repo/db';
+import { and, asc, count, eq, isNull } from 'drizzle-orm';
 import { iso } from '#shared/lib';
 import { normalizePermissions, type Permissions } from '#shared/permissions';
 
@@ -86,19 +86,56 @@ export async function updateRole(
   return row ? mapRole(row) : null;
 }
 
-// Deletes a role after reassigning every member on it, in any project of the team,
-// to the team's default role, so no member is left with a dangling role. Runs in one
-// transaction. The caller guards against deleting the default role itself.
-export async function deleteRole(teamId: number, roleId: number): Promise<void> {
+// Who currently works under a role: project members, AI agents, and pending
+// invites that would put their invitee on it. A role with any of them cannot be
+// deleted until the caller names the role to move them to.
+export interface RoleUsage {
+  members: number;
+  agents: number;
+  invites: number;
+}
+
+export async function getRoleUsage(roleId: number): Promise<RoleUsage> {
+  const [members, agents, invites] = await Promise.all([
+    db
+      .select({ n: count() })
+      .from(projectMember)
+      // An agent's bot user holds a project_member row on the same role; it is
+      // counted as an agent instead. Same agent test as listMembers.
+      .leftJoin(aiAgent, eq(aiAgent.userId, projectMember.userId))
+      .where(and(eq(projectMember.roleId, roleId), isNull(aiAgent.id))),
+    db.select({ n: count() }).from(aiAgent).where(eq(aiAgent.roleId, roleId)),
+    db
+      .select({ n: count() })
+      .from(teamInvite)
+      .where(and(eq(teamInvite.roleId, roleId), eq(teamInvite.status, 'pending'))),
+  ]);
+  return { members: members[0].n, agents: agents[0].n, invites: invites[0].n };
+}
+
+export function isRoleInUse(usage: RoleUsage): boolean {
+  return usage.members + usage.agents + usage.invites > 0;
+}
+
+// Deletes a role after moving everything on it — members, agents, pending invites
+// — to targetRoleId, in one transaction, so nothing is left with a dangling role.
+// The caller guards against deleting the default role and supplies the target
+// whenever the role is in use.
+export async function deleteRole(
+  teamId: number,
+  roleId: number,
+  targetRoleId: number | null,
+): Promise<void> {
   await db.transaction(async (tx) => {
-    const [def] = await tx
-      .select({ id: teamRole.id })
-      .from(teamRole)
-      .where(and(eq(teamRole.teamId, teamId), eq(teamRole.isDefault, true)));
     await tx
       .update(projectMember)
-      .set({ roleId: def?.id ?? null })
+      .set({ roleId: targetRoleId })
       .where(eq(projectMember.roleId, roleId));
+    await tx.update(aiAgent).set({ roleId: targetRoleId }).where(eq(aiAgent.roleId, roleId));
+    await tx
+      .update(teamInvite)
+      .set({ roleId: targetRoleId })
+      .where(and(eq(teamInvite.roleId, roleId), eq(teamInvite.status, 'pending')));
     await tx.delete(teamRole).where(and(eq(teamRole.teamId, teamId), eq(teamRole.id, roleId)));
   });
 }

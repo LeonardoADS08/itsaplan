@@ -32,9 +32,19 @@ export function useTeamRolesQuery(teamId: number | null) {
   });
 }
 
+// What a role is assigned to, read when the delete dialog opens: the counts decide
+// whether the caller has to name a role to move them to.
+export function useRoleUsageQuery(teamId: number, roleId: number) {
+  return useQuery({
+    queryKey: qk.roleUsage(teamId, roleId),
+    queryFn: () => api.getRoleUsage(teamId, roleId),
+  });
+}
+
 // A role belongs to the team, so a write to it changes what every project of that
-// team offers and what its members resolve to. The project-scoped lists are keyed by
-// project, so they are dropped wholesale rather than by key.
+// team offers and what its members, agents and pending invites resolve to. The
+// project-scoped lists are keyed by project, so they are dropped wholesale rather
+// than by key.
 function useRoleMutation<TInput, TResult>(
   teamId: number,
   mutationFn: (input: TInput) => Promise<TResult>,
@@ -45,7 +55,11 @@ function useRoleMutation<TInput, TResult>(
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.teamRoles(teamId) });
       qc.invalidateQueries({ queryKey: qk.anyProjectRoles });
+      qc.invalidateQueries({ queryKey: qk.anyRoleUsage });
       qc.invalidateQueries({ queryKey: qk.anyMembers });
+      qc.invalidateQueries({ queryKey: qk.anyAiAgents });
+      qc.invalidateQueries({ queryKey: qk.anyInvites });
+      qc.invalidateQueries({ queryKey: qk.anyTeamInvites });
     },
   });
 }
@@ -64,6 +78,12 @@ export function useUpdateRole(teamId: number) {
   );
 }
 
+// targetRoleId is where the members, agents and pending invites on the role are
+// moved; the API refuses to delete a role in use without it.
 export function useDeleteRole(teamId: number) {
-  return useRoleMutation(teamId, (roleId: number) => api.deleteRole(teamId, roleId));
+  return useRoleMutation(
+    teamId,
+    ({ roleId, targetRoleId }: { roleId: number; targetRoleId?: number }) =>
+      api.deleteRole(teamId, roleId, targetRoleId),
+  );
 }
