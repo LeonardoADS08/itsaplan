@@ -49,7 +49,7 @@ export interface TeamProjectMemberRow {
   name: string;
   email: string;
   // The handle they are mentioned by, @username. An agent's bot user carries the
-  // agent's handle, not one of its own.
+  // agent's handle.
   username: string | null;
   image: string | null;
   isAgent: boolean;
