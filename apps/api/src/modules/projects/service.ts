@@ -6,9 +6,11 @@ import {
   projectMember,
   projectRole,
   projectSetting,
+  team,
+  teamMember,
 } from '@repo/db';
-import { and, eq } from 'drizzle-orm';
-import { iso } from '#shared/lib';
+import { and, eq, getTableColumns } from 'drizzle-orm';
+import { HttpError, iso } from '#shared/lib';
 import {
   defaultMemberPermissions,
   fullPermissions,
@@ -25,6 +27,8 @@ import { deleteThreadsWhere } from '#modules/agents/core/runtime/memory';
 
 export interface ProjectRow {
   id: number;
+  teamId: number;
+  teamName: string;
   key: string;
   name: string;
   description: string;
@@ -64,9 +68,15 @@ export interface ProjectListItem extends ProjectRow {
   permissions?: Permissions;
 }
 
-function mapProject(row: typeof project.$inferSelect): ProjectRow {
+type ProjectWithTeam = typeof project.$inferSelect & { teamName: string };
+
+const projectWithTeam = { ...getTableColumns(project), teamName: team.name };
+
+export function mapProject(row: ProjectWithTeam): ProjectRow {
   return {
     id: row.id,
+    teamId: row.teamId,
+    teamName: row.teamName,
     key: row.key,
     name: row.name,
     description: row.description,
@@ -98,33 +108,19 @@ export async function listProjects(
     : eq(projectMember.userId, userId);
   const rows = await db
     .select({
-      id: project.id,
-      key: project.key,
-      name: project.name,
-      description: project.description,
-      mcpEnabled: project.mcpEnabled,
-      initiativesEnabled: project.initiativesEnabled,
-      dashboardsEnabled: project.dashboardsEnabled,
-      notesEnabled: project.notesEnabled,
-      cyclesEnabled: project.cyclesEnabled,
-      subtasksEnabled: project.subtasksEnabled,
-      checklistsEnabled: project.checklistsEnabled,
-      issueStatsEnabled: project.issueStatsEnabled,
-      pointsEstimateEnabled: project.pointsEstimateEnabled,
-      timeEstimateEnabled: project.timeEstimateEnabled,
-      timeLoggingEnabled: project.timeLoggingEnabled,
-      createdAt: project.createdAt,
-      role: projectMember.role,
+      ...projectWithTeam,
+      memberRole: projectMember.role,
       rolePermissions: projectRole.permissions,
     })
     .from(project)
+    .innerJoin(team, eq(team.id, project.teamId))
     .innerJoin(projectMember, eq(projectMember.projectId, project.id))
     .leftJoin(projectRole, eq(projectRole.id, projectMember.roleId))
     .where(where)
     .orderBy(project.key);
-  return rows.map(({ rolePermissions, ...r }) => {
-    const role = r.role === 'owner' ? 'owner' : 'member';
-    const item: ProjectListItem = { ...r, createdAt: iso(r.createdAt), role };
+  return rows.map(({ memberRole, rolePermissions, ...row }) => {
+    const role = memberRole === 'owner' ? 'owner' : 'member';
+    const item: ProjectListItem = { ...mapProject(row), role };
     if (opts.withPermissions) {
       item.permissions =
         role === 'owner'
@@ -138,13 +134,36 @@ export async function listProjects(
 }
 
 export async function getProjectByKey(key: string): Promise<ProjectRow | null> {
-  const rows = await db.select().from(project).where(eq(project.key, key));
+  const rows = await db
+    .select(projectWithTeam)
+    .from(project)
+    .innerJoin(team, eq(team.id, project.teamId))
+    .where(eq(project.key, key));
   return rows[0] ? mapProject(rows[0]) : null;
 }
 
 export async function getProjectById(id: number): Promise<ProjectRow | null> {
-  const rows = await db.select().from(project).where(eq(project.id, id));
+  const rows = await db
+    .select(projectWithTeam)
+    .from(project)
+    .innerJoin(team, eq(team.id, project.teamId))
+    .where(eq(project.id, id));
   return rows[0] ? mapProject(rows[0]) : null;
+}
+
+// The team a project the user creates belongs to: the one they own. Every account is
+// given one when it is created, so a caller without one is a broken account rather
+// than a state the UI can reach.
+export async function ownedTeam(userId: string): Promise<{ id: number; name: string }> {
+  const [row] = await db
+    .select({ id: team.id, name: team.name })
+    .from(teamMember)
+    .innerJoin(team, eq(team.id, teamMember.teamId))
+    .where(and(eq(teamMember.userId, userId), eq(teamMember.role, 'owner')))
+    .orderBy(team.id)
+    .limit(1);
+  if (!row) throw new HttpError(400, 'You do not own a team to create a project in');
+  return row;
 }
 
 // Every new project starts with one column per state type, so it's usable (has
@@ -235,10 +254,16 @@ export async function createProject(
   },
   ownerId: string,
 ): Promise<ProjectRow> {
+  const ownerTeam = await ownedTeam(ownerId);
   return db.transaction(async (tx) => {
     const [row] = await tx
       .insert(project)
-      .values({ key: input.key, name: input.name, description: input.description ?? '' })
+      .values({
+        teamId: ownerTeam.id,
+        key: input.key,
+        name: input.name,
+        description: input.description ?? '',
+      })
       .returning();
     await tx.insert(projectMember).values({ projectId: row.id, userId: ownerId, role: 'owner' });
     // Every project starts with a default "Member" role, assigned to members that
@@ -271,7 +296,7 @@ export async function createProject(
     await tx
       .insert(projectSetting)
       .values({ projectId: row.id, key: AUTO_ARCHIVE_KEY, value: DEFAULT_AUTO_ARCHIVE });
-    return mapProject(row);
+    return mapProject({ ...row, teamName: ownerTeam.name });
   });
 }
 
@@ -286,8 +311,8 @@ export async function updateProject(
   if (patch.name !== undefined) values.name = patch.name;
   if (patch.description !== undefined) values.description = patch.description;
   if (Object.keys(values).length === 0) return getProjectById(projectId);
-  const [row] = await db.update(project).set(values).where(eq(project.id, projectId)).returning();
-  return row ? mapProject(row) : null;
+  await db.update(project).set(values).where(eq(project.id, projectId));
+  return getProjectById(projectId);
 }
 
 // Toggles whether the project is reachable through the MCP server. Owner-only at
@@ -296,12 +321,8 @@ export async function setProjectMcpEnabled(
   projectId: number,
   enabled: boolean,
 ): Promise<ProjectRow | null> {
-  const [row] = await db
-    .update(project)
-    .set({ mcpEnabled: enabled })
-    .where(eq(project.id, projectId))
-    .returning();
-  return row ? mapProject(row) : null;
+  await db.update(project).set({ mcpEnabled: enabled }).where(eq(project.id, projectId));
+  return getProjectById(projectId);
 }
 
 // The project's feature toggles, read from the project row.
@@ -332,8 +353,8 @@ export async function setProjectFeatures(
   if (patch.checklists !== undefined) values.checklistsEnabled = patch.checklists;
   if (patch.issueStats !== undefined) values.issueStatsEnabled = patch.issueStats;
   if (Object.keys(values).length === 0) return getProjectById(projectId);
-  const [row] = await db.update(project).set(values).where(eq(project.id, projectId)).returning();
-  return row ? mapProject(row) : null;
+  await db.update(project).set(values).where(eq(project.id, projectId));
+  return getProjectById(projectId);
 }
 
 // Which estimate kinds the project's issues carry, and whether its members log the

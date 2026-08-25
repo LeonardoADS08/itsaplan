@@ -28,6 +28,8 @@
   "noProjects": "No projects yet",
   "newProject": "New project",
   "manageProjects": "Manage projects",
+  "newTeam": "New team",
+  "manageTeams": "Manage teams",
   "role": "Role: {role}",
   "search": "Search or run a command…",
   "searchHint": "Search or run a command ({key})",

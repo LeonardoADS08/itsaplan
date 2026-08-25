@@ -348,6 +348,20 @@ export const auth = betterAuth({
             },
           };
         },
+        // A project belongs to a team, so an account owns one from the moment it is
+        // created, named after the username the hook above settled on.
+        after: async (created) => {
+          const handle = typeof created.username === 'string' ? created.username : created.name;
+          await db.transaction(async (tx) => {
+            const [row] = await tx
+              .insert(schema.team)
+              .values({ name: handle })
+              .returning({ id: schema.team.id });
+            await tx
+              .insert(schema.teamMember)
+              .values({ teamId: row.id, userId: created.id, role: 'owner' });
+          });
+        },
       },
     },
   },

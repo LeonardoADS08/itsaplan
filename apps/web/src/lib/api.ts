@@ -108,6 +108,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface Project {
   id: number;
+  teamId: number;
+  teamName: string;
   key: string;
   name: string;
   description: string;

@@ -49,6 +49,24 @@ describe('projects', () => {
       expect(list.data?.[0]).toMatchObject({ key: 'MKT', name: 'Marketing', role: 'owner' });
     });
 
+    it('puts the project in the team the account owns', async () => {
+      const { user, api } = await signUpClient();
+      const other = await signUpClient();
+
+      const created = await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      expect(created.data).toMatchObject({ teamName: user.username });
+
+      const theirs = await other.api.projects.post({ key: 'OPS', name: 'Operations' });
+      expect(theirs.data).toMatchObject({ teamName: other.user.username });
+
+      const list = await api.projects.get();
+      expect(list.data?.[0]).toMatchObject({
+        key: 'MKT',
+        teamId: created.data?.teamId,
+        teamName: user.username,
+      });
+    });
+
     it('stores a provided description', async () => {
       const { api } = await signUpClient();
       const created = await api.projects.post({
@@ -252,7 +270,7 @@ describe('projects', () => {
     }
 
     it('copies the structure into a new project owned by the caller', async () => {
-      const { api } = await signUpClient();
+      const { user, api } = await signUpClient();
       await setupSource(api);
 
       const copied = await api.projects({ projectKey: 'SRC' }).copy.post({
@@ -260,7 +278,11 @@ describe('projects', () => {
         name: 'Destination',
       });
       expect(copied.status).toBe(201);
-      expect(copied.data).toMatchObject({ key: 'DST', name: 'Destination' });
+      expect(copied.data).toMatchObject({
+        key: 'DST',
+        name: 'Destination',
+        teamName: user.username,
+      });
 
       // The copy is owned by the caller: it shows up in their project list.
       const list = await api.projects.get();

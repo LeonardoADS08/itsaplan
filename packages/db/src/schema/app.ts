@@ -49,12 +49,46 @@ export const appSecret = pgTable('app_secret', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+// A team owns projects and holds its own member list. Every account is given one at
+// registration, named after its username, and every project belongs to exactly one
+// team.
+export const team = pgTable('team', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Team membership and the role it carries. The roles are fixed, unlike the
+// per-project ones: 'owner' is the account the team was created for, 'manager' and
+// 'member' are the ranks below it.
+export const teamMember = pgTable(
+  'team_member',
+  {
+    teamId: integer('team_id')
+      .notNull()
+      .references(() => team.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    role: text('role').notNull().default('member'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.teamId, t.userId] }),
+    check('team_member_role_check', sql`${t.role} IN ('owner', 'manager', 'member')`),
+    index('team_member_user_idx').on(t.userId),
+  ],
+);
+
 // A project groups its own columns, issue types, labels, custom fields, and
 // issues. next_sequence is the atomic counter behind each issue's human
 // identifier (e.g. "MKT-42"): incrementing it under a row lock keeps concurrent
 // creates from colliding.
 export const project = pgTable('project', {
   id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => team.id, { onDelete: 'cascade' }),
   key: text('key').notNull().unique(),
   name: text('name').notNull(),
   description: text('description').notNull().default(''),

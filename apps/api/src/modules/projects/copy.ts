@@ -19,9 +19,8 @@ import {
   projectSetting,
 } from '@repo/db';
 import { eq, inArray } from 'drizzle-orm';
-import { iso } from '#shared/lib';
 import { defaultMemberPermissions } from '#shared/permissions';
-import { DEFAULT_COLUMNS, type ProjectRow } from './service';
+import { DEFAULT_COLUMNS, mapProject, ownedTeam, type ProjectRow } from './service';
 import { GIT_SETTING_KEY } from '#modules/git/service';
 import { listAgents, createAgent, type NewAgentInput } from '#modules/agents/core/service';
 import {
@@ -217,27 +216,6 @@ function remapActionEffect(effect: unknown, maps: CopyIdMaps): unknown {
   return out;
 }
 
-function mapProjectRow(row: typeof project.$inferSelect): ProjectRow {
-  return {
-    id: row.id,
-    key: row.key,
-    name: row.name,
-    description: row.description,
-    mcpEnabled: row.mcpEnabled,
-    initiativesEnabled: row.initiativesEnabled,
-    dashboardsEnabled: row.dashboardsEnabled,
-    notesEnabled: row.notesEnabled,
-    cyclesEnabled: row.cyclesEnabled,
-    subtasksEnabled: row.subtasksEnabled,
-    checklistsEnabled: row.checklistsEnabled,
-    issueStatsEnabled: row.issueStatsEnabled,
-    pointsEstimateEnabled: row.pointsEstimateEnabled,
-    timeEstimateEnabled: row.timeEstimateEnabled,
-    timeLoggingEnabled: row.timeLoggingEnabled,
-    createdAt: iso(row.createdAt),
-  };
-}
-
 // Reads a whole object from the store into a Buffer, for copying a skill's reference
 // files into the new project's own object prefix.
 async function readObjectBytes(key: string): Promise<{ bytes: Buffer; contentType: string }> {
@@ -278,6 +256,7 @@ export async function copyProject(
   const skillMap = new Map<number, number>();
   const agentMap = new Map<number, number>();
 
+  const ownerTeam = await ownedTeam(ownerId);
   const newProject = await db.transaction(async (tx) => {
     // The optional sections the source project shows and the estimate kinds it
     // carries are part of its configuration, so the copy starts with the same ones.
@@ -301,13 +280,14 @@ export async function copyProject(
     const [row] = await tx
       .insert(project)
       .values({
+        teamId: ownerTeam.id,
         key: input.key,
         name: input.name,
         description: input.description ?? '',
         ...sourceFeatures,
       })
       .returning();
-    const proj = mapProjectRow(row);
+    const proj = mapProject({ ...row, teamName: ownerTeam.name });
     await tx.insert(projectMember).values({ projectId: proj.id, userId: ownerId, role: 'owner' });
 
     // Roles. When copied, every source role is carried over (including which one is

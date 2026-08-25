@@ -55,6 +55,8 @@ export const listProjectsQuery = t.Object({
 // A project DTO (ProjectRow from the service).
 export const ProjectResponse = t.Object({
   id: t.Number(),
+  teamId: t.Number(),
+  teamName: t.String(),
   key: t.String(),
   name: t.String(),
   description: t.String(),

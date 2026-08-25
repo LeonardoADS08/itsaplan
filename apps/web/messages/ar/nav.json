@@ -28,6 +28,8 @@
   "noProjects": "لا توجد مشاريع بعد",
   "newProject": "مشروع جديد",
   "manageProjects": "إدارة المشاريع",
+  "newTeam": "فريق جديد",
+  "manageTeams": "إدارة الفرق",
   "role": "الدور: {role}",
   "search": "ابحث أو نفّذ أمرًا…",
   "searchHint": "ابحث أو نفّذ أمرًا ({key})",

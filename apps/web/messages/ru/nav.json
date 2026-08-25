@@ -28,6 +28,8 @@
   "noProjects": "Проектов пока нет",
   "newProject": "Новый проект",
   "manageProjects": "Управление проектами",
+  "newTeam": "Новая команда",
+  "manageTeams": "Управление командами",
   "role": "Роль: {role}",
   "search": "Поиск или команда…",
   "searchHint": "Поиск или команда ({key})",
