@@ -10,6 +10,27 @@
     "namePlaceholder": "اسم الفريق",
     "submit": "حفظ"
   },
+  "invite": {
+    "action": "دعوة للفريق",
+    "title": "دعوة للفريق",
+    "description": "هيدخل قائمة أعضاء الفريق. ضيفه لمشروع بعد كده.",
+    "emailLabel": "البريد",
+    "emailPlaceholder": "name@example.com",
+    "roleLabel": "الرتبة في الفريق",
+    "roleHint": {
+      "member": "يشوف الفريق ويشتغل في المشاريع اللي يتضاف ليها.",
+      "manager": "يدير مشاريع الفريق ويدعو ناس للفريق."
+    },
+    "submit": "إرسال الدعوة",
+    "joinsTeam": "هيدخل الفريق",
+    "joinsProject": "هيدخل الفريق و{project}",
+    "copyLink": "نسخ الرابط",
+    "copied": "تم النسخ",
+    "revokeAction": "إلغاء الدعوة",
+    "revokeTitle": "إلغاء دعوة {email}",
+    "revokeConfirm": "إلغاء الدعوة",
+    "revokeDescription": "الرابط هيبطل يشتغل. تقدر تدعوه تاني بعدين."
+  },
   "manage": {
     "label": "إدارة الفرق",
     "title": "إدارة الفرق",

@@ -87,6 +87,24 @@ export async function requireProjectAdmin(
   throw new HttpError(403, 'Only a project owner or a team owner or manager can do this');
 }
 
+// Resolves the :projectKey path param to a project whose member list the caller may
+// act on: a member the role matrix allows, or an owner or manager of the team that
+// owns it. The team runs its projects, so it fills them from its own member list and
+// invites into them without belonging to them. Wrapped by the memberAdmin guard.
+export async function requireMemberAdmin(
+  projectKey: string,
+  user: AuthUser | undefined | null,
+  resource: PermissionResource,
+  action: PermissionAction,
+): Promise<ProjectRow> {
+  const current = requireUser(user);
+  const project = await requireProject(projectKey);
+  const standing = await getTeamMembership(project.teamId, current.id);
+  if (standing === 'owner' || standing === 'manager') return project;
+  await assertPermission(project.id, current, resource, action);
+  return project;
+}
+
 // Denies an MCP tool call against a project that has MCP disabled. A no-op for
 // normal web/API requests (isMcp false), so the per-project toggle only gates the
 // MCP surface, not the UI. Called by the guards after the project is resolved.

@@ -5,16 +5,21 @@ import { authContext } from '#shared/auth-context';
 import { guards } from '#shared/guards';
 import { assertPermission, requireUser } from '#shared/access';
 import { HttpError } from '#shared/lib';
-import { accessErrors, commonErrors } from '#shared/responses';
-import { getRole } from '#modules/roles/service';
+import { accessErrors, commonErrors, errors } from '#shared/responses';
+import { getDefaultRoleId, getRole } from '#modules/roles/service';
+import { getTeamMembership } from '#modules/teams/service';
 import {
+  MemberCandidateListResponse,
   MemberListResponse,
+  addMemberBody,
   memberParams,
   setMemberDescriptionBody,
   setMemberRoleBody,
 } from './model';
 import {
+  addMember,
   listMembers,
+  listMemberCandidates,
   getMembership,
   removeMember,
   setMembership,
@@ -34,6 +39,65 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
       permission: ['members_manage', 'read'],
       response: { 200: MemberListResponse, ...accessErrors },
       detail: { summary: 'List project members', ...mcpTool('list_members') },
+    },
+  )
+
+  // Who the project can be filled from without an invite: the team's members who are
+  // not in it yet.
+  .get(
+    '/projects/:projectKey/members/candidates',
+    async ({ project }) => {
+      return listMemberCandidates(project.id, project.teamId);
+    },
+    {
+      memberAdmin: ['members_manage', 'create'],
+      response: { 200: MemberCandidateListResponse, ...accessErrors },
+      detail: {
+        summary: 'List who can be added to the project',
+        description:
+          "The members of the project's team who are not in it yet. Anyone else is invited by " +
+          'email instead.',
+        ...mcpTool('list_member_candidates'),
+      },
+    },
+  )
+
+  // Someone already in the team joins a project directly; everyone else goes through
+  // an invite, which puts them in the team first.
+  .post(
+    '/projects/:projectKey/members',
+    async ({ project, body }) => {
+      if (!(await getTeamMembership(project.teamId, body.userId))) {
+        throw new HttpError(400, "This user is not a member of the project's team");
+      }
+      // An explicit roleId must name a role of this project's team; omitting it
+      // joins the member on the team's default role, as accepting an invite does.
+      let roleId: number | null = null;
+      if (body.role === 'member') {
+        if (body.roleId != null) {
+          const role = await getRole(project.teamId, body.roleId);
+          if (!role) throw new HttpError(400, "roleId does not belong to this project's team");
+          roleId = role.id;
+        } else {
+          roleId = await getDefaultRoleId(project.teamId);
+        }
+      }
+      if (!(await addMember(project.id, body.userId, body.role, roleId))) {
+        throw new HttpError(409, 'This user is already a member of the project');
+      }
+      return noContent();
+    },
+    {
+      body: addMemberBody,
+      memberAdmin: ['members_manage', 'create'],
+      response: { 204: t.Void(), ...commonErrors, ...errors(409) },
+      detail: {
+        summary: 'Add a member',
+        description:
+          "Add a member of the project's team to the project, as an owner or on a custom role " +
+          "(roleId, or null for the team's default role).",
+        ...mcpTool('add_member'),
+      },
     },
   )
 
@@ -110,7 +174,6 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
     },
   )
 
-  // New members join through invites, so there is no direct add here.
   .delete(
     '/projects/:projectKey/members/:userId',
     async ({ project, params, user }) => {

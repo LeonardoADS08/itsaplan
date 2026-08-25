@@ -5,6 +5,7 @@ import {
   requireProjectPermission,
   requireProjectOwner,
   requireProjectAdmin,
+  requireMemberAdmin,
   requireTeamMembership,
   assertPermission,
   assertMcpEnabled,
@@ -141,6 +142,23 @@ export const guards = new Elysia({ name: 'guards' }).use(authContext).macro({
     return {
       async resolve({ params, user, request }) {
         const project = await requireProjectAdmin((params as ProjectKeyParams).projectKey, user);
+        assertMcpEnabled(project, isMcpRequest(request.headers));
+        return { project };
+      },
+    };
+  },
+
+  // The project's member list: a permission from the role matrix, or the standing of
+  // a team owner or manager, who run the team's projects without being in them.
+  memberAdmin(permission: Permission) {
+    return {
+      async resolve({ params, user, request }) {
+        const project = await requireMemberAdmin(
+          (params as ProjectKeyParams).projectKey,
+          user,
+          permission[0],
+          permission[1],
+        );
         assertMcpEnabled(project, isMcpRequest(request.headers));
         return { project };
       },

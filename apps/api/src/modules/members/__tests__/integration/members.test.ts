@@ -4,11 +4,12 @@ import { signUpTestUser, type TestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { createRole } from '#tests/helpers/roles';
 
-// Integration coverage for the members feature: listing a project's members,
-// assigning a custom role to a member (owner only), and removing a member or
-// leaving the project. New members join through invites, so the tests add a
-// second member by creating and accepting an invite. Real sessions against the
-// real (test) database. See apps/api/AGENTS.md "Tests" for setup.
+// Integration coverage for the members feature: listing a project's members, adding
+// one from the team that owns it, assigning a custom role to a member (owner only),
+// and removing a member or leaving the project. Someone outside the team joins
+// through an invite, so the tests add a second member by creating and accepting one.
+// Real sessions against the real (test) database. See apps/api/AGENTS.md "Tests" for
+// setup.
 
 type Actor = { user: TestUser; api: ReturnType<typeof authedApi> };
 
@@ -47,6 +48,138 @@ async function addMember(owner: Actor, role: 'owner' | 'member' = 'member'): Pro
 describe('members', () => {
   beforeEach(async () => {
     await resetDb();
+  });
+
+  describe('add — POST /projects/:projectKey/members', () => {
+    // Someone in the team of MKT who is not in the project itself: they were invited
+    // into the team alone.
+    async function addTeamMember(owner: Actor): Promise<TestUser> {
+      const projects = await owner.api.projects.get();
+      const teamId = projects.data!.find((p) => p.key === 'MKT')!.teamId;
+      const user = await signUpTestUser();
+      const invite = await owner.api
+        .teams({ teamId })
+        .invites.post({ email: user.email, role: 'member' });
+      await authedApi(user.cookie).invites({ token: invite.data!.token }).accept.post();
+      return user;
+    }
+
+    it('lists a team member who is not in the project as a candidate', async () => {
+      const owner = await setupOwner();
+      const joiner = await addTeamMember(owner);
+
+      const res = await owner.api.projects({ projectKey: 'MKT' }).members.candidates.get();
+      expect(res.status).toBe(200);
+      expect(res.data?.map((c) => c.userId)).toEqual([joiner.userId]);
+    });
+
+    it('drops a candidate once they are in the project', async () => {
+      const owner = await setupOwner();
+      const joiner = await addTeamMember(owner);
+
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: joiner.userId, role: 'member' });
+
+      const res = await owner.api.projects({ projectKey: 'MKT' }).members.candidates.get();
+      expect(res.data).toHaveLength(0);
+    });
+
+    it('adds them on the given custom role', async () => {
+      const owner = await setupOwner();
+      const joiner = await addTeamMember(owner);
+      const role = await createRole(owner.api, 'MKT', { name: 'Editor', permissions: {} });
+
+      const res = await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: joiner.userId, role: 'member', roleId: role.data!.id });
+      expect(res.status).toBe(204);
+
+      const members = await owner.api.projects({ projectKey: 'MKT' }).members.get();
+      expect(members.data?.find((m) => m.userId === joiner.userId)).toMatchObject({
+        role: 'member',
+        roleId: role.data!.id,
+        roleName: 'Editor',
+      });
+    });
+
+    it("puts them on the team's default role when no roleId is given", async () => {
+      const owner = await setupOwner();
+      const joiner = await addTeamMember(owner);
+      const roles = await owner.api.projects({ projectKey: 'MKT' }).roles.get();
+      const fallback = roles.data!.find((r) => r.isDefault)!;
+
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: joiner.userId, role: 'member' });
+
+      const members = await owner.api.projects({ projectKey: 'MKT' }).members.get();
+      expect(members.data?.find((m) => m.userId === joiner.userId)).toMatchObject({
+        roleId: fallback.id,
+        roleName: fallback.name,
+      });
+    });
+
+    it('adds them as an owner, without a role', async () => {
+      const owner = await setupOwner();
+      const joiner = await addTeamMember(owner);
+
+      const res = await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: joiner.userId, role: 'owner' });
+      expect(res.status).toBe(204);
+
+      const members = await owner.api.projects({ projectKey: 'MKT' }).members.get();
+      expect(members.data?.find((m) => m.userId === joiner.userId)).toMatchObject({
+        role: 'owner',
+        roleId: null,
+      });
+    });
+
+    it('rejects someone outside the team with 400', async () => {
+      const owner = await setupOwner();
+      const stranger = await signUpTestUser();
+
+      const res = await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: stranger.userId, role: 'member' });
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects a roleId from another team with 400', async () => {
+      const owner = await setupOwner();
+      const joiner = await addTeamMember(owner);
+      const other = await setupOwner2();
+      const foreign = await createRole(other.api, 'OPS', { name: 'Ops', permissions: {} });
+
+      const res = await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: joiner.userId, role: 'member', roleId: foreign.data!.id });
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects someone already in the project with 409', async () => {
+      const owner = await setupOwner();
+      const joiner = await addTeamMember(owner);
+      const body = { userId: joiner.userId, role: 'member' as const };
+
+      expect((await owner.api.projects({ projectKey: 'MKT' }).members.post(body)).status).toBe(204);
+      expect((await owner.api.projects({ projectKey: 'MKT' }).members.post(body)).status).toBe(409);
+    });
+
+    it('denies a member without the permission with 403', async () => {
+      const owner = await setupOwner();
+      const joiner = await addTeamMember(owner);
+      const plain = await addMember(owner);
+
+      const res = await plain.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: joiner.userId, role: 'member' });
+      expect(res.status).toBe(403);
+      expect(
+        (await plain.api.projects({ projectKey: 'MKT' }).members.candidates.get()).status,
+      ).toBe(403);
+    });
   });
 
   describe('list — GET /projects/:projectKey/members', () => {

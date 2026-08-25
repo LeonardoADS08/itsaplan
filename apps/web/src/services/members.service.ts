@@ -12,6 +12,31 @@ export function useMembersQuery(projectKey: string | null) {
   });
 }
 
+// The team members who are not in the project yet. Only fetched while the dialog
+// that adds one is open.
+export function useMemberCandidatesQuery(projectKey: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.memberCandidates(projectKey),
+    queryFn: () => api.listMemberCandidates(projectKey),
+    enabled,
+  });
+}
+
+// Puts a member of the project's team in the project. Someone outside the team is
+// invited by email instead.
+export function useAddMember(projectKey: string) {
+  const t = useTranslations('members');
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { userId: string; role: MemberRole; roleId?: number | null }) =>
+      api.addMember(projectKey, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.members(projectKey) });
+      toast.success(t('added'));
+    },
+  });
+}
+
 export function useRemoveMember(projectKey: string) {
   const qc = useQueryClient();
   return useMutation({

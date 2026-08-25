@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
 
 // Accept or reject a pending invite when the signed-in session already matches
-// the invited email. Accept opens the project; reject re-queries the invite so
-// the page shows the declined state.
+// the invited email. Accept opens the project it names, or the app root for an
+// invite into the team alone; reject re-queries the invite so the page shows the
+// declined state.
 export default function InviteActions({ token }: { token: string }) {
   const t = useTranslations('invite');
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function InviteActions({ token }: { token: string }) {
     setBusy('accept');
     try {
       const result = await api.acceptInvite(token);
-      router.push(projectPath(result.projectKey));
+      router.push(result.projectKey ? projectPath(result.projectKey) : '/');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('acceptError'));

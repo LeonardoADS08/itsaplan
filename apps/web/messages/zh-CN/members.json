@@ -1,6 +1,26 @@
 {
   "title": "成员",
-  "description": "有权访问此项目的人员。通过邮箱邀请成员；项目所有者可以撤销访问权限。",
+  "description": "有权访问此项目的人员。可以从团队中添加成员，或通过邮箱邀请；项目所有者可以撤销访问权限。",
+  "add": {
+    "action": "添加成员",
+    "title": "添加成员",
+    "description": "从团队中选择成员，或通过邮箱邀请新成员。",
+    "personLabel": "成员",
+    "pickPlaceholder": "选择成员",
+    "searchPlaceholder": "搜索团队成员或输入邮箱",
+    "searchTeamPlaceholder": "搜索团队成员",
+    "fromTeam": "来自团队",
+    "byEmail": "通过邮箱邀请",
+    "inviteEmail": "邀请 {email}",
+    "alreadyInvited": "{email} 已被邀请",
+    "typeEmail": "没有找到成员。输入完整邮箱地址即可邀请。",
+    "noCandidates": "团队成员都已在此项目中。",
+    "willJoinTeam": "将加入团队 {teamName} 和此项目",
+    "roleLabel": "项目中的角色",
+    "rolePlaceholder": "角色",
+    "submit": "添加到项目",
+    "sendInvite": "发送邀请"
+  },
   "columns": {
     "member": "成员",
     "role": "角色",
@@ -27,10 +47,6 @@
   "descriptionQuestionOther": "此成员在项目中负责什么？",
   "descriptionPlaceholder": "例如：后端工程师，负责 API 和集成",
   "invites": {
-    "emailPlaceholder": "name@example.com",
-    "rolePlaceholder": "角色",
-    "invite": "邀请",
-    "inviting": "正在邀请…",
     "pendingCount": "{count, plural, other {# 个待处理邀请}}",
     "copyLink": "复制链接",
     "copied": "已复制",
@@ -50,5 +66,6 @@
   },
   "promoted": "成员已晋升为所有者",
   "roleUpdated": "成员角色已更新",
-  "descriptionUpdated": "成员描述已更新"
+  "descriptionUpdated": "成员描述已更新",
+  "added": "已添加成员"
 }

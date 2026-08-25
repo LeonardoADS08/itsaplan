@@ -43,6 +43,16 @@ export async function getRole(teamId: number, roleId: number): Promise<RoleRow |
   return rows[0] ? mapRole(rows[0]) : null;
 }
 
+// The role a member joins on when the caller picks none. Null when the team has no
+// default role, which leaves the member on the built-in member matrix.
+export async function getDefaultRoleId(teamId: number): Promise<number | null> {
+  const rows = await db
+    .select({ id: teamRole.id })
+    .from(teamRole)
+    .where(and(eq(teamRole.teamId, teamId), eq(teamRole.isDefault, true)));
+  return rows[0]?.id ?? null;
+}
+
 export async function createRole(
   teamId: number,
   input: { name: string; permissions: unknown },

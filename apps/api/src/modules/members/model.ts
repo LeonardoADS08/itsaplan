@@ -22,6 +22,23 @@ const MemberResponse = t.Object({
 
 export const MemberListResponse = t.Array(MemberResponse);
 
+// Someone who can be added to the project straight away (MemberCandidate).
+const MemberCandidateResponse = t.Object({
+  userId: t.String(),
+  name: t.String(),
+  email: t.String(),
+  username: t.Nullable(t.String()),
+  image: t.Nullable(t.String()),
+});
+
+export const MemberCandidateListResponse = t.Array(MemberCandidateResponse);
+
+export const addMemberBody = t.Object({
+  userId: t.String(),
+  role: memberRole,
+  roleId: t.Optional(t.Nullable(t.Integer())),
+});
+
 export const setMemberRoleBody = t.Object({
   role: memberRole,
   roleId: t.Optional(t.Nullable(t.Integer())),

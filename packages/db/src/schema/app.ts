@@ -265,27 +265,32 @@ export const projectMember = pgTable(
   ],
 );
 
-// Project invites: a shareable link (token) that grants a specific email a
-// specific role in a project once accepted. The role is the owner/member flag
-// plus, for a member, role_id naming which custom role they join on. An owner
-// creates an invite; the
-// invited person opens the link and accepts (only if their session email matches
-// invite.email) or rejects it. Accepting creates the project_member row. At most
-// one pending invite per (project, email) — enforced by the partial unique index.
-// email is stored lowercased. Revoking a pending invite removes its row.
-export const projectInvite = pgTable(
-  'project_invite',
+// An invite is a token-addressed grant of membership: always into a team, and, when
+// it names a project, straight into that project too. team_role is the rank the
+// invitee joins the team on; project_role is whether they own or belong to the
+// project, and role_id the team role a project member works under. Accepting creates
+// the team_member row, plus the project_member row when a project is named; an
+// invitee already in the team keeps the rank they have. At most one pending invite
+// per email into a team and per email into a project. email is stored lowercased.
+// Revoking a pending invite removes its row.
+export const teamInvite = pgTable(
+  'team_invite',
   {
     id: serial('id').primaryKey(),
     token: uuid('token').notNull().defaultRandom().unique(),
-    projectId: integer('project_id')
+    teamId: integer('team_id')
       .notNull()
-      .references(() => project.id, { onDelete: 'cascade' }),
+      .references(() => team.id, { onDelete: 'cascade' }),
+    // NULL for an invite into the team alone.
+    projectId: integer('project_id').references(() => project.id, { onDelete: 'cascade' }),
     email: text('email').notNull(),
-    role: text('role').notNull().default('member'),
-    // The team role the invitee joins on when role is "member". NULL falls back to
-    // the team's default role. Owners bypass roles, so an owner invite keeps this
-    // NULL.
+    // An invite that names a project always brings its invitee into the team as a
+    // plain member; 'manager' is granted by an invite into the team itself.
+    teamRole: text('team_role').notNull().default('member'),
+    projectRole: text('project_role'),
+    // The team role the invitee joins the project on when project_role is "member".
+    // NULL falls back to the team's default role. Project owners bypass roles, so an
+    // owner invite keeps this NULL.
     roleId: integer('role_id').references(() => teamRole.id, {
       onDelete: 'set null',
     }),
@@ -300,13 +305,21 @@ export const projectInvite = pgTable(
     respondedAt: timestamp('responded_at', { withTimezone: true }),
   },
   (t) => [
-    check('project_invite_role_check', sql`${t.role} IN ('owner', 'member')`),
-    check('project_invite_status_check', sql`${t.status} IN ('pending', 'accepted', 'rejected')`),
-    // At most one pending invite per project + email.
-    uniqueIndex('project_invite_pending_uq')
+    check('team_invite_team_role_check', sql`${t.teamRole} IN ('manager', 'member')`),
+    check(
+      'team_invite_project_role_check',
+      sql`(${t.projectId} IS NULL AND ${t.projectRole} IS NULL)
+        OR (${t.projectId} IS NOT NULL AND ${t.projectRole} IN ('owner', 'member'))`,
+    ),
+    check('team_invite_status_check', sql`${t.status} IN ('pending', 'accepted', 'rejected')`),
+    uniqueIndex('team_invite_team_pending_uq')
+      .on(t.teamId, t.email)
+      .where(sql`${t.status} = 'pending' AND ${t.projectId} IS NULL`),
+    uniqueIndex('team_invite_project_pending_uq')
       .on(t.projectId, t.email)
-      .where(sql`${t.status} = 'pending'`),
-    index('project_invite_project_idx').on(t.projectId),
+      .where(sql`${t.status} = 'pending' AND ${t.projectId} IS NOT NULL`),
+    index('team_invite_team_idx').on(t.teamId),
+    index('team_invite_project_idx').on(t.projectId),
   ],
 );
 

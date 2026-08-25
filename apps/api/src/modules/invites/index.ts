@@ -13,13 +13,17 @@ import {
   InviteRowResponse,
   InviteViewResponse,
   createInviteBody,
+  createTeamInviteBody,
   inviteParams,
+  teamInviteParams,
   tokenParams,
 } from './model';
 import {
   createInvite,
-  listInvites,
-  deleteInvite,
+  listProjectInvites,
+  listTeamInvites,
+  deleteProjectInvite,
+  deleteTeamInvite,
   getInviteByToken,
   getInviteRowByToken,
   acceptInvite,
@@ -55,9 +59,13 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
         if (!role) throw new HttpError(400, "roleId does not belong to this project's team");
       }
       const invite = await createInvite({
+        teamId: project.teamId,
         projectId: project.id,
         email: body.email,
-        role: body.role,
+        // An invite into a project brings its invitee into the team as a plain
+        // member; the rank above that is granted by an invite into the team itself.
+        teamRole: 'member',
+        projectRole: body.role,
         roleId,
         invitedByUserId: requireUser(user).id,
       });
@@ -66,13 +74,14 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
     },
     {
       body: createInviteBody,
-      permission: ['members_invite', 'create'],
+      memberAdmin: ['members_invite', 'create'],
       response: { 201: InviteRowResponse, ...commonErrors, ...errors(409) },
       detail: {
         summary: 'Create an invite',
         description:
           'Create an invite link for an email and role (owner or member). For a member, roleId ' +
-          'picks the custom role, or null for the default role.',
+          "picks the custom role, or null for the default role. Accepting it joins the project's " +
+          'team as well.',
         ...mcpTool('create_invite'),
       },
     },
@@ -81,10 +90,10 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
   .get(
     '/projects/:projectKey/invites',
     async ({ project }) => {
-      return listInvites(project.id);
+      return listProjectInvites(project.id);
     },
     {
-      permission: ['members_invite', 'read'],
+      memberAdmin: ['members_invite', 'read'],
       response: { 200: InviteRowListResponse, ...accessErrors },
       detail: { summary: "List a project's invites", ...mcpTool('list_invites') },
     },
@@ -93,13 +102,13 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
   .delete(
     '/projects/:projectKey/invites/:inviteId',
     async ({ project, params }) => {
-      const removed = await deleteInvite(project.id, params.inviteId);
+      const removed = await deleteProjectInvite(project.id, params.inviteId);
       if (!removed) throw new HttpError(404, 'Invite not found');
       return noContent();
     },
     {
       params: inviteParams,
-      permission: ['members_invite', 'delete'],
+      memberAdmin: ['members_invite', 'delete'],
       response: { 204: t.Void(), ...commonErrors },
       detail: {
         summary: 'Delete an invite',
@@ -109,8 +118,75 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
     },
   )
 
-  // Unguarded by project membership: the invitee is not a member yet. The token
-  // is unguessable, so any authenticated caller holding one may read the invite.
+  // Team invites carry no project: the invitee joins the team alone, and reaches its
+  // projects through a membership added afterwards.
+  .post(
+    '/teams/:teamId/invites',
+    async ({ membership, body, set }) => {
+      if (body.role === 'manager' && membership.role !== 'owner') {
+        throw new HttpError(403, 'Only a team owner can invite a manager');
+      }
+      const invite = await createInvite({
+        teamId: membership.teamId,
+        projectId: null,
+        email: body.email,
+        teamRole: body.role,
+        projectRole: null,
+        roleId: null,
+        invitedByUserId: membership.userId,
+      });
+      set.status = 201;
+      return invite;
+    },
+    {
+      teamManager: true,
+      body: createTeamInviteBody,
+      response: { 201: InviteRowResponse, ...errors(400, 401, 403, 404, 409) },
+      detail: {
+        summary: 'Invite someone to a team',
+        description:
+          'Create an invite link into the team, as a member or a manager. Only an owner can ' +
+          'invite a manager.',
+      },
+    },
+  )
+
+  .get(
+    '/teams/:teamId/invites',
+    async ({ membership }) => {
+      return listTeamInvites(membership.teamId);
+    },
+    {
+      teamManager: true,
+      response: { 200: InviteRowListResponse, ...errors(401, 403, 404) },
+      detail: {
+        summary: "List a team's invites",
+        description:
+          'Every invite into the team, including the ones that also name one of its projects.',
+      },
+    },
+  )
+
+  .delete(
+    '/teams/:teamId/invites/:inviteId',
+    async ({ membership, params }) => {
+      const removed = await deleteTeamInvite(membership.teamId, params.inviteId);
+      if (!removed) throw new HttpError(404, 'Invite not found');
+      return noContent();
+    },
+    {
+      teamManager: true,
+      params: teamInviteParams,
+      response: { 204: t.Void(), ...errors(401, 403, 404) },
+      detail: {
+        summary: 'Delete an invite of the team',
+        description: 'Revoke an invite into the team or into one of its projects.',
+      },
+    },
+  )
+
+  // Unguarded by membership: the invitee is not a member yet. The token is
+  // unguessable, so any authenticated caller holding one may read the invite.
   .get(
     '/invites/:token',
     async ({ params }) => {
@@ -123,7 +199,7 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
       response: { 200: InviteViewResponse, ...errors(400, 401, 404) },
       detail: {
         summary: 'Get an invite',
-        description: 'Get an invite by its token, with its project and role.',
+        description: 'Get an invite by its token, with its team, project and role.',
         ...mcpTool('get_invite'),
       },
     },

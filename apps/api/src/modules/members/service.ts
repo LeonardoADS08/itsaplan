@@ -1,13 +1,14 @@
 import {
   db,
   projectMember,
+  teamMember,
   teamRole,
   projectColumn,
   user,
   aiAgent,
   userPreference,
 } from '@repo/db';
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull, notExists, sql } from 'drizzle-orm';
 import { iso } from '#shared/lib';
 import { DEFAULT_TIMEZONE } from '#modules/user-preferences/service';
 import {
@@ -46,6 +47,16 @@ export interface MemberRow {
   // the AI Agents screen, not here.
   isAgent: boolean;
   createdAt: string;
+}
+
+// Someone who can be put in a project without an invite: a member of the team that
+// owns it who is not in the project yet.
+export interface MemberCandidate {
+  userId: string;
+  name: string;
+  email: string;
+  username: string | null;
+  image: string | null;
 }
 
 // A member's effective access in a project: the owner/member flag plus the
@@ -247,20 +258,56 @@ export async function setMemberDescription(
   return updated.length > 0;
 }
 
-// Adds a user to a project. Upserts the role when the user is already a member,
-// so re-adding is idempotent and doubles as a role change.
-export async function upsertMember(
+// Adds a member of the team to one of its projects. Returns false when they are
+// already in the project, which the route answers with a 409 rather than quietly
+// changing the role they are on.
+export async function addMember(
   projectId: number,
   userId: string,
   role: MemberRole,
-): Promise<void> {
-  await db
+  roleId: number | null,
+): Promise<boolean> {
+  const inserted = await db
     .insert(projectMember)
-    .values({ projectId, userId, role })
-    .onConflictDoUpdate({
-      target: [projectMember.projectId, projectMember.userId],
-      set: { role },
-    });
+    .values({ projectId, userId, role, roleId })
+    .onConflictDoNothing()
+    .returning({ userId: projectMember.userId });
+  return inserted.length > 0;
+}
+
+// The team's members who are not in the project yet: who can be added to it straight
+// away, without an invite.
+export async function listMemberCandidates(
+  projectId: number,
+  teamId: number,
+): Promise<MemberCandidate[]> {
+  return db
+    .select({
+      userId: teamMember.userId,
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      image: user.image,
+    })
+    .from(teamMember)
+    .innerJoin(user, eq(user.id, teamMember.userId))
+    .where(
+      and(
+        eq(teamMember.teamId, teamId),
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(projectMember)
+            .where(
+              and(
+                eq(projectMember.projectId, projectId),
+                eq(projectMember.userId, teamMember.userId),
+              ),
+            ),
+        ),
+      ),
+    )
+    .orderBy(user.name);
 }
 
 // Sets a member's owner/member flag and custom role in one update. Promoting to

@@ -10,6 +10,27 @@
     "namePlaceholder": "Team name",
     "submit": "Save"
   },
+  "invite": {
+    "action": "Invite to team",
+    "title": "Invite to team",
+    "description": "They join the team's member list. Add them to a project afterwards.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "name@example.com",
+    "roleLabel": "Rank in the team",
+    "roleHint": {
+      "member": "Reads the team and works in the projects they are added to.",
+      "manager": "Runs the team's projects and invites people to the team."
+    },
+    "submit": "Send invite",
+    "joinsTeam": "Joins the team",
+    "joinsProject": "Joins the team and {project}",
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "revokeAction": "Revoke invite",
+    "revokeTitle": "Revoke invite for {email}",
+    "revokeConfirm": "Revoke invite",
+    "revokeDescription": "The link stops working. You can invite them again later."
+  },
   "manage": {
     "label": "Manage teams",
     "title": "Manage teams",

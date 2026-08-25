@@ -1,6 +1,26 @@
 {
   "title": "الأعضاء",
-  "description": "دول الناس اللي عندهم وصول للمشروع ده. تقدر تدعو حد بالبريد، والمالك بس هو اللي يقدر يلغي وصول أي حد.",
+  "description": "دول الناس اللي عندهم وصول للمشروع ده. ضيف حد من الفريق أو ادعوه بالبريد، والمالك بس هو اللي يقدر يلغي وصول أي حد.",
+  "add": {
+    "action": "إضافة عضو",
+    "title": "إضافة عضو",
+    "description": "اختار حد من الفريق، أو ادعُ شخص جديد بالبريد.",
+    "personLabel": "الشخص",
+    "pickPlaceholder": "اختر شخصًا",
+    "searchPlaceholder": "دوّر في الفريق أو اكتب بريد",
+    "searchTeamPlaceholder": "دوّر في الفريق",
+    "fromTeam": "من الفريق",
+    "byEmail": "دعوة بالبريد",
+    "inviteEmail": "دعوة {email}",
+    "alreadyInvited": "{email} مدعو بالفعل",
+    "typeEmail": "مفيش حد. اكتب بريد كامل عشان تدعوه.",
+    "noCandidates": "كل أعضاء الفريق موجودين في المشروع ده.",
+    "willJoinTeam": "هيدخل فريق {teamName} والمشروع ده",
+    "roleLabel": "الدور في المشروع",
+    "rolePlaceholder": "الدور",
+    "submit": "إضافة للمشروع",
+    "sendInvite": "إرسال الدعوة"
+  },
   "columns": {
     "member": "العضو",
     "role": "الدور",
@@ -27,10 +47,6 @@
   "descriptionQuestionOther": "الشخص ده بيعمل إيه في المشروع ده؟",
   "descriptionPlaceholder": "مثلًا: مهندس خلفية، مسؤول عن واجهة البرمجة والتكاملات",
   "invites": {
-    "emailPlaceholder": "name@example.com",
-    "rolePlaceholder": "الدور",
-    "invite": "دعوة",
-    "inviting": "جارٍ الدعوة…",
     "pendingCount": "{count, plural, zero {لا دعوات معلّقة} one {دعوة معلّقة واحدة} two {دعوتان معلّقتان} few {# دعوات معلّقة} many {# دعوة معلّقة} other {# دعوة معلّقة}}",
     "copyLink": "نسخ الرابط",
     "copied": "تم النسخ",
@@ -50,5 +66,6 @@
   },
   "promoted": "تمت ترقية العضو إلى مالك",
   "roleUpdated": "تم تحديث دور العضو",
-  "descriptionUpdated": "تم تحديث وصف العضو"
+  "descriptionUpdated": "تم تحديث وصف العضو",
+  "added": "اتضاف العضو"
 }

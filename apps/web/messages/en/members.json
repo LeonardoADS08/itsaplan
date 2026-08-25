@@ -1,6 +1,26 @@
 {
   "title": "Members",
-  "description": "People with access to this project. Invite people by email; owners can revoke access.",
+  "description": "People with access to this project. Add someone from the team or invite them by email; owners can revoke access.",
+  "add": {
+    "action": "Add member",
+    "title": "Add member",
+    "description": "Pick someone from the team, or invite a new person by email.",
+    "personLabel": "Person",
+    "pickPlaceholder": "Select someone",
+    "searchPlaceholder": "Search the team or type an email",
+    "searchTeamPlaceholder": "Search the team",
+    "fromTeam": "From the team",
+    "byEmail": "Invite by email",
+    "inviteEmail": "Invite {email}",
+    "alreadyInvited": "{email} is already invited",
+    "typeEmail": "Nobody found. Type a full email address to invite them.",
+    "noCandidates": "Everyone in the team is already in this project.",
+    "willJoinTeam": "Joins {teamName} and this project",
+    "roleLabel": "Role in the project",
+    "rolePlaceholder": "Role",
+    "submit": "Add to project",
+    "sendInvite": "Send invite"
+  },
   "columns": {
     "member": "Member",
     "role": "Role",
@@ -27,10 +47,6 @@
   "descriptionQuestionOther": "What does this person do in this project?",
   "descriptionPlaceholder": "e.g. Backend engineer, owns the API and integrations",
   "invites": {
-    "emailPlaceholder": "name@example.com",
-    "rolePlaceholder": "Role",
-    "invite": "Invite",
-    "inviting": "Inviting…",
     "pendingCount": "{count, plural, one {# pending invite} other {# pending invites}}",
     "copyLink": "Copy link",
     "copied": "Copied",
@@ -50,5 +66,6 @@
   },
   "promoted": "Member promoted to owner",
   "roleUpdated": "Member role updated",
-  "descriptionUpdated": "Member description updated"
+  "descriptionUpdated": "Member description updated",
+  "added": "Member added"
 }

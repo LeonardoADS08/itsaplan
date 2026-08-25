@@ -95,9 +95,14 @@ Enforced declaratively through macros, never imperative calls in handlers.
   `assertPermission` on the fetched row.
 - Guards/macros wrap the `shared/access.ts` primitives. Handlers that still need
   `user` (project create, invite accept/reject, self-removal) call `requireUser(user)`.
-- **Members join only through invites/**, not a direct add. One pending invite per
-  (project, email) — partial unique index → 409. `members/` removes only (last owner
-  protected).
+- **A member of the team joins a project directly** (`POST /projects/:key/members`,
+  from the candidate list); anyone else joins through an invite, which puts them in
+  the team as well. A team invite (`/teams/:teamId/invites`) names no project. One
+  pending invite per (team, email) and per (project, email) — partial unique indexes →
+  409. `members/` removes (last owner protected).
+- The member list of a project is governed by its role matrix **or** by the team that
+  owns it: `memberAdmin: ["members_invite", "create"]` passes an owner or manager of
+  the team without a `project_member` row of their own.
 
 ## Security
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type Team } from '@/lib/api';
+import { api, type InviteTeamRole, type Team } from '@/lib/api';
 import { qk } from '@/services/queryKeys';
 
 export function useTeamsQuery() {
@@ -54,5 +54,33 @@ export function useLeaveTeam() {
       qc.setQueryData<Team[]>(qk.teams, (prev) => prev?.filter((t) => t.id !== teamId));
       void qc.invalidateQueries({ queryKey: qk.teams });
     },
+  });
+}
+
+// The invites of a team: the ones into the team itself and the ones into its
+// projects. Only an owner or a manager may read them, so pass enabled=false for a
+// plain member to keep the request from 403-ing.
+export function useTeamInvitesQuery(teamId: number, enabled = true) {
+  return useQuery({
+    queryKey: qk.teamInvites(teamId),
+    queryFn: () => api.listTeamInvites(teamId),
+    enabled,
+  });
+}
+
+export function useCreateTeamInvite(teamId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { email: string; role: InviteTeamRole }) =>
+      api.createTeamInvite(teamId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.teamInvites(teamId) }),
+  });
+}
+
+export function useDeleteTeamInvite(teamId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (inviteId: number) => api.deleteTeamInvite(teamId, inviteId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.teamInvites(teamId) }),
   });
 }

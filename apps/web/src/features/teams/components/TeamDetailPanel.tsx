@@ -13,12 +13,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import NewProjectModal from '@/components/layout/NewProjectModal';
-import TeamMemberRow from './TeamMemberRow';
+import TeamMembersSection from './TeamMembersSection';
 import TeamProjectRow from './TeamProjectRow';
 import TeamRolesSection from './roles/TeamRolesSection';
 
 // One team in a right-hand side panel: the projects it owns, the roles those projects
-// assign from, and its members. Escape or a backdrop click closes it.
+// assign from, and its members with the invites waiting to be answered. Escape or a
+// backdrop click closes it.
 export default function TeamDetailPanel({
   teamId,
   onClose,
@@ -124,17 +125,7 @@ export default function TeamDetailPanel({
                 onEditorOpenChange={setRoleEditorOpen}
               />
 
-              <section className="space-y-3">
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-sm font-medium">{t('teamMembers')}</h3>
-                  <span className="text-xs text-muted-foreground">{team.memberCount}</span>
-                </div>
-                <div className="space-y-2">
-                  {team.members.map((member) => (
-                    <TeamMemberRow key={member.userId} member={member} />
-                  ))}
-                </div>
-              </section>
+              <TeamMembersSection team={team} />
             </>
           )}
         </div>

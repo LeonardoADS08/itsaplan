@@ -59,9 +59,9 @@ import {
 
 // God mode: instance-wide administration, open only to the "god" user (the first
 // registered account). It covers how people may register, the mail provider that
-// sends authentication email, and the Google OAuth credentials. Invites are per
-// project (project_invite), managed in the project's Members section — there is
-// nothing instance-level to add here.
+// sends authentication email, and the Google OAuth credentials. Invites are per team
+// (team_invite), managed in the team panel and in the project's Members section —
+// there is nothing instance-level to add here.
 //
 // The settings themselves are owned by @repo/auth, which reads them at sign-up and
 // when sending mail; these routes only expose them over HTTP. Secrets are never

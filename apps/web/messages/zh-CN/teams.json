@@ -10,6 +10,27 @@
     "namePlaceholder": "团队名称",
     "submit": "保存"
   },
+  "invite": {
+    "action": "邀请加入团队",
+    "title": "邀请加入团队",
+    "description": "受邀者将加入团队成员列表。之后可以再把他们添加到项目。",
+    "emailLabel": "邮箱",
+    "emailPlaceholder": "name@example.com",
+    "roleLabel": "团队中的等级",
+    "roleHint": {
+      "member": "可以查看团队，并在被添加到的项目中工作。",
+      "manager": "管理团队的项目，并邀请他人加入团队。"
+    },
+    "submit": "发送邀请",
+    "joinsTeam": "加入团队",
+    "joinsProject": "加入团队和 {project}",
+    "copyLink": "复制链接",
+    "copied": "已复制",
+    "revokeAction": "撤销邀请",
+    "revokeTitle": "撤销 {email} 的邀请",
+    "revokeConfirm": "撤销邀请",
+    "revokeDescription": "链接将失效。之后可以重新邀请。"
+  },
   "manage": {
     "label": "管理团队",
     "title": "管理团队",

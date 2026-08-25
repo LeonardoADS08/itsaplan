@@ -757,6 +757,20 @@
       "when": 1787674359372,
       "tag": "0107_productive_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1787687534229,
+      "tag": "0108_project_members_join_team",
+      "breakpoints": true
+    },
+    {
+      "idx": 109,
+      "version": "7",
+      "when": 1787689061356,
+      "tag": "0109_team_invites",
+      "breakpoints": true
     }
   ]
 }

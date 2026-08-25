@@ -2351,8 +2351,9 @@ export interface PermissionCatalog {
   actions: PermissionAction[];
 }
 
-// Project membership: a user's access to a project and their role in it. New
-// members join through invites, not a direct add.
+// Project membership: a user's access to a project and their role in it. A member of
+// the team that owns the project is added straight away; everyone else joins through
+// an invite.
 export type MemberRole = 'owner' | 'member';
 
 export interface MemberRow {
@@ -2377,18 +2378,37 @@ export interface MemberRow {
   createdAt: string;
 }
 
+// Someone who can be added to a project without an invite: a member of the team that
+// owns it who is not in the project yet.
+export interface MemberCandidate {
+  userId: string;
+  name: string;
+  email: string;
+  username: string | null;
+  image: string | null;
+}
+
 export type InviteStatus = 'pending' | 'accepted' | 'rejected';
 
-// An invite as shown to the owner managing a project's invites: carries the token
-// so the owner can share the link, and who sent it.
+// The rank an invite puts its invitee on in the team. Team ownership is not granted
+// by an invite.
+export type InviteTeamRole = 'manager' | 'member';
+
+// An invite as shown to whoever manages a team's or a project's invites: carries the
+// token so they can share the link, and who sent it.
 export interface InviteRow {
   id: number;
   token: string;
   email: string;
-  role: MemberRole;
-  // The custom role the invitee joins on (for a member invite). null falls back
-  // to the default role; roleName resolves it for display. An owner invite has
-  // both null.
+  teamRole: InviteTeamRole;
+  // The project the invitee joins along with the team, or null for an invite into
+  // the team alone.
+  projectKey: string | null;
+  projectName: string | null;
+  // Their role in that project. null when the invite names no project.
+  role: MemberRole | null;
+  // The custom role the invitee joins the project on. null falls back to the team's
+  // default role; roleName resolves it for display. A project owner has both null.
   roleId: number | null;
   roleName: string | null;
   status: InviteStatus;
@@ -2398,14 +2418,16 @@ export interface InviteRow {
   invitedByEmail: string | null;
 }
 
-// An invite as shown to the invitee opening the link: enough project context to
-// decide, never the internal project id.
+// An invite as shown to the invitee opening the link: enough team and project
+// context to decide, never the internal ids.
 export interface InviteView {
   token: string;
-  projectKey: string;
-  projectName: string;
+  teamName: string;
+  projectKey: string | null;
+  projectName: string | null;
   email: string;
-  role: MemberRole;
+  teamRole: InviteTeamRole;
+  role: MemberRole | null;
   roleId: number | null;
   roleName: string | null;
   status: InviteStatus;
@@ -2413,6 +2435,14 @@ export interface InviteView {
   // Whether the invited email already has an account, so the accept screen can
   // open in sign-in mode instead of registration.
   hasAccount: boolean;
+}
+
+// Where an invitee landed once the invite was accepted.
+export interface AcceptedInvite {
+  teamName: string;
+  projectKey: string | null;
+  projectName: string | null;
+  role: MemberRole | null;
 }
 
 // The attachment DTO's url is relative to the API origin; point it at the web
@@ -3031,9 +3061,20 @@ export const api = {
   getAgentWorkload: (projectKey: string) =>
     request<AgentWorkloadItem[]>(`/projects/${projectKey}/analytics/agent-workload`),
 
-  // Members: list who is on a project, and revoke access (an owner removes
-  // anyone; a member removes only themselves — leaving the project).
+  // Members: list who is on a project, add someone from its team, and revoke access
+  // (an owner removes anyone; a member removes only themselves — leaving the
+  // project).
   listMembers: (projectKey: string) => request<MemberRow[]>(`/projects/${projectKey}/members`),
+  listMemberCandidates: (projectKey: string) =>
+    request<MemberCandidate[]>(`/projects/${projectKey}/members/candidates`),
+  addMember: (
+    projectKey: string,
+    input: { userId: string; role: MemberRole; roleId?: number | null },
+  ) =>
+    request<void>(`/projects/${projectKey}/members`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
   removeMember: (projectKey: string, userId: string) =>
     request<void>(`/projects/${projectKey}/members/${encodeURIComponent(userId)}`, {
       method: 'DELETE',
@@ -3267,7 +3308,9 @@ export const api = {
   deleteRole: (teamId: number, roleId: number) =>
     request<void>(`/teams/${teamId}/roles/${roleId}`, { method: 'DELETE' }),
 
-  // Invites — owner side: create, list, and revoke a project's invite links.
+  // Invites — the managing side: create, list, and revoke the invite links of a
+  // project or of a team. A project invite joins the team as well; a team invite
+  // names no project.
   listInvites: (projectKey: string) => request<InviteRow[]>(`/projects/${projectKey}/invites`),
   createInvite: (
     projectKey: string,
@@ -3279,15 +3322,20 @@ export const api = {
     }),
   deleteInvite: (projectKey: string, inviteId: number) =>
     request<void>(`/projects/${projectKey}/invites/${inviteId}`, { method: 'DELETE' }),
+  listTeamInvites: (teamId: number) => request<InviteRow[]>(`/teams/${teamId}/invites`),
+  createTeamInvite: (teamId: number, input: { email: string; role: InviteTeamRole }) =>
+    request<InviteRow>(`/teams/${teamId}/invites`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteTeamInvite: (teamId: number, inviteId: number) =>
+    request<void>(`/teams/${teamId}/invites/${inviteId}`, { method: 'DELETE' }),
 
   // Invites — invitee side: open a link by token, then accept or reject it. The
   // session email must match the invite. Accept returns where to go next.
   getInvite: (token: string) => request<InviteView>(`/invites/${encodeURIComponent(token)}`),
   acceptInvite: (token: string) =>
-    request<{ projectKey: string; projectName: string; role: MemberRole }>(
-      `/invites/${encodeURIComponent(token)}/accept`,
-      { method: 'POST' },
-    ),
+    request<AcceptedInvite>(`/invites/${encodeURIComponent(token)}/accept`, { method: 'POST' }),
   rejectInvite: (token: string) =>
     request<void>(`/invites/${encodeURIComponent(token)}/reject`, { method: 'POST' }),
 
