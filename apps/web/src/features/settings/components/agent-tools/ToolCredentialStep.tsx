@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useConfiguredToolsQuery, useCreateConfiguredTool } from '@/services/customTools.service';
-import { IntegrationIcon } from '../integrations/IntegrationIcon';
+import { IntegrationIcon } from '@/components/common/IntegrationIcon';
 import type { ToolOption } from './ToolConfigDialog';
 import { useTranslations } from 'next-intl';
 

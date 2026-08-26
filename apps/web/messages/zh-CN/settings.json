@@ -64,35 +64,6 @@
     "emptyHint": "选择代理、任务和运行频率。",
     "deleteMessage": "定时任务 <v>{name}</v> 及其运行记录将被删除。此操作无法撤销。"
   },
-  "integrations": {
-    "add": "添加凭据",
-    "edit": "编辑凭据",
-    "delete": "删除凭据",
-    "back": "返回集成",
-    "label": "标签（可选）",
-    "labelPlaceholder": "例如：团队账户",
-    "labelHint": "用于区分同一集成的不同凭据。密钥会加密存储。",
-    "noFields": "无字段",
-    "search": "搜索集成",
-    "noMatches": "没有与“{query}”匹配的集成。",
-    "empty": "暂无凭据",
-    "emptyHint": "代理需要凭据才能使用 AI 提供商或工具。",
-    "deleteMessage": "删除 {integration} 凭据？使用它的代理和工具将停止工作，直到添加新凭据。",
-    "groups": {
-      "llm": {
-        "title": "AI 提供商",
-        "hint": "内置代理使用的模型"
-      },
-      "tool": {
-        "title": "工具",
-        "hint": "代理可以作为工具调用的集成"
-      }
-    },
-    "columns": {
-      "integration": "集成",
-      "credentials": "凭据"
-    }
-  },
   "agents": {
     "newAgent": "新建代理",
     "create": "新建代理",
@@ -130,8 +101,8 @@
     "searchCredential": "搜索凭据",
     "noCredentialsFound": "未找到凭据。",
     "noCredential": "尚未连接 AI 提供商",
-    "noCredentialHint": "添加提供商密钥后即可为该代理选择模型。",
-    "addKey": "前往集成页面",
+    "noCredentialHint": "在团队集成中添加提供商密钥后即可为该代理选择模型。",
+    "addKey": "前往团队设置",
     "chooseModel": "选择模型",
     "searchModel": "搜索或输入模型 ID",
     "loadingModels": "正在加载模型…",
@@ -324,7 +295,7 @@
     "scopesLabel": "所需令牌权限",
     "credential": "凭据",
     "chooseCredential": "选择凭据",
-    "noCredential": "尚无 {integration} 凭据。请先在集成页面添加。",
+    "noCredential": "尚无 {integration} 凭据。请先在团队集成中添加。",
     "deleteMessage": "移除 {tool}？使用它的代理将无法再访问此工具。",
     "scopesUpper": "权限范围",
     "selectGroup": "全选",

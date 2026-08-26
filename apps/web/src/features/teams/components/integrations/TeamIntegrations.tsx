@@ -1,49 +1,44 @@
 import { useState } from 'react';
-import type { IntegrationCredential, ProjectDetail } from '@/lib/api';
-import {
-  useCredentialsQuery,
-  useIntegrationCatalogQuery,
-  useDeleteCredential,
-} from '@/services/integrations.service';
+import { useTranslations } from 'next-intl';
+import type { IntegrationCredential, IntegrationMeta, ResourcePermissions } from '@/lib/api';
+import { useCredentialsQuery, useDeleteCredential } from '@/services/integrations.service';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EmptyState } from '@/components/common/page/EmptyState';
-import SettingsConfirmDeleteDialog from '../crud/SettingsConfirmDeleteDialog';
-import { useSettingsCan } from '../../context/settingsPermission';
+import { integrationLabel } from '@/utils/integrationLabels';
+import ConfirmDialog from '@/components/common/overlay/ConfirmDialog';
 import { CredentialDialog } from './CredentialDialog';
 import { CredentialRow } from './CredentialRow';
-import { useTranslations } from 'next-intl';
 
-// Project settings for integration credentials: the API keys of AI providers and the
-// credentials of tool integrations. Secrets are write-only, so the list shows only a
-// masked view. Adding and editing happen in a dialog; deleting confirms first.
-export default function SettingsIntegrations({ project }: { project: ProjectDetail }) {
-  const t = useTranslations('settings.integrations');
+// The team's stored credentials as a table. Editing happens in a dialog; deleting
+// confirms first. Adding is done from the tab header.
+export default function TeamIntegrations({
+  teamId,
+  catalog,
+  permissions,
+}: {
+  teamId: number;
+  catalog: IntegrationMeta[];
+  permissions: ResourcePermissions;
+}) {
+  const t = useTranslations('teams.integrations');
   const tCommon = useTranslations('common');
-  const projectKey = project.project.key;
-  const credentialsQuery = useCredentialsQuery(projectKey);
-  const credentials = credentialsQuery.data ?? [];
-  const catalogQuery = useIntegrationCatalogQuery(projectKey);
-  const catalog = catalogQuery.data ?? [];
-  const deleteCredential = useDeleteCredential(projectKey);
-  const can = useSettingsCan();
+  const credentials = useCredentialsQuery(teamId).data ?? [];
+  const deleteCredential = useDeleteCredential(teamId);
 
-  // Editing an existing credential; creating is done from the page header.
   const [editing, setEditing] = useState<IntegrationCredential | null>(null);
   const [deleting, setDeleting] = useState<IntegrationCredential | null>(null);
-
-  const integrationLabel = (key: string) => catalog.find((c) => c.key === key)?.label ?? key;
 
   return (
     <>
       {credentials.length === 0 ? (
         <EmptyState title={t('empty')} description={t('emptyHint')} />
       ) : (
-        <div className="space-y-4">
-          <Table className="min-w-[720px] table-fixed">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[560px] table-fixed">
             <colgroup>
-              <col className="w-[32%]" />
-              <col className="w-[54%]" />
-              <col className="w-[14%]" />
+              <col className="w-[34%]" />
+              <col className="w-[50%]" />
+              <col className="w-[16%]" />
             </colgroup>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -53,7 +48,7 @@ export default function SettingsIntegrations({ project }: { project: ProjectDeta
                 <TableHead className="text-xs font-medium text-muted-foreground">
                   {t('columns.credentials')}
                 </TableHead>
-                <TableHead className="text-right text-xs font-medium text-muted-foreground">
+                <TableHead className="text-end text-xs font-medium text-muted-foreground">
                   {tCommon('actions')}
                 </TableHead>
               </TableRow>
@@ -63,9 +58,9 @@ export default function SettingsIntegrations({ project }: { project: ProjectDeta
                 <CredentialRow
                   key={c.id}
                   credential={c}
-                  integrationLabel={integrationLabel(c.integrationKey)}
-                  canEdit={can('edit')}
-                  canDelete={can('delete')}
+                  integrationLabel={integrationLabel(catalog, c.integrationKey)}
+                  canEdit={permissions.edit}
+                  canDelete={permissions.delete}
                   onEdit={() => setEditing(c)}
                   onDelete={() => setDeleting(c)}
                 />
@@ -77,7 +72,7 @@ export default function SettingsIntegrations({ project }: { project: ProjectDeta
 
       {editing && (
         <CredentialDialog
-          projectKey={projectKey}
+          teamId={teamId}
           catalog={catalog}
           existing={editing}
           onClose={() => setEditing(null)}
@@ -85,18 +80,21 @@ export default function SettingsIntegrations({ project }: { project: ProjectDeta
       )}
 
       {deleting && (
-        <SettingsConfirmDeleteDialog
+        <ConfirmDialog
           title={t('delete')}
           confirmLabel={t('delete')}
-          message={
-            <>{t('deleteMessage', { integration: integrationLabel(deleting.integrationKey) })}</>
-          }
           onConfirm={async () => {
             await deleteCredential.mutateAsync(deleting.id);
             setDeleting(null);
           }}
           onClose={() => setDeleting(null)}
-        />
+        >
+          <div className="text-sm text-muted-foreground">
+            {t('deleteMessage', {
+              integration: integrationLabel(catalog, deleting.integrationKey),
+            })}
+          </div>
+        </ConfirmDialog>
       )}
     </>
   );

@@ -15,6 +15,7 @@ import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 import { auth } from '@repo/auth';
 import { iso, HttpError, rethrowDuplicate } from '#shared/lib';
 import { getCredentialById } from '../integrations/service';
+import { getProjectTeamId } from '#modules/projects/service';
 import { integrationKind } from '../integrations/catalog';
 import { encryptSecret, decryptSecret } from '@repo/crypto';
 import { normalizeToolKeys, ALWAYS_ON_ACTIONS } from './runtime/tools/catalog';
@@ -367,13 +368,14 @@ export async function isAgentUser(userId: string): Promise<boolean> {
 }
 
 // An unknown, foreign, or non-LLM credential id would otherwise be stored and only
-// surface later, as a run that fails to start.
+// surface later, as a run that fails to start. Credentials belong to the team, so an
+// id from another team is what counts as foreign.
 async function assertModelCredential(
   projectId: number,
   credentialId: number | null | undefined,
 ): Promise<void> {
   if (credentialId == null) return;
-  const credential = await getCredentialById(credentialId, projectId);
+  const credential = await getCredentialById(credentialId, await getProjectTeamId(projectId));
   if (!credential) throw new HttpError(400, 'Credential not found');
   if (integrationKind(credential.integrationKey) !== 'llm') {
     throw new HttpError(

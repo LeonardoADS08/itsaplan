@@ -64,35 +64,6 @@
     "emptyHint": "Pick an agent, a task, and how often it runs.",
     "deleteMessage": "The schedule <v>{name}</v> and its run history will be removed. This cannot be undone."
   },
-  "integrations": {
-    "add": "Add credential",
-    "edit": "Edit credential",
-    "delete": "Delete credential",
-    "back": "Back to integrations",
-    "label": "Label (optional)",
-    "labelPlaceholder": "e.g. Team account",
-    "labelHint": "Helps tell apart credentials of the same integration. Secrets are stored encrypted.",
-    "noFields": "No fields",
-    "search": "Search integrations",
-    "noMatches": "No integration matches “{query}”.",
-    "empty": "No credentials yet",
-    "emptyHint": "Agents can't use an AI provider or a tool without one.",
-    "deleteMessage": "Delete the {integration} credential? Agents and tools using it will stop working until you add a new one.",
-    "groups": {
-      "llm": {
-        "title": "AI providers",
-        "hint": "The model an internal agent runs on"
-      },
-      "tool": {
-        "title": "Tools",
-        "hint": "Integrations an agent can call as tools"
-      }
-    },
-    "columns": {
-      "integration": "Integration",
-      "credentials": "Credentials"
-    }
-  },
   "agents": {
     "newAgent": "New agent",
     "create": "Create agent",
@@ -130,8 +101,8 @@
     "searchCredential": "Search credentials",
     "noCredentialsFound": "No credentials found.",
     "noCredential": "No AI provider connected",
-    "noCredentialHint": "Connect a provider key to pick a model for this agent.",
-    "addKey": "Go to Integrations",
+    "noCredentialHint": "Connect a provider key in the team's integrations to pick a model for this agent.",
+    "addKey": "Go to team settings",
     "chooseModel": "Choose a model",
     "searchModel": "Search or type a model id",
     "loadingModels": "Loading models…",
@@ -324,7 +295,7 @@
     "scopesLabel": "Required token permissions",
     "credential": "Credential",
     "chooseCredential": "Choose a credential",
-    "noCredential": "No {integration} credential yet. Add one on the Integrations page first.",
+    "noCredential": "No {integration} credential yet. Add one in the team's integrations first.",
     "deleteMessage": "Remove {tool}? Agents using it will lose access to this tool.",
     "scopesUpper": "Scopes",
     "selectGroup": "Select all",

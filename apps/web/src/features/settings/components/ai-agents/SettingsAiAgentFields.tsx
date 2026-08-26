@@ -183,7 +183,6 @@ export default function SettingsAiAgentFields({
       {...sectionProps('model')}
       value={value}
       onChange={onChange}
-      projectKey={projectKey}
       credentials={credentials}
       catalog={catalog}
       models={models}

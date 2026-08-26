@@ -22,7 +22,7 @@ export function CredentialRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const t = useTranslations('settings.integrations');
+  const t = useTranslations('teams.integrations');
   const fields = Object.entries(credential.redacted);
   return (
     <TableRow className="group/item">

@@ -166,5 +166,36 @@
     "botToken": "Bot API 令牌（可选）",
     "emailSaved": "邮件服务商已保存",
     "telegramSaved": "Telegram 服务商已保存"
+  },
+  "integrations": {
+    "title": "集成",
+    "noAccess": "你没有权限查看该团队的集成。",
+    "add": "添加凭据",
+    "edit": "编辑凭据",
+    "delete": "删除凭据",
+    "back": "返回集成",
+    "label": "标签（可选）",
+    "labelPlaceholder": "例如：团队账户",
+    "labelHint": "用于区分同一集成的不同凭据。密钥会加密存储。",
+    "noFields": "无字段",
+    "search": "搜索集成",
+    "noMatches": "没有与“{query}”匹配的集成。",
+    "empty": "暂无凭据",
+    "emptyHint": "代理需要凭据才能使用 AI 提供商或工具。",
+    "deleteMessage": "删除 {integration} 凭据？使用它的代理和工具将停止工作，直到添加新凭据。",
+    "groups": {
+      "llm": {
+        "title": "AI 提供商",
+        "hint": "内置代理使用的模型"
+      },
+      "tool": {
+        "title": "工具",
+        "hint": "代理可以作为工具调用的集成"
+      }
+    },
+    "columns": {
+      "integration": "集成",
+      "credentials": "凭据"
+    }
   }
 }

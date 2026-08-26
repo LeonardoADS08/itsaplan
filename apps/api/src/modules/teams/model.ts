@@ -60,6 +60,7 @@ export const TeamDetailResponse = t.Composite([
         createdAt: t.String(),
       }),
     ),
+    permissions: PermissionMatrixSchema,
   }),
 ]);
 

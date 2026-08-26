@@ -166,5 +166,36 @@
     "botToken": "Bot API token (optional)",
     "emailSaved": "Email provider saved",
     "telegramSaved": "Telegram provider saved"
+  },
+  "integrations": {
+    "title": "Integrations",
+    "noAccess": "You do not have access to the integrations of this team.",
+    "add": "Add credential",
+    "edit": "Edit credential",
+    "delete": "Delete credential",
+    "back": "Back to integrations",
+    "label": "Label (optional)",
+    "labelPlaceholder": "e.g. Team account",
+    "labelHint": "Helps tell apart credentials of the same integration. Secrets are stored encrypted.",
+    "noFields": "No fields",
+    "search": "Search integrations",
+    "noMatches": "No integration matches “{query}”.",
+    "empty": "No credentials yet",
+    "emptyHint": "Agents can't use an AI provider or a tool without one.",
+    "deleteMessage": "Delete the {integration} credential? Agents and tools using it will stop working until you add a new one.",
+    "groups": {
+      "llm": {
+        "title": "AI providers",
+        "hint": "The model an internal agent runs on"
+      },
+      "tool": {
+        "title": "Tools",
+        "hint": "Integrations an agent can call as tools"
+      }
+    },
+    "columns": {
+      "integration": "Integration",
+      "credentials": "Credentials"
+    }
   }
 }

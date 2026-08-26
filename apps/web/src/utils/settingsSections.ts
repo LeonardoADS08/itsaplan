@@ -5,7 +5,6 @@ import {
   Columns3,
   GitPullRequest,
   Info,
-  KeyRound,
   ListPlus,
   type LucideIcon,
   Shapes,
@@ -112,13 +111,6 @@ export const AI_AGENTS_SECTION: SettingsSection = {
   group: 'ai',
 };
 
-export const INTEGRATIONS_SECTION: SettingsSection = {
-  slug: 'integrations',
-  icon: KeyRound,
-  resource: 'integrations',
-  group: 'ai',
-};
-
 export const AGENT_SKILLS_SECTION: SettingsSection = {
   slug: 'agent-skills',
   icon: BookText,
@@ -135,7 +127,6 @@ export const AGENT_TOOLS_SECTION: SettingsSection = {
 
 // The "Configure" nav items, in sidebar order.
 export const AI_SECTIONS: SettingsSection[] = [
-  INTEGRATIONS_SECTION,
   AI_AGENTS_SECTION,
   AGENT_SKILLS_SECTION,
   AGENT_TOOLS_SECTION,

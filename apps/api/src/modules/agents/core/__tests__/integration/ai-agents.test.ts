@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
+import { createCredential } from '#tests/helpers/integrations';
 import { untaggedRoutes } from '#tests/helpers/mcp';
 
 // AI agents attached to a project. Each agent is backed by a hidden bot user, owns a
@@ -21,12 +22,11 @@ async function setup() {
 
 const agents = (api: Api) => api.projects({ projectKey: 'MKT' })['ai-agents'];
 
-async function createCredential(api: Api, projectKey = 'MKT'): Promise<number> {
-  const res = await api.projects({ projectKey }).integrations.post({
+function openAiCredential(api: Api, projectKey = 'MKT'): Promise<number> {
+  return createCredential(api, projectKey, {
     integrationKey: 'openai',
     credential: { apiKey: 'sk-secret-1234' },
   });
-  return res.data!.id;
 }
 
 describe('ai agents', () => {
@@ -122,7 +122,7 @@ describe('ai agents', () => {
 
   it('binds a model credential of the project to an internal agent', async () => {
     const { asOwner } = await setup();
-    const credentialId = await createCredential(asOwner);
+    const credentialId = await openAiCredential(asOwner);
     const res = await agents(asOwner).post({
       name: 'Bot',
       username: 'bot',
@@ -147,10 +147,14 @@ describe('ai agents', () => {
     expect(res.status).toBe(400);
   });
 
-  it("rejects another project's model credential with 400", async () => {
+  it("rejects another team's model credential with 400", async () => {
     const { asOwner } = await setup();
-    await asOwner.projects.post({ key: 'ENG', name: 'Engineering' });
-    const foreignCredentialId = await createCredential(asOwner, 'ENG');
+    const otherTeam = await asOwner.teams.post({ name: 'Engineering' });
+    await asOwner.teams({ teamId: otherTeam.data!.id }).projects.post({
+      key: 'ENG',
+      name: 'Engineering',
+    });
+    const foreignCredentialId = await openAiCredential(asOwner, 'ENG');
     const res = await agents(asOwner).post({
       name: 'Bot',
       username: 'bot',
@@ -162,7 +166,7 @@ describe('ai agents', () => {
 
   it('rejects a tool credential as the model credential with 400', async () => {
     const { asOwner } = await setup();
-    const created = await asOwner.projects({ projectKey: 'MKT' }).integrations.post({
+    const toolCredentialId = await createCredential(asOwner, 'MKT', {
       integrationKey: 'jina',
       credential: { apiKey: 'jina_secret' },
     });
@@ -170,14 +174,14 @@ describe('ai agents', () => {
       name: 'Bot',
       username: 'bot',
       kind: 'internal',
-      modelCredentialId: created.data!.id,
+      modelCredentialId: toolCredentialId,
     });
     expect(res.status).toBe(400);
   });
 
   it('rejects an unknown model credential with 400 on update and keeps the stored one', async () => {
     const { asOwner } = await setup();
-    const credentialId = await createCredential(asOwner);
+    const credentialId = await openAiCredential(asOwner);
     const created = await agents(asOwner).post({
       name: 'Bot',
       username: 'bot',
@@ -202,7 +206,7 @@ describe('ai agents', () => {
       name: 'Bot',
       username: 'bot',
       kind: 'internal',
-      modelCredentialId: await createCredential(asOwner),
+      modelCredentialId: await openAiCredential(asOwner),
     });
     const res = await agents(asOwner)({ agentId: created.data!.agent.id }).patch({
       modelCredentialId: null,

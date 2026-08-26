@@ -18,8 +18,7 @@ const REQUIRES: Record<CopyProjectIncludeKey, CopyProjectIncludeKey[]> = {
   actions: ['states', 'issueTypes', 'labels'],
   configuration: [],
   webhooks: [],
-  integrations: [],
-  tools: ['integrations'],
+  tools: [],
   skills: [],
   agents: [],
   schedules: ['agents'],
@@ -41,7 +40,7 @@ const COLUMNS: Group[][] = [
     },
   ],
   [{ title: 'automation', keys: ['actions', 'schedules', 'webhooks'] }],
-  [{ title: 'aiTeam', keys: ['agents', 'integrations', 'skills', 'tools'] }],
+  [{ title: 'aiTeam', keys: ['agents', 'skills', 'tools'] }],
   [{ title: 'views', keys: ['views', 'dashboards'] }],
 ];
 

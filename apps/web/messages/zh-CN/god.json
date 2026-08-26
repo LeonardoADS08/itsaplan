@@ -107,8 +107,7 @@
       "views": "视图",
       "agents": "AI 代理",
       "skills": "技能",
-      "tools": "工具",
-      "integrations": "集成"
+      "tools": "工具"
     },
     "members": "成员",
     "noMembersTitle": "暂无成员",

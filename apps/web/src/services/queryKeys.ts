@@ -93,9 +93,14 @@ export const qk = {
     ['aiAgents', projectKey, agentId, 'threads'] as const,
   agentThreadMessages: (projectKey: string, agentId: number, threadId: string) =>
     ['aiAgents', projectKey, agentId, 'threads', threadId] as const,
-  // Stored integration credentials, the integration catalog, and an LLM provider's
-  // models (the Integrations page and the agent model select).
-  integrationCredentials: (projectKey: string) => ['integrations', projectKey] as const,
+  // Everything integration-scoped. A credential belongs to the team, so changing one
+  // is invalidated at this prefix: the pickers its projects fill from go stale too.
+  integrations: ['integrations'] as const,
+  // The team's stored credentials and the same catalog the team panel reads.
+  teamCredentials: (teamId: number) => ['integrations', 'team', teamId] as const,
+  teamIntegrationCatalog: (teamId: number) => ['integrations', 'team', teamId, 'catalog'] as const,
+  // The integration catalog and an LLM provider's models, as a project reads them
+  // (the agent model select and the tool forms).
   integrationCatalog: (projectKey: string) => ['integrations', projectKey, 'catalog'] as const,
   integrationModels: (projectKey: string, provider: string) =>
     ['integrations', projectKey, 'models', provider] as const,

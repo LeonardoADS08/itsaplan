@@ -40,8 +40,6 @@ export const notificationsPath = (key: string) => `${projectPath(key)}/notificat
 
 export const aiAgentsPath = (key: string) => `${projectPath(key)}/ai-agents`;
 
-export const integrationsPath = (key: string) => `${projectPath(key)}/integrations`;
-
 export const agentSkillsPath = (key: string) => `${projectPath(key)}/agent-skills`;
 
 export const agentToolsPath = (key: string) => `${projectPath(key)}/agent-tools`;
@@ -50,7 +48,6 @@ export const agentToolsPath = (key: string) => `${projectPath(key)}/agent-tools`
 // top-level route rather than a /settings/:slug page.
 const AI_SECTION_PATH: Record<string, (key: string) => string> = {
   'ai-agents': aiAgentsPath,
-  integrations: integrationsPath,
   'agent-skills': agentSkillsPath,
   'agent-tools': agentToolsPath,
 };

@@ -2,9 +2,9 @@
 
 import { Cpu, KeyRound } from 'lucide-react';
 import type { IntegrationMeta, IntegrationOption, ProviderModel } from '@/lib/api';
-import { integrationsPath } from '@/utils/paths';
+import { manageTeamsPath } from '@/utils/paths';
 import type { AgentFormValue } from '../../utils/agentForm';
-import { integrationLabel } from '../../utils/integrationLabels';
+import { integrationLabel } from '@/utils/integrationLabels';
 import { AgentFormSection } from './AgentFormSection';
 import { AgentEmptyNotice } from './AgentEmptyNotice';
 import AgentCredentialField from './AgentCredentialField';
@@ -12,14 +12,13 @@ import AgentModelField from './AgentModelField';
 import { useTranslations } from 'next-intl';
 
 // Which provider key the agent runs on and which model of that provider. Only
-// internal agents have it. With no provider key in the project both pickers are
-// replaced by the notice that points at Integrations.
+// internal agents have it. With no provider key on the team both pickers are
+// replaced by a notice that points at the team panel, where the credentials live.
 export default function AgentModelSection({
   open,
   onOpenChange,
   value,
   onChange,
-  projectKey,
   credentials,
   catalog,
   models,
@@ -29,7 +28,6 @@ export default function AgentModelSection({
   onOpenChange: (open: boolean) => void;
   value: AgentFormValue;
   onChange: (patch: Partial<AgentFormValue>) => void;
-  projectKey: string;
   credentials: IntegrationOption[];
   catalog: IntegrationMeta[];
   models: ProviderModel[];
@@ -55,7 +53,7 @@ export default function AgentModelSection({
           icon={KeyRound}
           title={t('noCredential')}
           hint={t('noCredentialHint')}
-          href={integrationsPath(projectKey)}
+          href={manageTeamsPath()}
           linkLabel={t('addKey')}
         />
       ) : (

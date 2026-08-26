@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCreateCredential, useUpdateCredential } from '@/services/integrations.service';
-import { IntegrationIcon } from './IntegrationIcon';
+import { IntegrationIcon } from '@/components/common/IntegrationIcon';
 import { useTranslations } from 'next-intl';
 
 type FieldValue = string | boolean;
@@ -41,19 +41,19 @@ function seedValues(
 // a chosen integration, built from its credentialSchema. Secret fields left blank on
 // edit keep their stored value. `onBack` returns to the picker (create only).
 export function CredentialForm({
-  projectKey,
+  teamId,
   meta,
   existing,
   onBack,
   onDone,
 }: {
-  projectKey: string;
+  teamId: number;
   meta: IntegrationMeta;
   existing: IntegrationCredential | null;
   onBack?: () => void;
   onDone: () => void;
 }) {
-  const t = useTranslations('settings.integrations');
+  const t = useTranslations('teams.integrations');
   const tCommon = useTranslations('common');
   const isEdit = existing != null;
   const [label, setLabel] = useState(existing?.label ?? '');
@@ -62,8 +62,8 @@ export function CredentialForm({
   );
   const [busy, setBusy] = useState(false);
 
-  const create = useCreateCredential(projectKey);
-  const update = useUpdateCredential(projectKey);
+  const create = useCreateCredential(teamId);
+  const update = useUpdateCredential(teamId);
 
   function setField(key: string, v: FieldValue) {
     setValues((prev) => ({ ...prev, [key]: v }));

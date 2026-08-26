@@ -4,11 +4,13 @@ import { getTool, type ToolConfig } from '@repo/agent-tools';
 import { iso, HttpError, rethrowDuplicate } from '#shared/lib';
 import { decryptSecret } from '@repo/crypto';
 import { getCredentialById } from '../integrations/service';
+import { getProjectTeamId } from '#modules/projects/service';
 
 // Data access for configured tools. A configured tool binds a catalog tool (tool_key)
-// to one integration_credential. The secret lives on the credential, so a row here
-// carries no secret; the runtime decrypts the bound credential at call time. The list
-// DTO enriches a row with its credential's integration and label for display.
+// to one integration_credential of the team that owns the project. The secret lives on
+// the credential, so a row here carries no secret; the runtime decrypts the bound
+// credential at call time. The list DTO enriches a row with its credential's
+// integration and label for display.
 
 export interface AgentToolRow {
   id: number;
@@ -64,7 +66,7 @@ export async function createAgentTool(
 ): Promise<AgentToolRow> {
   const tool = getTool(input.toolKey);
   if (!tool) throw new HttpError(400, `Unknown tool: ${input.toolKey}`);
-  const credential = await getCredentialById(input.credentialId, projectId);
+  const credential = await getCredentialById(input.credentialId, await getProjectTeamId(projectId));
   if (!credential) throw new HttpError(400, 'Credential not found');
   if (credential.integrationKey !== tool.integration.key) {
     throw new HttpError(

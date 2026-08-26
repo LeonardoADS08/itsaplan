@@ -17,10 +17,11 @@ import TeamMembersSection from './TeamMembersSection';
 import TeamPanelTabs from './TeamPanelTabs';
 import TeamProjectRow from './TeamProjectRow';
 
-// One team in a right-hand side panel: what its owner configures for every project it
-// owns (the roles they assign from, the providers they deliver notifications through),
-// the projects themselves, and its members with the invites waiting to be answered.
-// Escape or a backdrop click closes it.
+// One team in a right-hand side panel: what it configures for every project it owns
+// (the roles they assign from, the providers they deliver notifications through, the
+// integration credentials their agents run on), the projects themselves, and its
+// members with the invites waiting to be answered. Escape or a backdrop click closes
+// it.
 export default function TeamDetailPanel({
   teamId,
   onClose,
@@ -86,6 +87,7 @@ export default function TeamDetailPanel({
                 teamId={team.id}
                 teamName={team.name}
                 canManage={isOwner}
+                integrationPermissions={team.permissions.integrations}
                 onEditorOpenChange={setRoleEditorOpen}
               />
 

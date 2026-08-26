@@ -37,7 +37,6 @@ const STATS = [
   { key: 'agents', count: (p: InstanceProjectDetail) => p.agentCount },
   { key: 'skills', count: (p: InstanceProjectDetail) => p.skillCount },
   { key: 'tools', count: (p: InstanceProjectDetail) => p.toolCount },
-  { key: 'integrations', count: (p: InstanceProjectDetail) => p.integrationCount },
 ] as const;
 
 // One project in a right-hand side panel (the same surface the user directory uses):

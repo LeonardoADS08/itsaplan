@@ -10,17 +10,17 @@ import { useTranslations } from 'next-intl';
 // (CredentialForm). Editing skips the picker: the integration is fixed and the form
 // opens directly.
 export function CredentialDialog({
-  projectKey,
+  teamId,
   catalog,
   existing,
   onClose,
 }: {
-  projectKey: string;
+  teamId: number;
   catalog: IntegrationMeta[];
   existing: IntegrationCredential | null;
   onClose: () => void;
 }) {
-  const t = useTranslations('settings.integrations');
+  const t = useTranslations('teams.integrations');
   const isEdit = existing != null;
   const [integrationKey, setIntegrationKey] = useState<string | null>(
     existing?.integrationKey ?? null,
@@ -29,7 +29,7 @@ export function CredentialDialog({
 
   if (!isEdit && !meta) {
     return (
-      <Modal title={t('add')} scope={projectKey} onClose={onClose} wide>
+      <Modal title={t('add')} onClose={onClose} wide>
         <IntegrationPicker catalog={catalog} onSelect={setIntegrationKey} />
       </Modal>
     );
@@ -39,9 +39,9 @@ export function CredentialDialog({
   if (!meta) return null;
 
   return (
-    <Modal title={isEdit ? t('edit') : t('add')} scope={projectKey} onClose={onClose}>
+    <Modal title={isEdit ? t('edit') : t('add')} onClose={onClose}>
       <CredentialForm
-        projectKey={projectKey}
+        teamId={teamId}
         meta={meta}
         existing={existing}
         onBack={isEdit ? undefined : () => setIntegrationKey(null)}

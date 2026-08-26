@@ -650,23 +650,23 @@ export const agentChatEvent = pgTable(
   (t) => [index('agent_chat_event_message_idx').on(t.messageId, t.id)],
 );
 
-// Stored credentials for a project's integrations. One store for every secret: the
-// API keys of LLM providers (kind 'llm', addressed by an internal agent's model) and
-// the credentials of tool integrations (kind 'tool', bound to configured tools).
-// integration_key names the integration in the catalog; the credential's fields (and
-// which are secret) come from that integration's credentialSchema. The full
-// credential object is stored encrypted (AES-256-GCM, see
+// Stored credentials for a team's integrations, shared by every project it owns. One
+// store for every secret: the API keys of LLM providers (kind 'llm', addressed by an
+// internal agent's model) and the credentials of tool integrations (kind 'tool',
+// bound to configured tools). integration_key names the integration in the catalog;
+// the credential's fields (and which are secret) come from that integration's
+// credentialSchema. The full credential object is stored encrypted (AES-256-GCM, see
 // apps/api/src/shared/crypto.ts): ciphertext + iv + auth_tag. `redacted` is the same
 // object with secret fields masked, kept in plaintext for a masked display. The
-// secret is never returned to the client. A project may hold several credentials per
+// secret is never returned to the client. A team may hold several credentials per
 // integration (e.g. two Jina keys), told apart by `label`.
 export const integrationCredential = pgTable(
   'integration_credential',
   {
     id: serial('id').primaryKey(),
-    projectId: integer('project_id')
+    teamId: integer('team_id')
       .notNull()
-      .references(() => project.id, { onDelete: 'cascade' }),
+      .references(() => team.id, { onDelete: 'cascade' }),
     integrationKey: text('integration_key').notNull(),
     label: text('label'),
     ciphertext: text('ciphertext').notNull(),
@@ -677,7 +677,7 @@ export const integrationCredential = pgTable(
     redacted: jsonb('redacted').notNull().default({}),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('integration_credential_project_idx').on(t.projectId)],
+  (t) => [index('integration_credential_team_idx').on(t.teamId)],
 );
 
 // Per-team notification provider credentials: the outbound channels every project

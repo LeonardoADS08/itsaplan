@@ -8,7 +8,7 @@ import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
 import SettingsConfirmDeleteDialog from '../crud/SettingsConfirmDeleteDialog';
 import { useSettingsCan } from '../../context/settingsPermission';
 import { ToolConfigRow } from './ToolConfigRow';
-import { integrationLabel } from '../../utils/integrationLabels';
+import { integrationLabel } from '@/utils/integrationLabels';
 import { useTranslations } from 'next-intl';
 
 // Project settings for configured tools: a catalog tool bound to an integration

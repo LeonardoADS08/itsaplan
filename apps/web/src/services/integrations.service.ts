@@ -7,11 +7,11 @@ import {
 } from '@/lib/api';
 import { qk } from '@/services/queryKeys';
 
-export function useCredentialsQuery(projectKey: string | null) {
+// The team's stored credentials, secrets redacted. Backs the team's Integrations tab.
+export function useCredentialsQuery(teamId: number) {
   return useQuery({
-    queryKey: qk.integrationCredentials(projectKey ?? ''),
-    queryFn: () => api.listCredentials(projectKey!),
-    enabled: projectKey != null,
+    queryKey: qk.teamCredentials(teamId),
+    queryFn: () => api.listCredentials(teamId),
   });
 }
 
@@ -36,47 +36,48 @@ export function useIntegrationCatalogQuery(projectKey: string | null) {
   });
 }
 
-// Models an LLM provider offers (from the models.dev registry). Fetched only when a
-// provider is chosen; cached for the session.
-export function useIntegrationModelsQuery(projectKey: string | null, provider: string | null) {
+// The same catalog for the team panel, which knows the team and no project.
+export function useTeamIntegrationCatalogQuery(teamId: number | null) {
   return useQuery({
-    queryKey: qk.integrationModels(projectKey ?? '', provider ?? ''),
-    queryFn: () => api.listIntegrationModels(projectKey!, provider!),
-    enabled: projectKey != null && provider != null && provider.length > 0,
+    queryKey: qk.teamIntegrationCatalog(teamId ?? 0),
+    queryFn: () => api.listTeamIntegrationCatalog(teamId!),
+    enabled: teamId != null,
     staleTime: Infinity,
   });
 }
 
-export function useCreateCredential(projectKey: string | null) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: NewCredentialInput) => api.createCredential(projectKey!, input),
-    onSuccess: () => {
-      if (projectKey)
-        void qc.invalidateQueries({ queryKey: qk.integrationCredentials(projectKey) });
-    },
+// Models an LLM provider offers (from the models.dev registry). Fetched only when a
+// provider is chosen; cached for the session.
+export function useIntegrationModelsQuery(projectKey: string, provider: string | null) {
+  return useQuery({
+    queryKey: qk.integrationModels(projectKey, provider ?? ''),
+    queryFn: () => api.listIntegrationModels(projectKey, provider!),
+    enabled: provider != null && provider.length > 0,
+    staleTime: Infinity,
   });
 }
 
-export function useUpdateCredential(projectKey: string | null) {
+export function useCreateCredential(teamId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: NewCredentialInput) => api.createCredential(teamId, input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.integrations }),
+  });
+}
+
+export function useUpdateCredential(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, patch }: { id: number; patch: CredentialPatch }) =>
-      api.updateCredential(projectKey!, id, patch),
-    onSuccess: () => {
-      if (projectKey)
-        void qc.invalidateQueries({ queryKey: qk.integrationCredentials(projectKey) });
-    },
+      api.updateCredential(teamId, id, patch),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.integrations }),
   });
 }
 
-export function useDeleteCredential(projectKey: string | null) {
+export function useDeleteCredential(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => api.deleteCredential(projectKey!, id),
-    onSuccess: () => {
-      if (projectKey)
-        void qc.invalidateQueries({ queryKey: qk.integrationCredentials(projectKey) });
-    },
+    mutationFn: (id: number) => api.deleteCredential(teamId, id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.integrations }),
   });
 }

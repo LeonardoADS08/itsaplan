@@ -167,7 +167,6 @@ const InstanceProjectResponse = t.Object({
   agentCount: t.Number(),
   skillCount: t.Number(),
   toolCount: t.Number(),
-  integrationCount: t.Number(),
   lastActivityAt: t.Nullable(t.String()),
   createdAt: t.String(),
 });

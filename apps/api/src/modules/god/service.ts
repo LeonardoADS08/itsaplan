@@ -7,7 +7,6 @@ import {
   agentTool,
   aiAgent,
   initiative,
-  integrationCredential,
   issue,
   issueActivity,
   project,
@@ -301,7 +300,6 @@ export interface InstanceProjectCounts {
   agentCount: number;
   skillCount: number;
   toolCount: number;
-  integrationCount: number;
 }
 
 export interface InstanceProjectRow extends InstanceProjectCounts {
@@ -371,7 +369,6 @@ const EMPTY_FACTS: ProjectFacts = {
   agentCount: 0,
   skillCount: 0,
   toolCount: 0,
-  integrationCount: 0,
   lastActivityAt: null,
 };
 
@@ -391,7 +388,6 @@ async function loadProjectFacts(projectIds: number[]): Promise<(id: number) => P
     agents,
     skills,
     tools,
-    integrations,
     activityRows,
   ] = await Promise.all([
     countByProject(projectMember, projectMember.projectId, projectIds),
@@ -403,7 +399,6 @@ async function loadProjectFacts(projectIds: number[]): Promise<(id: number) => P
     countByProject(aiAgent, aiAgent.projectId, projectIds),
     countByProject(agentSkill, agentSkill.projectId, projectIds),
     countByProject(agentTool, agentTool.projectId, projectIds),
-    countByProject(integrationCredential, integrationCredential.projectId, projectIds),
     // The feed has no project column of its own; it reaches one through its issue.
     // Reduced to the latest per project below, because aggregating in SQL would
     // return the max as a driver-formatted string, not a Date.
@@ -432,7 +427,6 @@ async function loadProjectFacts(projectIds: number[]): Promise<(id: number) => P
       agentCount: counts(agents, id),
       skillCount: counts(skills, id),
       toolCount: counts(tools, id),
-      integrationCount: counts(integrations, id),
       lastActivityAt: activeAt ? iso(activeAt) : null,
     };
   };

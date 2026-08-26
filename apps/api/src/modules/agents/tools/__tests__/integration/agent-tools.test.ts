@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
+import { createCredential } from '#tests/helpers/integrations';
 import { untaggedRoutes } from '#tests/helpers/mcp';
 
 // Configured tools for a project: a catalog tool bound to an integration credential.
@@ -16,16 +17,14 @@ async function setup() {
 }
 
 const tools = (api: Api) => api.projects({ projectKey: 'MKT' })['agent-tools'];
-const integrations = (api: Api) => api.projects({ projectKey: 'MKT' }).integrations;
 const agents = (api: Api) => api.projects({ projectKey: 'MKT' })['ai-agents'];
 
-// Creates a Jina credential and returns its id.
-async function jinaCredential(asOwner: Api): Promise<number> {
-  const res = await integrations(asOwner).post({
+// Creates a Jina credential on the team that owns MKT and returns its id.
+function jinaCredential(asOwner: Api): Promise<number> {
+  return createCredential(asOwner, 'MKT', {
     integrationKey: 'jina',
     credential: { apiKey: 'jina-key-1234' },
   });
-  return res.data!.id;
 }
 
 describe('agent tools', () => {
@@ -57,27 +56,22 @@ describe('agent tools', () => {
 
   it('rejects binding a tool to a credential of a different integration', async () => {
     const { asOwner } = await setup();
-    const openai = await integrations(asOwner).post({
+    const openaiId = await createCredential(asOwner, 'MKT', {
       integrationKey: 'openai',
       credential: { apiKey: 'sk-1' },
     });
-    const res = await tools(asOwner).post({
-      toolKey: 'jina_reader',
-      credentialId: openai.data!.id,
-    });
+    const res = await tools(asOwner).post({ toolKey: 'jina_reader', credentialId: openaiId });
     expect(res.status).toBe(400);
   });
 
   it('binds different Jina tools to different credentials', async () => {
     const { asOwner } = await setup();
     const keyA = await jinaCredential(asOwner);
-    const keyB = (
-      await integrations(asOwner).post({
-        integrationKey: 'jina',
-        label: 'B',
-        credential: { apiKey: 'jina-b' },
-      })
-    ).data!.id;
+    const keyB = await createCredential(asOwner, 'MKT', {
+      integrationKey: 'jina',
+      label: 'B',
+      credential: { apiKey: 'jina-b' },
+    });
     expect((await tools(asOwner).post({ toolKey: 'jina_reader', credentialId: keyA })).status).toBe(
       201,
     );

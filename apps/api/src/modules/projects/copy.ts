@@ -11,7 +11,6 @@ import {
   projectView,
   projectDashboard,
   projectAction,
-  integrationCredential,
   agentTool,
   webhook,
   projectSetting,
@@ -54,7 +53,6 @@ export interface CopyProjectInclude {
   actions: boolean;
   configuration: boolean;
   webhooks: boolean;
-  integrations: boolean;
   tools: boolean;
   skills: boolean;
   agents: boolean;
@@ -71,7 +69,6 @@ export const COPY_INCLUDE_KEYS: (keyof CopyProjectInclude)[] = [
   'actions',
   'configuration',
   'webhooks',
-  'integrations',
   'tools',
   'skills',
   'agents',
@@ -97,8 +94,7 @@ const DEFAULT_INCLUDE: CopyProjectInclude = {
 
 // Resolves the selection and force-enables the dependencies each entity needs to be
 // copied correctly. Views/actions remap the ids of states, types, labels and fields,
-// so those must be copied too; a tool cannot exist without its credential; a schedule
-// cannot exist without its agent.
+// so those must be copied too; a schedule cannot exist without its agent.
 function normalizeInclude(raw?: Partial<CopyProjectInclude>): CopyProjectInclude {
   const inc: CopyProjectInclude = raw ? { ...ALL_FALSE, ...raw } : { ...DEFAULT_INCLUDE };
   if (inc.customFields) inc.issueTypes = true;
@@ -113,7 +109,6 @@ function normalizeInclude(raw?: Partial<CopyProjectInclude>): CopyProjectInclude
     inc.issueTypes = true;
     inc.labels = true;
   }
-  if (inc.tools) inc.integrations = true;
   if (inc.schedules) inc.agents = true;
   return inc;
 }
@@ -228,9 +223,9 @@ async function readObjectBytes(key: string): Promise<{ bytes: Buffer; contentTyp
 // configuration, but none of its issues. The creator becomes the new project's owner.
 //
 // Pure-database entities (states, types, labels, custom fields, views, dashboards,
-// actions, settings, webhooks, integration credentials, configured tools) are
-// copied in one transaction, recording old id → new id so the ids that views/actions
-// and tools/agents reference are remapped to the copied entities. Entities with side
+// actions, settings, webhooks, configured tools) are copied in one transaction,
+// recording old id → new id so the ids that views/actions and tools/agents reference
+// are remapped to the copied entities. Entities with side
 // effects outside the database are copied after that transaction commits: skills copy
 // their object-store files, agents create their own bot user and API key, and both go
 // through the same service functions the UI uses.
@@ -251,7 +246,6 @@ export async function copyProject(
     field: new Map(),
     option: new Map(),
   };
-  const integrationMap = new Map<number, number>();
   const toolMap = new Map<number, number>();
   const skillMap = new Map<number, number>();
   const agentMap = new Map<number, number>();
@@ -259,6 +253,9 @@ export async function copyProject(
   const source = await getProjectById(sourceProjectId);
   if (!source) throw new HttpError(404, 'Project not found');
   const ownerTeam = await targetTeam(ownerId, teamId);
+  // Integration credentials and roles belong to the team, so what references them
+  // survives the copy only when it stays in the same team.
+  const sameTeam = ownerTeam.id === source.teamId;
   const newProject = await db.transaction(async (tx) => {
     // The optional sections the source project shows and the estimate kinds it
     // carries are part of its configuration, so the copy starts with the same ones.
@@ -517,46 +514,18 @@ export async function copyProject(
       }
     }
 
-    // Integration credentials (LLM and tool secrets), copied verbatim — the ciphertext
-    // is already encrypted and the project scope is the boundary. Their ids are mapped
-    // so configured tools and agents' model credentials point at the copies.
-    if (inc.integrations) {
-      const credRows = await tx
-        .select()
-        .from(integrationCredential)
-        .where(eq(integrationCredential.projectId, sourceProjectId))
-        .orderBy(integrationCredential.id);
-      for (const c of credRows) {
-        const [created] = await tx
-          .insert(integrationCredential)
-          .values({
-            projectId: proj.id,
-            integrationKey: c.integrationKey,
-            label: c.label,
-            ciphertext: c.ciphertext,
-            iv: c.iv,
-            authTag: c.authTag,
-            redacted: c.redacted,
-          })
-          .returning({ id: integrationCredential.id });
-        integrationMap.set(c.id, created.id);
-      }
-    }
-
-    // Configured tools: each binds a tool key to one integration credential, remapped
-    // to the copied credential. A tool whose credential was not copied is skipped.
-    if (inc.tools) {
+    // Configured tools: each binds a tool key to one integration credential, so a copy
+    // into another team leaves the tools behind.
+    if (inc.tools && sameTeam) {
       const toolRows = await tx
         .select()
         .from(agentTool)
         .where(eq(agentTool.projectId, sourceProjectId))
         .orderBy(agentTool.id);
       for (const tRow of toolRows) {
-        const newCredId = integrationMap.get(tRow.credentialId);
-        if (newCredId == null) continue;
         const [created] = await tx
           .insert(agentTool)
-          .values({ projectId: proj.id, toolKey: tRow.toolKey, credentialId: newCredId })
+          .values({ projectId: proj.id, toolKey: tRow.toolKey, credentialId: tRow.credentialId })
           .returning({ id: agentTool.id });
         toolMap.set(tRow.id, created.id);
       }
@@ -587,19 +556,17 @@ export async function copyProject(
     }
   }
 
-  // Agents: each gets its own bot user and API key through createAgent, with its model
-  // credential and role remapped to the copies. An external agent's key is regenerated
-  // and cannot be recovered here — its operator resets it in the new project. Skill and
-  // tool links are re-created only for the skills/tools that were also copied.
+  // Agents: each gets its own bot user and API key through createAgent. An external
+  // agent's key is regenerated and cannot be recovered here — its operator resets it in
+  // the new project. Skill and tool links are re-created only for the skills/tools that
+  // were also copied.
   if (inc.agents) {
-    const sameTeam = source.teamId === newProject.teamId;
     for (const a of await listAgents(sourceProjectId)) {
       const agentInput: NewAgentInput = {
         name: a.name,
         username: a.username,
         kind: a.kind,
-        modelCredentialId:
-          a.modelCredentialId != null ? (integrationMap.get(a.modelCredentialId) ?? null) : null,
+        modelCredentialId: sameTeam ? a.modelCredentialId : null,
         model: a.model,
         instructions: a.instructions,
         tools: a.tools,
@@ -614,8 +581,7 @@ export async function copyProject(
           return fieldId == null ? [] : [{ fieldId, delaySec: trigger.delaySec }];
         }),
         delegationDelaySec: a.delegationDelaySec,
-        // Roles belong to the team, so an agent keeps its own only inside the team
-        // it was copied from; elsewhere it starts on the target team's default role.
+        // Outside the source team an agent starts on the target team's default role.
         roleId: sameTeam ? a.roleId : null,
         // An 'owner'-scoped agent keeps its scope, bound to whoever made the copy —
         // the source owner need not be a member of the new project.

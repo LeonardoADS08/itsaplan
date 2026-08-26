@@ -11,8 +11,13 @@ import {
 } from '@repo/db';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { HttpError, iso } from '#shared/lib';
-import { defaultMemberPermissions, type Permissions } from '#shared/permissions';
-import { listMemberContexts, listMembers, type MemberRole } from '#modules/members/service';
+import { defaultMemberPermissions, fullPermissions, type Permissions } from '#shared/permissions';
+import {
+  getTeamPermissions,
+  listMemberContexts,
+  listMembers,
+  type MemberRole,
+} from '#modules/members/service';
 import { getStats, type StatsDto } from '#modules/analytics/service';
 
 export type TeamRole = 'owner' | 'manager' | 'member';
@@ -81,6 +86,10 @@ export interface TeamProjectDetail {
 export interface TeamDetail extends TeamRow {
   members: TeamMemberRow[];
   projects: TeamProjectRow[];
+  // What the caller may do with the resources the team holds for all its projects.
+  // Owners and managers run the team, so they get the full matrix; a member gets the
+  // permissions of their project roles in it, merged.
+  permissions: Permissions;
 }
 
 // The caller's teams as DTOs, optionally narrowed to one. Membership is the join,
@@ -154,7 +163,7 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
   const [row] = await loadTeamRows(userId, teamId);
   if (!row) return null;
 
-  const [members, projects, projectOwners] = await Promise.all([
+  const [members, projects, projectOwners, permissions] = await Promise.all([
     db
       .select({
         userId: user.id,
@@ -195,6 +204,7 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
       .innerJoin(user, eq(user.id, projectMember.userId))
       .where(and(eq(project.teamId, teamId), eq(projectMember.role, 'owner')))
       .orderBy(user.name),
+    row.role === 'member' ? getTeamPermissions(teamId, userId) : fullPermissions(),
   ]);
 
   const ownersByProject = new Map<number, TeamProjectRow['owners']>();
@@ -224,6 +234,7 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
       isMember: p.isMember ?? false,
       createdAt: iso(p.createdAt),
     })),
+    permissions,
   };
 }
 

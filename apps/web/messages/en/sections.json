@@ -89,10 +89,6 @@
       "label": "Agents",
       "description": "Bot users you can delegate issues to."
     },
-    "integrations": {
-      "label": "Integrations",
-      "description": "Credentials your agents use to reach AI providers and tools."
-    },
     "agent-skills": {
       "label": "Skills",
       "description": "Reusable instructions internal agents load on demand."

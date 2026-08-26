@@ -1,6 +1,6 @@
 import { HttpError } from './lib';
 import { getProjectByKey, type ProjectRow } from '#modules/projects/service';
-import { getMembership, getMemberContext } from '#modules/members/service';
+import { getMembership, getMemberContext, getTeamPermissions } from '#modules/members/service';
 import { getTeamMembership, type TeamRole } from '#modules/teams/service';
 import { hasPermission, type PermissionAction, type PermissionResource } from './permissions';
 
@@ -192,7 +192,7 @@ export interface TeamMembership {
 // Resolves the :teamId path param to the caller's membership in it. 404 for an
 // unknown team and for one the caller is not a member of: a team the caller cannot
 // see should not be distinguishable from one that does not exist. Wrapped by the
-// teamMember, teamManager and teamOwner guards.
+// team guards.
 export async function requireTeamMembership(
   teamId: number,
   user: AuthUser | undefined | null,
@@ -201,4 +201,24 @@ export async function requireTeamMembership(
   const role = await getTeamMembership(teamId, current.id);
   if (!role) throw new HttpError(404, 'Team not found');
   return { teamId, role, userId: current.id };
+}
+
+// Asserts the caller may perform the action on a resource the team owns and every
+// project of it shares. Owners and managers always may — they run the team. So does
+// an owner of one of its projects, whose project membership carries the full matrix.
+// Anyone else may when a project role of theirs in the team grants it. Wrapped by the
+// teamPermission guard.
+export async function requireTeamPermission(
+  teamId: number,
+  user: AuthUser | undefined | null,
+  resource: PermissionResource,
+  action: PermissionAction,
+): Promise<TeamMembership> {
+  const membership = await requireTeamMembership(teamId, user);
+  if (membership.role !== 'member') return membership;
+  const permissions = await getTeamPermissions(teamId, membership.userId);
+  if (!hasPermission(permissions, resource, action)) {
+    throw new HttpError(403, `You do not have permission to ${action} ${resourceLabel(resource)}`);
+  }
+  return membership;
 }

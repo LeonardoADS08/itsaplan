@@ -1,5 +1,6 @@
 import {
   db,
+  project,
   projectMember,
   teamMember,
   teamRole,
@@ -13,8 +14,11 @@ import { iso } from '#shared/lib';
 import { DEFAULT_TIMEZONE } from '#modules/user-preferences/service';
 import {
   defaultMemberPermissions,
+  emptyPermissions,
   fullPermissions,
   normalizePermissions,
+  PERMISSION_ACTIONS,
+  PERMISSION_RESOURCES,
   type Permissions,
 } from '#shared/permissions';
 
@@ -103,6 +107,31 @@ export async function getMemberContext(
     .where(and(eq(projectMember.projectId, projectId), eq(projectMember.userId, userId)));
   const r = rows[0];
   return r ? toMemberContext(r.role as MemberRole, r.permissions) : null;
+}
+
+// The access a user has across a team: the permissions of their project memberships
+// in it, merged. Permissions are only ever assigned per project, so this is what a
+// team-scoped resource checks for a member who is neither owner nor manager of the
+// team. Owning one of the projects carries the full matrix into the merge, which is
+// what lets a project owner manage the resources the team holds for all of them.
+// Someone who is a member of no project of the team gets an empty matrix.
+export async function getTeamPermissions(teamId: number, userId: string): Promise<Permissions> {
+  const rows = await db
+    .select({ role: projectMember.role, permissions: teamRole.permissions })
+    .from(projectMember)
+    .innerJoin(project, eq(project.id, projectMember.projectId))
+    .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
+    .where(and(eq(project.teamId, teamId), eq(projectMember.userId, userId)));
+  const merged = emptyPermissions();
+  for (const row of rows) {
+    const { permissions } = toMemberContext(row.role as MemberRole, row.permissions);
+    for (const resource of PERMISSION_RESOURCES) {
+      for (const action of PERMISSION_ACTIONS) {
+        merged[resource][action] ||= permissions[resource][action];
+      }
+    }
+  }
+  return merged;
 }
 
 // Every member's resolved access in the project, keyed by user id — getMemberContext

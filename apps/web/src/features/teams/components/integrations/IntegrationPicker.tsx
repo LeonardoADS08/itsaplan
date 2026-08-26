@@ -2,14 +2,12 @@ import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import type { IntegrationMeta } from '@/lib/api';
 import { Input } from '@/components/ui/input';
-import { IntegrationIcon } from './IntegrationIcon';
+import { IntegrationIcon } from '@/components/common/IntegrationIcon';
 import { useTranslations } from 'next-intl';
 
-// The groups the catalog is split into, in display order. LLM providers first, tool
-// integrations second.
-// The two kinds of integration, in picker order. Their name and blurb are
-// messages under `settings.integrations.groups`.
-const GROUPS: { kind: IntegrationMeta['kind'] }[] = [{ kind: 'llm' }, { kind: 'tool' }];
+// The two kinds of integration, in picker order. Their name and blurb are messages
+// under `teams.integrations.groups`.
+const GROUPS: IntegrationMeta['kind'][] = ['llm', 'tool'];
 
 // Step one of adding a credential: pick the integration. The catalog is long (~150 LLM
 // providers), so it is a full-width searchable list grouped by kind rather than a
@@ -21,7 +19,7 @@ export function IntegrationPicker({
   catalog: IntegrationMeta[];
   onSelect: (key: string) => void;
 }) {
-  const t = useTranslations('settings.integrations');
+  const t = useTranslations('teams.integrations');
   const [query, setQuery] = useState('');
 
   const matches = useMemo(() => {
@@ -51,7 +49,7 @@ export function IntegrationPicker({
             {t('noMatches', { query: query.trim() })}
           </p>
         )}
-        {GROUPS.map(({ kind }) => {
+        {GROUPS.map((kind) => {
           const items = matches.filter((c) => c.kind === kind);
           if (items.length === 0) return null;
           return (

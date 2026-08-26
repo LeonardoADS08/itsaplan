@@ -9,7 +9,7 @@ import SettingsConfirmDeleteDialog from '../crud/SettingsConfirmDeleteDialog';
 import { SettingsAiAgentRow } from './SettingsAiAgentRow';
 import { SettingsAiAgentSheet } from './SettingsAiAgentSheet';
 import { SettingsAiAgentRunsSheet } from './SettingsAiAgentRunsSheet';
-import { integrationLabel } from '../../utils/integrationLabels';
+import { integrationLabel } from '@/utils/integrationLabels';
 import { useTranslations } from 'next-intl';
 
 // Project settings tab for AI agents: bot users that issues can be delegated to.

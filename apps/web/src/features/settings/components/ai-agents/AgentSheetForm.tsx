@@ -37,7 +37,7 @@ import {
   toUpdatePatch,
   type AgentFormValue,
 } from '../../utils/agentForm';
-import { integrationLabel } from '../../utils/integrationLabels';
+import { integrationLabel } from '@/utils/integrationLabels';
 import { useTranslations } from 'next-intl';
 
 // The Edit tab of the agent sheet, used for both create and edit. With no agent it

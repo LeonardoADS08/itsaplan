@@ -147,6 +147,10 @@ export interface TeamProject {
 export interface TeamDetail extends Team {
   members: TeamMember[];
   projects: TeamProject[];
+  // What the caller may do with the resources the team holds for all its projects.
+  // Owners and managers get the full matrix; a member gets the permissions of their
+  // project roles in the team, merged.
+  permissions: Permissions;
 }
 
 // One project the team owns, as its row in the team panel opens it: how its issues
@@ -220,7 +224,6 @@ export type CopyProjectIncludeKey =
   | 'actions'
   | 'configuration'
   | 'webhooks'
-  | 'integrations'
   | 'tools'
   | 'skills'
   | 'agents'
@@ -476,7 +479,7 @@ export interface ConfigField {
 // integration whose `tools` are configured on a credential.
 export type IntegrationKind = 'llm' | 'tool';
 
-// An integration the project can store a credential for (server-side catalog).
+// An integration the team can store a credential for (server-side catalog).
 export interface IntegrationMeta {
   key: string;
   label: string;
@@ -495,7 +498,7 @@ export interface ProviderModel {
 // secret fields masked; the real secrets are never returned.
 export interface IntegrationCredential {
   id: number;
-  projectId: number;
+  teamId: number;
   integrationKey: string;
   label: string | null;
   redacted: Record<string, unknown>;
@@ -1223,7 +1226,6 @@ export interface InstanceProject {
   agentCount: number;
   skillCount: number;
   toolCount: number;
-  integrationCount: number;
   lastActivityAt: string | null;
   createdAt: string;
 }
@@ -3182,32 +3184,37 @@ export const api = {
       { method: 'DELETE' },
     ),
 
-  // Integrations: stored credentials for LLM providers and tool integrations. The
-  // secret is write-only — responses carry only a redacted view.
+  // Integrations: the team's stored credentials for LLM providers and tool
+  // integrations, shared by every project it owns. The secret is write-only —
+  // responses carry only a redacted view. The catalog and the models a provider offers
+  // are read through the project that needs them; the team panel reads the same
+  // catalog under its own id, knowing no project.
   listIntegrationCatalog: (projectKey: string) =>
     request<IntegrationMeta[]>(`/projects/${projectKey}/integrations/catalog`),
+  listTeamIntegrationCatalog: (teamId: number) =>
+    request<IntegrationMeta[]>(`/teams/${teamId}/integrations/catalog`),
   listIntegrationModels: (projectKey: string, provider: string) =>
     request<ProviderModel[]>(
       `/projects/${projectKey}/integrations/models/${encodeURIComponent(provider)}`,
     ),
-  listCredentials: (projectKey: string) =>
-    request<IntegrationCredential[]>(`/projects/${projectKey}/integrations`),
+  listCredentials: (teamId: number) =>
+    request<IntegrationCredential[]>(`/teams/${teamId}/integrations`),
   listIntegrationOptions: (projectKey: string, kind?: IntegrationKind) =>
     request<IntegrationOption[]>(
       `/projects/${projectKey}/integrations/options${kind ? `?kind=${kind}` : ''}`,
     ),
-  createCredential: (projectKey: string, input: NewCredentialInput) =>
-    request<IntegrationCredential>(`/projects/${projectKey}/integrations`, {
+  createCredential: (teamId: number, input: NewCredentialInput) =>
+    request<IntegrationCredential>(`/teams/${teamId}/integrations`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-  updateCredential: (projectKey: string, credentialId: number, patch: CredentialPatch) =>
-    request<IntegrationCredential>(`/projects/${projectKey}/integrations/${credentialId}`, {
+  updateCredential: (teamId: number, credentialId: number, patch: CredentialPatch) =>
+    request<IntegrationCredential>(`/teams/${teamId}/integrations/${credentialId}`, {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
-  deleteCredential: (projectKey: string, credentialId: number) =>
-    request<void>(`/projects/${projectKey}/integrations/${credentialId}`, { method: 'DELETE' }),
+  deleteCredential: (teamId: number, credentialId: number) =>
+    request<void>(`/teams/${teamId}/integrations/${credentialId}`, { method: 'DELETE' }),
 
   // Agent skills: the project skill library and the skills enabled on an agent.
   listSkills: (projectKey: string) => request<AgentSkill[]>(`/projects/${projectKey}/agent-skills`),

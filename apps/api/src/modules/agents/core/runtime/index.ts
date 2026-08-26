@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { getAgentById, getInternalAgentApiKey, type AiAgentRow } from '../service';
-import { getProjectById } from '#modules/projects/service';
+import { getProjectById, getProjectTeamId } from '#modules/projects/service';
 import { getCredentialSecret } from '../../integrations/service';
 import { listAgentSkills } from '../../skills/service';
 import { listAgentToolsForRun } from '../../tools/service';
@@ -22,10 +22,8 @@ import { HttpError } from '#shared/lib';
 // values, and attachments — acting as its own bot user, plus a read_skill tool for
 // any skills enabled on it.
 //
-// The model is addressed through Mastra's model router. When the project has a
-// stored credential for the agent's provider (ai_provider_credential), its key is
-// decrypted and passed to the model config; otherwise the provider/model string
-// form is used, which falls back to the provider key in the environment.
+// The model is addressed through Mastra's model router: the credential the agent's
+// team stores for the provider is decrypted and its key passed to the model config.
 
 // Default OpenAI mini model used when an OpenAI agent has no model set.
 const DEFAULT_MODEL = 'gpt-5-mini';
@@ -44,7 +42,10 @@ async function resolveModel(row: AiAgentRow): Promise<ModelConfig> {
   if (row.modelCredentialId == null) {
     throw new HttpError(400, 'Agent has no model credential set');
   }
-  const secret = await getCredentialSecret(row.modelCredentialId, row.projectId);
+  const secret = await getCredentialSecret(
+    row.modelCredentialId,
+    await getProjectTeamId(row.projectId),
+  );
   if (!secret) throw new HttpError(400, "Agent's model credential not found");
   const provider = secret.integrationKey;
   const modelId = row.model ?? (provider === 'openai' ? DEFAULT_MODEL : null);

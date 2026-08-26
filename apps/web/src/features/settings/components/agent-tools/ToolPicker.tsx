@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { IntegrationIcon } from '../integrations/IntegrationIcon';
+import { IntegrationIcon } from '@/components/common/IntegrationIcon';
 import type { ToolOption } from './ToolConfigDialog';
 import { useTranslations } from 'next-intl';
 

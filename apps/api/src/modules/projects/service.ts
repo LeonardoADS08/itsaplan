@@ -151,6 +151,18 @@ export async function getProjectById(id: number): Promise<ProjectRow | null> {
   return rows[0] ? mapProject(rows[0]) : null;
 }
 
+// The team that owns a project, for the resources the team holds on behalf of all of
+// them (integration credentials, notification providers). Throws 404 for an unknown
+// project.
+export async function getProjectTeamId(projectId: number): Promise<number> {
+  const rows = await db
+    .select({ teamId: project.teamId })
+    .from(project)
+    .where(eq(project.id, projectId));
+  if (!rows[0]) throw new HttpError(404, 'Project not found');
+  return rows[0].teamId;
+}
+
 // The team a new project belongs to. `teamId` names it explicitly (the caller's
 // rank in it is checked by the route); without one it is the team the caller owns.
 export async function targetTeam(

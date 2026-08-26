@@ -107,8 +107,7 @@
       "views": "Views",
       "agents": "AI agents",
       "skills": "Skills",
-      "tools": "Tools",
-      "integrations": "Integrations"
+      "tools": "Tools"
     },
     "members": "Members",
     "noMembersTitle": "No members",

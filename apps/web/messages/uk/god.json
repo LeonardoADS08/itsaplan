@@ -107,8 +107,7 @@
       "views": "Подання",
       "agents": "AI-агенти",
       "skills": "Навички",
-      "tools": "Інструменти",
-      "integrations": "Інтеграції"
+      "tools": "Інструменти"
     },
     "members": "Учасники",
     "noMembersTitle": "Немає учасників",

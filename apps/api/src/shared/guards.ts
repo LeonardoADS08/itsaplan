@@ -7,6 +7,7 @@ import {
   requireProjectAdmin,
   requireMemberAdmin,
   requireTeamMembership,
+  requireTeamPermission,
   assertPermission,
   assertMcpEnabled,
   type AuthUser,
@@ -165,7 +166,7 @@ export const guards = new Elysia({ name: 'guards' }).use(authContext).macro({
     };
   },
 
-  // Any member of the team may proceed. The three team macros inject the resolved
+  // Any member of the team may proceed. The team macros inject the resolved
   // `membership` into the handler context.
   teamMember(_enabled: boolean) {
     return {
@@ -183,6 +184,25 @@ export const guards = new Elysia({ name: 'guards' }).use(authContext).macro({
         if (membership.role === 'member')
           throw new HttpError(403, 'Only a team owner or manager can do this');
         return { membership };
+      },
+    };
+  },
+
+  // A resource the team owns and every project of it shares. Owners and managers of
+  // the team pass, so does an owner of one of its projects; anyone else passes when a
+  // project role of theirs in the team grants the permission.
+  teamPermission(permission: Permission) {
+    return {
+      async resolve({ params, user }) {
+        const { teamId } = params as TeamIdParams;
+        return {
+          membership: await requireTeamPermission(
+            Number(teamId),
+            user,
+            permission[0],
+            permission[1],
+          ),
+        };
       },
     };
   },

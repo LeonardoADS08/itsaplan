@@ -75,7 +75,6 @@ describe('god projects', () => {
         viewCount: 0,
         skillCount: 0,
         toolCount: 0,
-        integrationCount: 0,
       });
       // Creating the issue wrote its first feed entry.
       expect(row.lastActivityAt).not.toBeNull();
