@@ -24,7 +24,6 @@
   "copyGroups": {
     "workflow": "Workflow",
     "automation": "Automation",
-    "project": "Project",
     "views": "Views",
     "aiTeam": "AI Team"
   },
@@ -37,7 +36,6 @@
     "dashboards": "Dashboards",
     "actions": "Actions",
     "configuration": "Configuration",
-    "notificationProviders": "Notification providers",
     "webhooks": "Webhooks",
     "integrations": "Integrations",
     "tools": "Tools",

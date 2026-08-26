@@ -49,10 +49,6 @@
       "label": "General",
       "description": "The project's name, description, and the sections it shows."
     },
-    "notifications": {
-      "label": "Notification providers",
-      "description": "The email (SMTP or Resend) and Telegram bot credentials this project delivers notifications through."
-    },
     "states": {
       "label": "States",
       "description": "The workflow states issues move through, each shown as a column."

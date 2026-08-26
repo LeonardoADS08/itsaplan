@@ -1,5 +1,4 @@
 import {
-  Bell,
   Bot,
   BookText,
   Clock3,
@@ -44,12 +43,6 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   {
     slug: 'general',
     icon: Info,
-    resource: 'danger_zone',
-    group: 'general',
-  },
-  {
-    slug: 'notifications',
-    icon: Bell,
     resource: 'danger_zone',
     group: 'general',
   },

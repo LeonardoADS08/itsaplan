@@ -137,5 +137,34 @@
     "title": "退出 {name}？",
     "confirm": "退出团队",
     "description": "你将不再是 <strong>{name}</strong> 的成员。团队的项目仍归团队所有，你仍保留自己参与的项目。若要重新加入，需要所有者再次将你添加进来。"
+  },
+  "notifications": {
+    "title": "通知提供商",
+    "ownerOnly": "只有团队所有者可以管理通知提供商。",
+    "email": "邮件",
+    "telegram": "Telegram",
+    "emailProvider": "邮件服务商",
+    "emailProviderHint": "通过系统提供商或团队自己的提供商发送。凭据以加密方式存储。",
+    "systemAvailable": "通知通过此实例配置的服务商发送，此处无需填写凭据。",
+    "systemUnavailable": "实例提供商不可用。请管理员进行配置并共享给团队，或为本团队设置一个提供商。",
+    "host": "主机",
+    "port": "端口",
+    "encryption": "加密方式",
+    "encryptionOptions": {
+      "none": "无",
+      "ssl": "SSL",
+      "tls": "TLS"
+    },
+    "username": "用户名",
+    "password": "密码",
+    "passwordPlaceholder": "SMTP 密码",
+    "timeout": "超时（秒）",
+    "optional": "可选",
+    "apiKey": "API 密钥",
+    "telegramBot": "Telegram 机器人",
+    "telegramBotHint": "为团队的所有项目投递通知的机器人。成员在自己的偏好设置中选择聊天。令牌以加密方式存储。",
+    "botToken": "Bot API 令牌（可选）",
+    "emailSaved": "邮件服务商已保存",
+    "telegramSaved": "Telegram 服务商已保存"
   }
 }

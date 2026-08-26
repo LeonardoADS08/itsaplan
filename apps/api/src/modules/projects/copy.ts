@@ -14,7 +14,6 @@ import {
   integrationCredential,
   agentTool,
   webhook,
-  projectNotificationSetting,
   projectSetting,
 } from '@repo/db';
 import { eq, inArray } from 'drizzle-orm';
@@ -54,7 +53,6 @@ export interface CopyProjectInclude {
   dashboards: boolean;
   actions: boolean;
   configuration: boolean;
-  notificationProviders: boolean;
   webhooks: boolean;
   integrations: boolean;
   tools: boolean;
@@ -72,7 +70,6 @@ export const COPY_INCLUDE_KEYS: (keyof CopyProjectInclude)[] = [
   'dashboards',
   'actions',
   'configuration',
-  'notificationProviders',
   'webhooks',
   'integrations',
   'tools',
@@ -498,25 +495,6 @@ export async function copyProject(
       for (const s of settingRows) {
         if (s.key === GIT_SETTING_KEY) continue;
         await tx.insert(projectSetting).values({ projectId: proj.id, key: s.key, value: s.value });
-      }
-    }
-
-    // Notification provider credentials: the single per-project row, copied verbatim
-    // (its config is already encrypted at rest). Per-member event/channel preferences
-    // are personal and not copied.
-    if (inc.notificationProviders) {
-      const [ns] = await tx
-        .select()
-        .from(projectNotificationSetting)
-        .where(eq(projectNotificationSetting.projectId, sourceProjectId));
-      if (ns) {
-        await tx.insert(projectNotificationSetting).values({
-          projectId: proj.id,
-          ciphertext: ns.ciphertext,
-          iv: ns.iv,
-          authTag: ns.authTag,
-          redacted: ns.redacted,
-        });
       }
     }
 

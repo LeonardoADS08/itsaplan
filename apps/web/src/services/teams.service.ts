@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type InviteTeamRole, type Team } from '@/lib/api';
+import { api, type InviteTeamRole, type NotificationSettingsPatch, type Team } from '@/lib/api';
 import { qk } from '@/services/queryKeys';
 
 export function useTeamsQuery() {
@@ -82,5 +82,24 @@ export function useDeleteTeamInvite(teamId: number) {
   return useMutation({
     mutationFn: (inviteId: number) => api.deleteTeamInvite(teamId, inviteId),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.teamInvites(teamId) }),
+  });
+}
+
+// The team's notification provider credentials, read and changed by its owner alone,
+// so pass null for anyone else to skip the request. A write returns the redacted
+// result, which replaces the cache directly.
+export function useNotificationSettingsQuery(teamId: number | null) {
+  return useQuery({
+    queryKey: qk.notificationSettings(teamId ?? 0),
+    queryFn: () => api.getNotificationSettings(teamId!),
+    enabled: teamId != null,
+  });
+}
+
+export function useUpdateNotificationSettings(teamId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: NotificationSettingsPatch) => api.setNotificationSettings(teamId, input),
+    onSuccess: (data) => qc.setQueryData(qk.notificationSettings(teamId), data),
   });
 }

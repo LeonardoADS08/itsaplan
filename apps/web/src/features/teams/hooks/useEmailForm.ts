@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import type { NotificationEncryption, NotificationSettings } from '@/lib/api';
-import { useUpdateNotificationSettings } from '../services/settings.service';
+import { useUpdateNotificationSettings } from '@/services/teams.service';
 import type { EmailProvider } from '@/components/common/inputs/ProviderToggle';
 import { toPositiveInt } from '@/lib/utils';
 
@@ -28,25 +28,20 @@ export interface EmailForm {
   apiKey: string;
   setApiKey: (v: string) => void;
   settings: NotificationSettings;
-  editable: boolean;
   dirty: boolean;
   saving: boolean;
   save: () => Promise<void>;
 }
 
-// Form state for the Email notification provider tab (SMTP or Resend). Shared
-// between the header Save button and the body fields, so it lives in a hook. Secrets
-// start blank and are sent only when changed. The whole tab saves at once.
-export function useEmailForm(
-  projectKey: string,
-  settings: NotificationSettings,
-  editable: boolean,
-): EmailForm {
-  const t = useTranslations('settings.notifications');
-  const update = useUpdateNotificationSettings(projectKey);
+// Form state for the Email notification provider tab (SMTP or Resend). Shared between
+// the tab's Save button and the body fields, so it lives in a hook. Secrets start
+// blank and are sent only when changed. The whole tab saves at once.
+export function useEmailForm(teamId: number, settings: NotificationSettings): EmailForm {
+  const t = useTranslations('teams.notifications');
+  const update = useUpdateNotificationSettings(teamId);
 
-  // The project's own provider wins when it configured one; otherwise it sends
-  // through the instance provider, which is also the default for a new project.
+  // The team's own provider wins when it configured one; otherwise it sends
+  // through the instance provider, which is also the default for a new team.
   const initialProvider: EmailProvider = settings.smtp.enabled
     ? 'smtp'
     : settings.resend.enabled
@@ -121,7 +116,6 @@ export function useEmailForm(
     apiKey,
     setApiKey,
     settings,
-    editable,
     dirty,
     saving: update.isPending,
     save,

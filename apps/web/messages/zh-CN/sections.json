@@ -49,10 +49,6 @@
       "label": "常规",
       "description": "设置项目名称、描述和启用的功能区。"
     },
-    "notifications": {
-      "label": "通知提供商",
-      "description": "设置此项目发送通知所用的邮件（SMTP 或 Resend）和 Telegram 机器人凭据。"
-    },
     "states": {
       "label": "状态",
       "description": "设置工作项在工作流中经过的状态，每个状态显示为一个状态列。"

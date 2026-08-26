@@ -188,8 +188,8 @@
     "timeout": "超时（秒）",
     "optional": "可选",
     "apiKey": "API 密钥",
-    "projectNotifications": "项目通知",
-    "projectNotificationsHint": "允许项目使用此服务商发送通知。每个项目可以自行选择是否使用。"
+    "teamNotifications": "团队通知",
+    "teamNotificationsHint": "允许团队通过该提供商投递通知，而无需配置自己的提供商。是否使用仍由各团队决定。"
   },
   "authProvider": {
     "saved": "身份验证提供商已保存",

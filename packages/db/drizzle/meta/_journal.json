@@ -771,6 +771,13 @@
       "when": 1787689061356,
       "tag": "0109_team_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1787738728818,
+      "tag": "0110_team_notification_providers",
+      "breakpoints": true
     }
   ]
 }

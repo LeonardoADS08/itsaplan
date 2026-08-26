@@ -346,32 +346,9 @@
       "state_changed": "关注的工作项状态发生变化"
     },
     "eventsTitle": "事件",
-    "emailProvider": "邮件服务商",
-    "emailProviderHint": "使用系统服务商或项目自己的服务商发送。凭据会加密存储。",
-    "systemAvailable": "通知通过此实例配置的服务商发送，此处无需填写凭据。",
-    "systemUnavailable": "实例服务商不可用。请联系管理员配置并共享给项目，或为此项目设置服务商。",
-    "host": "主机",
-    "port": "端口",
-    "encryption": "加密方式",
-    "encryptionOptions": {
-      "none": "无",
-      "ssl": "SSL",
-      "tls": "TLS"
-    },
-    "username": "用户名",
-    "password": "密码",
-    "passwordPlaceholder": "SMTP 密码",
-    "timeout": "超时（秒）",
-    "optional": "可选",
-    "apiKey": "API 密钥",
-    "telegramBot": "Telegram 机器人",
-    "telegramBotHint": "用于发送通知的机器人。成员可在个人偏好设置中选择自己的对话，令牌会加密存储。",
-    "botToken": "Bot API 令牌（可选）",
     "telegramAccount": "Telegram 账户",
     "telegramAccountHint": "你参与的每个项目都会将 Telegram 通知发送到已关联账户。",
     "noTelegramAccount": "未关联 Telegram 账户",
-    "emailSaved": "邮件服务商已保存",
-    "telegramSaved": "Telegram 服务商已保存",
     "preferencesSaved": "通知偏好已保存"
   },
   "transfer": {

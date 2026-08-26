@@ -28,8 +28,8 @@ export default function GodEmailSettings({ form }: { form: GodEmailForm }) {
     <div className="space-y-8">
       <ProviderSection form={form} />
       <SettingsSection
-        title={t('projectNotifications')}
-        description={t('projectNotificationsHint')}
+        title={t('teamNotifications')}
+        description={t('teamNotificationsHint')}
         action={
           <EnabledSwitch
             checked={form.allowProjects}
@@ -124,7 +124,6 @@ function ProviderSection({ form }: { form: GodEmailForm }) {
                 value={form.password}
                 onChange={form.setPassword}
                 hasStored={settings.smtp.hasPassword}
-                editable
                 placeholder={t('passwordPlaceholder')}
               />
             </div>
@@ -148,7 +147,6 @@ function ProviderSection({ form }: { form: GodEmailForm }) {
               value={form.apiKey}
               onChange={form.setApiKey}
               hasStored={settings.resend.hasApiKey}
-              editable
               placeholder="re_…"
             />
           </div>

@@ -8,12 +8,12 @@ import RoleEditorPanel from './RoleEditorPanel';
 import TeamRolesList from './TeamRolesList';
 import TeamRolesToolbar from './TeamRolesToolbar';
 
-// The roles section of the team panel: the roles every project of the team assigns
+// The roles tab of the team panel: the roles every project of the team assigns
 // from, with the editor they are created and changed in. Only the team owner manages
 // them, so anyone else reads a notice instead of the list. The editor is a panel of
 // its own over this one, which is why the team panel is told when it is open — it
 // must not take Escape while it is.
-export default function TeamRolesSection({
+export default function TeamRolesTab({
   teamId,
   teamName,
   canManage,

@@ -24,7 +24,6 @@
   "copyGroups": {
     "workflow": "工作流",
     "automation": "自动化",
-    "project": "项目",
     "views": "视图",
     "aiTeam": "AI 团队"
   },
@@ -37,7 +36,6 @@
     "dashboards": "仪表盘",
     "actions": "操作",
     "configuration": "配置",
-    "notificationProviders": "通知提供商",
     "webhooks": "Webhook",
     "integrations": "集成",
     "tools": "工具",

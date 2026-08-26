@@ -680,9 +680,9 @@ export const integrationCredential = pgTable(
   (t) => [index('integration_credential_project_idx').on(t.projectId)],
 );
 
-// Per-project notification provider credentials: the outbound channels the project
-// can deliver through (SMTP or Resend for email, a Telegram bot). One row per
-// project, managed by an owner. The config carries secrets (SMTP password, Resend
+// Per-team notification provider credentials: the outbound channels every project
+// of the team delivers through (SMTP or Resend for email, a Telegram bot). One row
+// per team, managed by its owner. The config carries secrets (SMTP password, Resend
 // API key, Telegram bot token), so it is stored encrypted (AES-256-GCM, see
 // apps/api/src/shared/crypto.ts): ciphertext + iv + auth_tag. `redacted` is the
 // same config with secret values dropped, kept in plaintext so the settings UI can
@@ -690,12 +690,12 @@ export const integrationCredential = pgTable(
 // returned to the client. The plaintext config is read only by the delivery sender.
 // Which events reach a given member is a per-user choice held in
 // user_notification_preference, not here. The Telegram bot token here is optional: a
-// project that sets one delivers through its own bot, otherwise delivery falls back
+// team that sets one delivers through its own bot, otherwise delivery falls back
 // to the instance bot in app_secret key 'telegram.bot'.
-export const projectNotificationSetting = pgTable('project_notification_setting', {
-  projectId: integer('project_id')
+export const teamNotificationSetting = pgTable('team_notification_setting', {
+  teamId: integer('team_id')
     .primaryKey()
-    .references(() => project.id, { onDelete: 'cascade' }),
+    .references(() => team.id, { onDelete: 'cascade' }),
   ciphertext: text('ciphertext').notNull(),
   iv: text('iv').notNull(),
   authTag: text('auth_tag').notNull(),
@@ -766,8 +766,8 @@ export const userTelegramAccount = pgTable(
 // apps/api/src/modules/notifications/outbound.ts) and drained by the worker
 // following the same claim/retry pattern as webhook_delivery. The message text is
 // composed at enqueue time and stored in `payload`; the channel credentials are read
-// from project_notification_setting at send time. channel is 'email' | 'telegram'
-// ('email' picks SMTP or Resend from the project config). recipient is the member's
+// from team_notification_setting at send time. channel is 'email' | 'telegram'
+// ('email' picks SMTP or Resend from the team config). recipient is the member's
 // email address for email rows, or their Telegram chat id for telegram rows.
 export const notificationDelivery = pgTable(
   'notification_delivery',

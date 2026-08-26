@@ -188,8 +188,8 @@
     "timeout": "Timeout (s)",
     "optional": "Optional",
     "apiKey": "API key",
-    "projectNotifications": "Project notifications",
-    "projectNotificationsHint": "Let projects deliver their notifications through this provider instead of configuring one of their own. Each project still chooses whether to use it."
+    "teamNotifications": "Team notifications",
+    "teamNotificationsHint": "Let teams deliver their notifications through this provider instead of configuring one of their own. Each team still chooses whether to use it."
   },
   "authProvider": {
     "saved": "Auth provider saved",

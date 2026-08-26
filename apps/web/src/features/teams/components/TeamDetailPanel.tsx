@@ -14,12 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import NewProjectModal from '@/components/layout/NewProjectModal';
 import TeamMembersSection from './TeamMembersSection';
+import TeamPanelTabs from './TeamPanelTabs';
 import TeamProjectRow from './TeamProjectRow';
-import TeamRolesSection from './roles/TeamRolesSection';
 
-// One team in a right-hand side panel: the projects it owns, the roles those projects
-// assign from, and its members with the invites waiting to be answered. Escape or a
-// backdrop click closes it.
+// One team in a right-hand side panel: what its owner configures for every project it
+// owns (the roles they assign from, the providers they deliver notifications through),
+// the projects themselves, and its members with the invites waiting to be answered.
+// Escape or a backdrop click closes it.
 export default function TeamDetailPanel({
   teamId,
   onClose,
@@ -37,9 +38,9 @@ export default function TeamDetailPanel({
   const [roleEditorOpen, setRoleEditorOpen] = useState(false);
   // Owners and managers run the team's projects; a plain member only reads them.
   const canCreateProject = !!team && team.role !== 'member';
-  // Roles decide what a member of any project of the team may do, so only the owner
-  // manages them.
-  const canManageRoles = team?.role === 'owner';
+  // Roles decide what a member of any project of the team may do, and the providers
+  // carry credentials, so only the owner manages either.
+  const isOwner = team?.role === 'owner';
 
   useExitOnEscape(onClose, !roleEditorOpen);
 
@@ -81,6 +82,13 @@ export default function TeamDetailPanel({
             <ListSkeleton rows={5} rowClassName="h-12" />
           ) : (
             <>
+              <TeamPanelTabs
+                teamId={team.id}
+                teamName={team.name}
+                canManage={isOwner}
+                onEditorOpenChange={setRoleEditorOpen}
+              />
+
               <section className="space-y-3">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-medium">{t('projects')}</h3>
@@ -117,13 +125,6 @@ export default function TeamDetailPanel({
                   </div>
                 )}
               </section>
-
-              <TeamRolesSection
-                teamId={team.id}
-                teamName={team.name}
-                canManage={canManageRoles}
-                onEditorOpenChange={setRoleEditorOpen}
-              />
 
               <TeamMembersSection team={team} />
             </>

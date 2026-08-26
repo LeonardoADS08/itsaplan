@@ -137,5 +137,34 @@
     "title": "Leave {name}?",
     "confirm": "Leave team",
     "description": "You will no longer be a member of <strong>{name}</strong>. Its projects stay with the team, and you keep the ones you are a member of. To join again you need an owner to add you back."
+  },
+  "notifications": {
+    "title": "Notification providers",
+    "ownerOnly": "Only the team owner can manage notification providers.",
+    "email": "Email",
+    "telegram": "Telegram",
+    "emailProvider": "Email provider",
+    "emailProviderHint": "Send through the system provider or one of the team's own. Credentials are stored encrypted.",
+    "systemAvailable": "Notifications are sent through the provider configured for this instance. No credentials needed here.",
+    "systemUnavailable": "The instance provider is not available. Ask the administrator to configure it and share it with teams, or set up a provider for this team.",
+    "host": "Host",
+    "port": "Port",
+    "encryption": "Encryption",
+    "encryptionOptions": {
+      "none": "None",
+      "ssl": "SSL",
+      "tls": "TLS"
+    },
+    "username": "Username",
+    "password": "Password",
+    "passwordPlaceholder": "SMTP password",
+    "timeout": "Timeout (s)",
+    "optional": "Optional",
+    "apiKey": "API key",
+    "telegramBot": "Telegram bot",
+    "telegramBotHint": "The bot that delivers notifications for every project of the team. Members choose their own chat in their preferences. The token is stored encrypted.",
+    "botToken": "Bot API token (optional)",
+    "emailSaved": "Email provider saved",
+    "telegramSaved": "Telegram provider saved"
   }
 }

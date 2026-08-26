@@ -17,27 +17,22 @@ import { useTranslations } from 'next-intl';
 
 const ENCRYPTION_OPTIONS: NotificationEncryption[] = ['none', 'ssl', 'tls'];
 
-// The instance provider or one of the project's own (SMTP or Resend). Non-secret
+// The instance provider or one of the team's own (SMTP or Resend). Non-secret
 // fields prefill from the stored config; secrets start blank and are sent only when
 // changed.
 export default function EmailSettings({ form }: { form: EmailForm }) {
-  const t = useTranslations('settings.notifications');
-  const { settings, editable } = form;
+  const t = useTranslations('teams.notifications');
+  const { settings } = form;
   return (
     <SettingsSection
       title={t('emailProvider')}
       description={t('emailProviderHint')}
-      action={
-        editable && (
-          <EnabledSwitch checked={form.enabled} onChange={form.setEnabled} disabled={!editable} />
-        )
-      }
+      action={<EnabledSwitch checked={form.enabled} onChange={form.setEnabled} />}
     >
       <ProviderToggle
         value={form.provider}
         onChange={form.setProvider}
         options={['system', 'smtp', 'resend']}
-        disabled={!editable}
       />
 
       {form.provider === 'system' ? (
@@ -52,7 +47,6 @@ export default function EmailSettings({ form }: { form: EmailForm }) {
               id="smtp-host"
               value={form.host}
               onChange={(e) => form.setHost(e.target.value)}
-              disabled={!editable}
               placeholder="smtp.example.com"
             />
           </div>
@@ -64,7 +58,6 @@ export default function EmailSettings({ form }: { form: EmailForm }) {
               min={1}
               value={form.port}
               onChange={(e) => form.setPort(e.target.value)}
-              disabled={!editable}
               placeholder="587"
             />
           </div>
@@ -73,7 +66,6 @@ export default function EmailSettings({ form }: { form: EmailForm }) {
             <Select
               value={form.encryption}
               onValueChange={(v) => form.setEncryption(v as NotificationEncryption)}
-              disabled={!editable}
             >
               <SelectTrigger id="smtp-encryption" className="w-full">
                 <SelectValue />
@@ -93,7 +85,6 @@ export default function EmailSettings({ form }: { form: EmailForm }) {
               id="smtp-username"
               value={form.username}
               onChange={(e) => form.setUsername(e.target.value)}
-              disabled={!editable}
               placeholder="notifications@example.com"
               autoComplete="off"
             />
@@ -105,7 +96,6 @@ export default function EmailSettings({ form }: { form: EmailForm }) {
               value={form.password}
               onChange={form.setPassword}
               hasStored={settings.smtp.hasPassword}
-              editable={editable}
               placeholder={t('passwordPlaceholder')}
             />
           </div>
@@ -117,7 +107,6 @@ export default function EmailSettings({ form }: { form: EmailForm }) {
               min={1}
               value={form.timeout}
               onChange={(e) => form.setTimeout(e.target.value)}
-              disabled={!editable}
               placeholder={t('optional')}
             />
           </div>
@@ -130,7 +119,6 @@ export default function EmailSettings({ form }: { form: EmailForm }) {
             value={form.apiKey}
             onChange={form.setApiKey}
             hasStored={settings.resend.hasApiKey}
-            editable={editable}
             placeholder="re_…"
           />
         </div>

@@ -12,6 +12,8 @@ export const qk = {
   // Every team detail and every project of one, for a write that changes what any
   // of them shows (a project gained or lost a member).
   anyTeam: ['team'] as const,
+  // A team's notification provider credentials.
+  notificationSettings: (teamId: number) => ['notificationSettings', teamId] as const,
   // The board scaffold (columns/types/labels/fields/viewer) for a project.
   project: (projectKey: string) => ['workItems', projectKey] as const,
   // The board's issues, their relations and the change marker for a project.
@@ -28,8 +30,7 @@ export const qk = {
   subtaskAutomation: (projectKey: string) => ['subtaskAutomation', projectKey] as const,
   // The project's repository integration settings (the Repositories settings section).
   gitSettings: (projectKey: string) => ['gitSettings', projectKey] as const,
-  // A project's notification delivery settings (the Notifications section).
-  notificationSettings: (projectKey: string) => ['notificationSettings', projectKey] as const,
+  // The member's own notification preferences for a project.
   notificationPreferences: (projectKey: string) => ['notificationPreferences', projectKey] as const,
   views: (projectKey: string) => ['views', projectKey] as const,
   actions: (projectKey: string) => ['actions', projectKey] as const,

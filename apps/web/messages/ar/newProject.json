@@ -24,7 +24,6 @@
   "copyGroups": {
     "workflow": "سير العمل",
     "automation": "الأتمتة",
-    "project": "المشروع",
     "views": "العروض",
     "aiTeam": "فريق الذكاء الاصطناعي"
   },
@@ -37,7 +36,6 @@
     "dashboards": "لوحات المعلومات",
     "actions": "الإجراءات",
     "configuration": "التهيئة",
-    "notificationProviders": "مزوّدو الإشعارات",
     "webhooks": "خطافات الويب (webhooks)",
     "integrations": "التكاملات (integrations)",
     "tools": "الأدوات (tools)",

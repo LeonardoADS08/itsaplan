@@ -24,7 +24,6 @@
   "copyGroups": {
     "workflow": "Робочий процес",
     "automation": "Автоматизація",
-    "project": "Проєкт",
     "views": "Подання",
     "aiTeam": "AI-команда"
   },
@@ -37,7 +36,6 @@
     "dashboards": "Дашборди",
     "actions": "Дії",
     "configuration": "Конфігурація",
-    "notificationProviders": "Провайдери сповіщень",
     "webhooks": "Вебхуки",
     "integrations": "Інтеграції",
     "tools": "Інструменти",

@@ -346,32 +346,9 @@
       "state_changed": "State changed on an issue you watch"
     },
     "eventsTitle": "Events",
-    "emailProvider": "Email provider",
-    "emailProviderHint": "Send through the system provider or one of your own. Credentials are stored encrypted.",
-    "systemAvailable": "Notifications are sent through the provider configured for this instance. No credentials needed here.",
-    "systemUnavailable": "The instance provider is not available. Ask the administrator to configure it and share it with projects, or set up a provider for this project.",
-    "host": "Host",
-    "port": "Port",
-    "encryption": "Encryption",
-    "encryptionOptions": {
-      "none": "None",
-      "ssl": "SSL",
-      "tls": "TLS"
-    },
-    "username": "Username",
-    "password": "Password",
-    "passwordPlaceholder": "SMTP password",
-    "timeout": "Timeout (s)",
-    "optional": "Optional",
-    "apiKey": "API key",
-    "telegramBot": "Telegram bot",
-    "telegramBotHint": "The bot that delivers notifications. Members choose their own chat in their preferences. The token is stored encrypted.",
-    "botToken": "Bot API token (optional)",
     "telegramAccount": "Telegram account",
     "telegramAccountHint": "Telegram notifications go to the account connected to your profile, for every project you are in.",
     "noTelegramAccount": "No Telegram account connected",
-    "emailSaved": "Email provider saved",
-    "telegramSaved": "Telegram provider saved",
     "preferencesSaved": "Notification preferences saved"
   },
   "transfer": {

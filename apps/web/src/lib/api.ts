@@ -219,7 +219,6 @@ export type CopyProjectIncludeKey =
   | 'dashboards'
   | 'actions'
   | 'configuration'
-  | 'notificationProviders'
   | 'webhooks'
   | 'integrations'
   | 'tools'
@@ -989,8 +988,9 @@ export interface ProjectSettings {
   features: ProjectFeatures;
 }
 
-// Per-project notification provider credentials (owner-managed) plus a member's own
-// delivery preferences. The issue events match the inbox notification types.
+// Per-team notification provider credentials (owner-managed) plus a member's own
+// delivery preferences for a project. The issue events match the inbox notification
+// types.
 export type NotificationEncryption = 'none' | 'ssl' | 'tls';
 
 export interface NotificationEventToggles {
@@ -1003,10 +1003,10 @@ export interface NotificationEventToggles {
 // The provider credentials as read from the API: secrets are never returned, only a
 // `hasX` flag telling whether a value is stored.
 export interface NotificationSettings {
-  // Deliver email through the instance provider instead of the project's own. Its
-  // credentials belong to the instance, so the project only turns it on.
+  // Deliver email through the instance provider instead of the team's own. Its
+  // credentials belong to the instance, so the team only turns it on.
   system: { enabled: boolean };
-  // Whether the instance provider exists and is shared with projects right now.
+  // Whether the instance provider exists and is shared with teams right now.
   systemAvailable: boolean;
   smtp: {
     enabled: boolean;
@@ -1097,7 +1097,7 @@ export interface InstanceAuthSettingsPatch {
 }
 
 // The instance mail provider used for authentication email (password reset, address
-// verification, magic links). Separate from a project's notification provider.
+// verification, magic links). Separate from a team's notification provider.
 // Secrets are never returned, only a `hasX` flag.
 export interface InstanceEmailSettings {
   smtp: {
@@ -3436,11 +3436,12 @@ export const api = {
       method: 'POST',
     }),
 
-  // Notification provider credentials (danger_zone: read to view, edit to change).
-  getNotificationSettings: (projectKey: string) =>
-    request<NotificationSettings>(`/projects/${projectKey}/notification-settings`),
-  setNotificationSettings: (projectKey: string, input: NotificationSettingsPatch) =>
-    request<NotificationSettings>(`/projects/${projectKey}/notification-settings`, {
+  // The team's notification provider credentials, shared by every project it owns
+  // (team owner only).
+  getNotificationSettings: (teamId: number) =>
+    request<NotificationSettings>(`/teams/${teamId}/notification-settings`),
+  setNotificationSettings: (teamId: number, input: NotificationSettingsPatch) =>
+    request<NotificationSettings>(`/teams/${teamId}/notification-settings`, {
       method: 'PUT',
       body: JSON.stringify(input),
     }),

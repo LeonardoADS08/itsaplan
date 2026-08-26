@@ -346,32 +346,9 @@
       "state_changed": "تغيّر الحالة في مهمة تتابعها"
     },
     "eventsTitle": "الأحداث",
-    "emailProvider": "مزوّد البريد الإلكتروني",
-    "emailProviderHint": "ابعت من خلال مزوّد النظام أو مزوّد بتاعك انت. بيانات الاعتماد بتتخزّن مشفّرة.",
-    "systemAvailable": "الإشعارات بتتبعت من خلال المزوّد المتظبّط للنسخة دي. مش محتاج بيانات اعتماد هنا.",
-    "systemUnavailable": "مزوّد النسخة مش متاح. اطلب من المسؤول يظبّطه ويشاركه مع المشاريع، أو ظبّط مزوّد للمشروع ده لوحده.",
-    "host": "المضيف",
-    "port": "المنفذ",
-    "encryption": "التشفير",
-    "encryptionOptions": {
-      "none": "بدون",
-      "ssl": "SSL",
-      "tls": "TLS"
-    },
-    "username": "اسم المستخدم",
-    "password": "كلمة المرور",
-    "passwordPlaceholder": "كلمة مرور SMTP",
-    "timeout": "المهلة (ث)",
-    "optional": "اختياري",
-    "apiKey": "مفتاح API",
-    "telegramBot": "بوت Telegram",
-    "telegramBotHint": "البوت اللي بيوصّل الإشعارات. كل عضو بيختار محادثته من تفضيلاته. الرمز بيتخزّن مشفّر.",
-    "botToken": "رمز API للبوت (اختياري)",
     "telegramAccount": "حساب Telegram",
     "telegramAccountHint": "إشعارات Telegram بتوصل للحساب المربوط بملفك الشخصي، في كل مشروع انت فيه.",
     "noTelegramAccount": "لا يوجد حساب Telegram مرتبط",
-    "emailSaved": "حُفظ مزوّد البريد الإلكتروني",
-    "telegramSaved": "حُفظ مزوّد Telegram",
     "preferencesSaved": "حُفظت تفضيلات الإشعارات"
   },
   "transfer": {

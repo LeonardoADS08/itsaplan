@@ -17,7 +17,6 @@ const REQUIRES: Record<CopyProjectIncludeKey, CopyProjectIncludeKey[]> = {
   dashboards: [],
   actions: ['states', 'issueTypes', 'labels'],
   configuration: [],
-  notificationProviders: [],
   webhooks: [],
   integrations: [],
   tools: ['integrations'],
@@ -28,7 +27,7 @@ const REQUIRES: Record<CopyProjectIncludeKey, CopyProjectIncludeKey[]> = {
 
 // The name of a group, and of each entity, are messages under `newProject`.
 type Group = {
-  title: 'workflow' | 'automation' | 'aiTeam' | 'project' | 'views';
+  title: 'workflow' | 'automation' | 'aiTeam' | 'views';
   keys: CopyProjectIncludeKey[];
 };
 
@@ -43,10 +42,7 @@ const COLUMNS: Group[][] = [
   ],
   [{ title: 'automation', keys: ['actions', 'schedules', 'webhooks'] }],
   [{ title: 'aiTeam', keys: ['agents', 'integrations', 'skills', 'tools'] }],
-  [
-    { title: 'project', keys: ['notificationProviders'] },
-    { title: 'views', keys: ['views', 'dashboards'] },
-  ],
+  [{ title: 'views', keys: ['views', 'dashboards'] }],
 ];
 
 const ALL_KEYS = COLUMNS.flat().flatMap((g) => g.keys);
