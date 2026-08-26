@@ -74,6 +74,19 @@ describe('integrations', () => {
     expect(res.data).toMatchObject({ integrationKey: 'jina' });
   });
 
+  it('stores a Gitea credential, showing the URL and masking the token', async () => {
+    const { asOwner, teamId } = await setup();
+    const res = await integrations(asOwner, teamId).post({
+      integrationKey: 'gitea',
+      credential: { baseUrl: 'https://git.example.com', token: 'token-secret-abcd' },
+    });
+    expect(res.status).toBe(201);
+    expect(res.data!.redacted).toMatchObject({
+      baseUrl: 'https://git.example.com',
+      token: '••••abcd',
+    });
+  });
+
   it('rejects an unknown integration', async () => {
     const { asOwner, teamId } = await setup();
     const res = await integrations(asOwner, teamId).post({
@@ -168,7 +181,7 @@ describe('integrations', () => {
   });
 
   // The credential store is the team's, but the tagged reads hang off a project, so a
-  // project with MCP off (the default) keeps them out of reach of an MCP client.
+  // project with MCP off keeps them out of reach of an MCP client.
   describe('mcp', () => {
     it('blocks the tagged reads while the project has MCP off, and allows them once on', async () => {
       const { asOwner, teamId } = await setup();
@@ -176,6 +189,7 @@ describe('integrations', () => {
         integrationKey: 'openai',
         credential: { apiKey: 'sk-secret-1234' },
       });
+      await asOwner.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: false });
 
       expect((await projectIntegrations(asOwner).get()).status).toBe(200);
       expect((await projectIntegrations(asOwner).get(asMcp)).status).toBe(403);
