@@ -5,7 +5,7 @@ import { Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { TeamProject } from '@/lib/api';
 import { useUpdateTeamProject } from '@/services/projects.service';
-import { useTeamsQuery } from '@/services/teams.service';
+import { useTeam } from '@/services/teams.service';
 import Modal from '@/components/common/overlay/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ export default function TeamProjectEditModal({
   const [description, setDescription] = useState(project.description);
   const updateProject = useUpdateTeamProject();
   // Names the team in the header, the same as when the project was created.
-  const team = useTeamsQuery().data?.find((one) => one.id === teamId);
+  const team = useTeam(teamId);
   const canSubmit = !updateProject.isPending && name.trim() !== '';
 
   function submit() {

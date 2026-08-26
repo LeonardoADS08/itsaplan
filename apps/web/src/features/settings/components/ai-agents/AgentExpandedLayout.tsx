@@ -51,6 +51,7 @@ export default function AgentExpandedLayout({
           activeId={activeId}
           label={t('agentSettings')}
           onJump={jump}
+          className="sticky top-2 hidden w-44 shrink-0 self-start lg:block"
         />
         <div className="min-w-0 flex-1 space-y-8">{children}</div>
       </div>

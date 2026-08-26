@@ -4,8 +4,11 @@
 export const qk = {
   projects: ['projects'] as const,
   teams: ['teams'] as const,
-  // One team with its members and the projects it owns.
+  // One team: its counters and what the caller may do with what it holds.
   team: (teamId: number) => ['team', teamId] as const,
+  // The members of a team and the projects it owns, each read by its own section.
+  teamMembers: (teamId: number) => ['team', teamId, 'members'] as const,
+  teamProjects: (teamId: number) => ['team', teamId, 'projects'] as const,
   // One project the team owns, loaded when its row is opened.
   teamProject: (teamId: number, projectId: number) =>
     ['team', teamId, 'project', projectId] as const,

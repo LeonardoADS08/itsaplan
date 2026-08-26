@@ -5,10 +5,49 @@
     "hint": "You'll be the owner of this team.",
     "submit": "Create team"
   },
-  "rename": {
-    "title": "Rename team",
-    "namePlaceholder": "Team name",
-    "submit": "Save"
+  "sections": {
+    "info": {
+      "title": "Info",
+      "description": "The team and your place in it."
+    },
+    "projects": {
+      "title": "Projects",
+      "description": "The projects this team owns."
+    },
+    "members": {
+      "title": "Team members",
+      "description": "Who belongs to the team, and the invites waiting to be answered."
+    },
+    "roles": {
+      "title": "Project roles",
+      "description": "The roles every project of the team assigns from."
+    },
+    "notifications": {
+      "title": "Notification providers",
+      "description": "How the team's projects deliver email and Telegram notifications."
+    },
+    "integrations": {
+      "title": "Integrations",
+      "description": "The AI provider keys and tool credentials the team's projects run on."
+    }
+  },
+  "info": {
+    "team": "Team",
+    "teamHint": "The name the team's projects are grouped under.",
+    "role": "Your role",
+    "created": "Created",
+    "saved": "Team name saved",
+    "leaveHint": "You keep the projects you are a member of. To join again an owner has to add you back."
+  },
+  "columns": {
+    "project": "Project",
+    "owners": "Owners",
+    "members": "Members",
+    "created": "Created",
+    "account": "Account",
+    "role": "Role",
+    "joined": "Joined",
+    "permissions": "Permissions"
   },
   "invite": {
     "action": "Invite to team",
@@ -29,23 +68,14 @@
     "revokeAction": "Revoke invite",
     "revokeTitle": "Revoke invite for {email}",
     "revokeConfirm": "Revoke invite",
-    "revokeDescription": "The link stops working. You can invite them again later."
+    "revokeDescription": "The link stops working. You can invite them again later.",
+    "pending": "Invited"
   },
   "manage": {
     "label": "Manage teams",
-    "title": "Manage teams",
-    "description": "Your teams and the projects they own.",
+    "teams": "Teams",
     "empty": "You do not belong to any team yet.",
     "newTeam": "New team",
-    "columns": {
-      "team": "Team",
-      "role": "Role",
-      "members": "Members",
-      "projects": "Projects",
-      "joined": "Joined",
-      "actions": "Actions"
-    },
-    "renameAction": "Rename team",
     "leaveAction": "Leave team",
     "roles": {
       "owner": "Owner",
@@ -54,7 +84,6 @@
     }
   },
   "roles": {
-    "title": "Project roles",
     "ownerOnly": "Only the team owner can manage roles.",
     "empty": "No roles yet. Create one to grant scoped access.",
     "default": "Default",
@@ -75,7 +104,6 @@
     "newRole": "New role",
     "editorTitleEdit": "Edit role",
     "editorTitleNew": "New role",
-    "editorSubtitle": "role permissions",
     "namePlaceholder": "e.g. Contributor",
     "resourceColumn": "Resource",
     "toggleActionAll": "Toggle {action} for all resources",
@@ -110,18 +138,13 @@
     }
   },
   "panel": {
-    "created": "created {date}",
-    "projects": "Projects",
+    "created": "Created {date}",
     "newProject": "New project",
     "noProjects": "This team has no projects yet.",
-    "teamMembers": "Team members",
     "projectMembers": "Project members",
-    "memberCount": "{count, plural, one {# member} other {# members}}",
     "owners": "Owners: {names}",
-    "joined": "joined {date}",
     "openProject": "Open project",
     "noProjectMembers": "Nobody can reach this project yet.",
-    "info": "Info",
     "lastActivity": "Last activity: {value}",
     "noActivity": "none yet",
     "stats": {
@@ -139,7 +162,6 @@
     "description": "You will no longer be a member of <strong>{name}</strong>. Its projects stay with the team, and you keep the ones you are a member of. To join again you need an owner to add you back."
   },
   "notifications": {
-    "title": "Notification providers",
     "ownerOnly": "Only the team owner can manage notification providers.",
     "email": "Email",
     "telegram": "Telegram",
@@ -168,7 +190,6 @@
     "telegramSaved": "Telegram provider saved"
   },
   "integrations": {
-    "title": "Integrations",
     "noAccess": "You do not have access to the integrations of this team.",
     "add": "Add credential",
     "edit": "Edit credential",

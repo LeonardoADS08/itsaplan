@@ -5,10 +5,49 @@
     "hint": "你将成为该团队的所有者。",
     "submit": "创建团队"
   },
-  "rename": {
-    "title": "重命名团队",
-    "namePlaceholder": "团队名称",
-    "submit": "保存"
+  "sections": {
+    "info": {
+      "title": "信息",
+      "description": "团队及你在其中的角色。"
+    },
+    "projects": {
+      "title": "项目",
+      "description": "该团队拥有的项目。"
+    },
+    "members": {
+      "title": "团队成员",
+      "description": "团队中的成员，以及尚未回应的邀请。"
+    },
+    "roles": {
+      "title": "项目角色",
+      "description": "团队所有项目分配所依据的角色。"
+    },
+    "notifications": {
+      "title": "通知渠道",
+      "description": "团队项目发送邮件和 Telegram 通知的方式。"
+    },
+    "integrations": {
+      "title": "集成",
+      "description": "团队项目使用的 AI 提供商密钥和工具凭据。"
+    }
+  },
+  "info": {
+    "team": "团队",
+    "teamHint": "团队项目归属的名称。",
+    "role": "你的角色",
+    "created": "创建于",
+    "saved": "团队名称已保存",
+    "leaveHint": "你仍保留你参与的项目。若要重新加入，需由所有者再次添加你。"
+  },
+  "columns": {
+    "project": "项目",
+    "owners": "所有者",
+    "members": "成员",
+    "created": "创建时间",
+    "account": "账户",
+    "role": "角色",
+    "joined": "加入时间",
+    "permissions": "权限"
   },
   "invite": {
     "action": "邀请加入团队",
@@ -29,23 +68,14 @@
     "revokeAction": "撤销邀请",
     "revokeTitle": "撤销 {email} 的邀请",
     "revokeConfirm": "撤销邀请",
-    "revokeDescription": "链接将失效。之后可以重新邀请。"
+    "revokeDescription": "链接将失效。之后可以重新邀请。",
+    "pending": "已邀请"
   },
   "manage": {
     "label": "管理团队",
-    "title": "管理团队",
-    "description": "你的团队及其项目。",
+    "teams": "团队",
     "empty": "你还没有加入任何团队。",
     "newTeam": "新建团队",
-    "columns": {
-      "team": "团队",
-      "role": "角色",
-      "members": "成员",
-      "projects": "项目",
-      "joined": "加入时间",
-      "actions": "操作"
-    },
-    "renameAction": "重命名团队",
     "leaveAction": "退出团队",
     "roles": {
       "owner": "所有者",
@@ -54,7 +84,6 @@
     }
   },
   "roles": {
-    "title": "项目角色",
     "ownerOnly": "只有团队所有者可以管理角色。",
     "empty": "暂无角色。创建一个角色以授予有限访问权限。",
     "default": "默认",
@@ -75,7 +104,6 @@
     "newRole": "新建角色",
     "editorTitleEdit": "编辑角色",
     "editorTitleNew": "新建角色",
-    "editorSubtitle": "角色权限",
     "namePlaceholder": "例如：贡献者",
     "resourceColumn": "资源",
     "toggleActionAll": "切换所有资源的“{action}”权限",
@@ -111,17 +139,12 @@
   },
   "panel": {
     "created": "创建于 {date}",
-    "projects": "项目",
     "newProject": "新建项目",
     "noProjects": "该团队还没有项目。",
-    "teamMembers": "团队成员",
     "projectMembers": "项目成员",
-    "memberCount": "{count, plural, other {# 位成员}}",
     "owners": "所有者：{names}",
-    "joined": "加入于 {date}",
     "openProject": "打开项目",
     "noProjectMembers": "目前还没有人可以访问该项目。",
-    "info": "信息",
     "lastActivity": "最近活动：{value}",
     "noActivity": "暂无",
     "stats": {
@@ -139,7 +162,6 @@
     "description": "你将不再是 <strong>{name}</strong> 的成员。团队的项目仍归团队所有，你仍保留自己参与的项目。若要重新加入，需要所有者再次将你添加进来。"
   },
   "notifications": {
-    "title": "通知提供商",
     "ownerOnly": "只有团队所有者可以管理通知提供商。",
     "email": "邮件",
     "telegram": "Telegram",
@@ -168,7 +190,6 @@
     "telegramSaved": "Telegram 服务商已保存"
   },
   "integrations": {
-    "title": "集成",
     "noAccess": "你没有权限查看该团队的集成。",
     "add": "添加凭据",
     "edit": "编辑凭据",

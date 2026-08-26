@@ -6,8 +6,30 @@ export function useTeamsQuery() {
   return useQuery({ queryKey: qk.teams, queryFn: () => api.listTeams() });
 }
 
+// The team a page is on, out of the list its rail already reads: its name, the
+// caller's rank in it and how much it holds. No request of its own.
+export function useTeam(teamId: number): Team | null {
+  const { data } = useTeamsQuery();
+  return data?.find((team) => team.id === teamId) ?? null;
+}
+
+// What the caller may do with the resources the team holds. Read on its own because
+// resolving it for a plain member costs a query per team, which the list avoids.
 export function useTeamQuery(teamId: number) {
   return useQuery({ queryKey: qk.team(teamId), queryFn: () => api.getTeam(teamId) });
+}
+
+// The members of a team, and the projects it owns. Each section of the team page
+// reads one of them, so opening a section fetches nothing the others show.
+export function useTeamMembersQuery(teamId: number) {
+  return useQuery({ queryKey: qk.teamMembers(teamId), queryFn: () => api.listTeamMembers(teamId) });
+}
+
+export function useTeamProjectsQuery(teamId: number) {
+  return useQuery({
+    queryKey: qk.teamProjects(teamId),
+    queryFn: () => api.listTeamProjects(teamId),
+  });
 }
 
 // One project the team owns. Fetched when the project's row is opened, so a team

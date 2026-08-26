@@ -16,7 +16,9 @@ import { copyProject } from '#modules/projects/copy';
 import {
   TeamDetailResponse,
   TeamListResponse,
+  TeamMemberListResponse,
   TeamProjectDetailResponse,
+  TeamProjectListResponse,
   TeamResponse,
   createTeamBody,
   teamParams,
@@ -28,6 +30,8 @@ import {
   getTeam,
   getTeamProject,
   leaveTeam,
+  listTeamMembers,
+  listTeamProjects,
   listTeams,
   renameTeam,
   teamOwnsProject,
@@ -67,7 +71,36 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
       response: { 200: TeamDetailResponse, ...errors(401, 404) },
       detail: {
         summary: 'Get a team',
-        description: 'A team with its members and the projects it owns.',
+        description:
+          'A team, with how many projects, members, roles and integration credentials it ' +
+          'holds, and what you may do with them. Its members and its projects are listed ' +
+          'by their own routes.',
+      },
+    },
+  )
+
+  .get('/teams/:teamId/members', ({ membership }) => listTeamMembers(membership.teamId), {
+    teamMember: true,
+    params: teamParams,
+    response: { 200: TeamMemberListResponse, ...errors(401, 404) },
+    detail: {
+      summary: 'List team members',
+      description: 'The members of a team you belong to.',
+    },
+  })
+
+  .get(
+    '/teams/:teamId/projects',
+    ({ membership }) => listTeamProjects(membership.teamId, membership.userId),
+    {
+      teamMember: true,
+      params: teamParams,
+      response: { 200: TeamProjectListResponse, ...errors(401, 404) },
+      detail: {
+        summary: 'List team projects',
+        description:
+          'The projects a team owns. Every member sees them all, with whether they belong ' +
+          'to each.',
       },
     },
   )

@@ -1,0 +1,115 @@
+'use client';
+
+import { useState } from 'react';
+import { Plus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import type { InviteRow } from '@/lib/api';
+import {
+  useDeleteTeamInvite,
+  useTeam,
+  useTeamInvitesQuery,
+  useTeamMembersQuery,
+} from '@/services/teams.service';
+import ConfirmDialog from '@/components/common/overlay/ConfirmDialog';
+import SectionPageView from '@/components/common/page/SectionPageView';
+import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import TeamInviteDialog from './TeamInviteDialog';
+import TeamInviteRow from './TeamInviteRow';
+import TeamMemberRow from './TeamMemberRow';
+
+// The team's members, with the invites that have not been answered yet above them.
+// Owners and managers run the list, so only they invite and see the pending invites.
+export default function TeamMembersSection({ teamId }: { teamId: number }) {
+  const t = useTranslations('teams');
+  const tInvite = useTranslations('teams.invite');
+  const tCommon = useTranslations('common');
+  const team = useTeam(teamId);
+  const { data: members } = useTeamMembersQuery(teamId);
+  const canInvite = team != null && team.role !== 'member';
+  const invitesQuery = useTeamInvitesQuery(teamId, canInvite);
+  const deleteInvite = useDeleteTeamInvite(teamId);
+  const [inviting, setInviting] = useState(false);
+  const [target, setTarget] = useState<InviteRow | null>(null);
+
+  const pending = (invitesQuery.data ?? []).filter((invite) => invite.status === 'pending');
+
+  return (
+    <SectionPageView
+      title={t('sections.members.title')}
+      description={t('sections.members.description')}
+      wide
+      actions={
+        canInvite ? (
+          <Button size="sm" className="h-8 gap-1.5" onClick={() => setInviting(true)}>
+            <Plus className="size-3.5" />
+            {tInvite('action')}
+          </Button>
+        ) : undefined
+      }
+    >
+      {!members ? (
+        <ListSkeleton rows={4} rowClassName="h-12" />
+      ) : (
+        <div className="overflow-x-auto">
+          <Table className="min-w-[720px] table-fixed">
+            <colgroup>
+              <col className="w-[46%]" />
+              <col className="w-[16%]" />
+              <col className="w-[20%]" />
+              <col className="w-[18%]" />
+            </colgroup>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-xs font-medium text-muted-foreground">
+                  {t('columns.account')}
+                </TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground">
+                  {t('columns.role')}
+                </TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground">
+                  {t('columns.joined')}
+                </TableHead>
+                <TableHead className="text-end text-xs font-medium text-muted-foreground">
+                  {tCommon('actions')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pending.map((invite) => (
+                <TeamInviteRow key={invite.id} invite={invite} onRevoke={setTarget} />
+              ))}
+              {members.map((member) => (
+                <TeamMemberRow key={member.userId} member={member} />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {inviting && team && (
+        <TeamInviteDialog
+          teamId={teamId}
+          teamName={team.name}
+          teamRole={team.role}
+          onClose={() => setInviting(false)}
+        />
+      )}
+
+      {target && (
+        <ConfirmDialog
+          title={tInvite('revokeTitle', { email: target.email })}
+          confirmLabel={tInvite('revokeConfirm')}
+          onConfirm={async () => {
+            await deleteInvite.mutateAsync(target.id);
+            setTarget(null);
+          }}
+          onClose={() => setTarget(null)}
+        >
+          <div className="text-sm text-muted-foreground">{tInvite('revokeDescription')}</div>
+        </ConfirmDialog>
+      )}
+    </SectionPageView>
+  );
+}

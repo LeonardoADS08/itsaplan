@@ -46,13 +46,11 @@ function triState(values: boolean[]): boolean | 'indeterminate' {
 // group. On failure the reason is toasted globally and the panel stays open.
 export default function RoleEditorPanel({
   teamId,
-  teamName,
   role,
   catalog,
   onClose,
 }: {
   teamId: number;
-  teamName: string;
   role: Role | null;
   catalog: PermissionCatalog;
   onClose: () => void;
@@ -109,18 +107,10 @@ export default function RoleEditorPanel({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="ml-auto flex h-full w-full flex-col border-l bg-card sm:w-[680px] sm:max-w-[92vw]">
-        <div className="flex shrink-0 items-center justify-between border-b px-6 py-4">
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-medium">
-              {role ? t('editorTitleEdit') : t('editorTitleNew')}
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              <span className="rounded bg-secondary px-1.5 py-0.5 font-medium text-secondary-foreground">
-                {teamName}
-              </span>{' '}
-              {t('editorSubtitle')}
-            </p>
-          </div>
+        <div className="flex shrink-0 items-center justify-between gap-3 bg-muted/30 px-6 py-4">
+          <h2 className="min-w-0 truncate text-base font-semibold">
+            {role ? t('editorTitleEdit') : t('editorTitleNew')}
+          </h2>
           <Button
             variant="ghost"
             size="icon"

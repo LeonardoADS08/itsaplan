@@ -1,5 +1,6 @@
 import {
   db,
+  integrationCredential,
   issue,
   issueActivity,
   project,
@@ -32,6 +33,10 @@ export interface TeamRow {
   memberCount: number;
   // How many of those members are owners: the last one cannot leave.
   ownerCount: number;
+  // The roles the team's projects assign from, and the integration credentials they
+  // run on. Counted here so the page shows them beside the section without opening it.
+  roleCount: number;
+  integrationCount: number;
   createdAt: string;
 }
 
@@ -84,8 +89,6 @@ export interface TeamProjectDetail {
 }
 
 export interface TeamDetail extends TeamRow {
-  members: TeamMemberRow[];
-  projects: TeamProjectRow[];
   // What the caller may do with the resources the team holds for all its projects.
   // Owners and managers run the team, so they get the full matrix; a member gets the
   // permissions of their project roles in it, merged.
@@ -114,7 +117,7 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.id);
-  const [projectCounts, memberCounts] = await Promise.all([
+  const [projectCounts, memberCounts, roleCounts, integrationCounts] = await Promise.all([
     db
       .select({ teamId: project.teamId, count: sql<number>`count(*)::int` })
       .from(project)
@@ -129,9 +132,21 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
       .from(teamMember)
       .where(inArray(teamMember.teamId, ids))
       .groupBy(teamMember.teamId),
+    db
+      .select({ teamId: teamRole.teamId, count: sql<number>`count(*)::int` })
+      .from(teamRole)
+      .where(inArray(teamRole.teamId, ids))
+      .groupBy(teamRole.teamId),
+    db
+      .select({ teamId: integrationCredential.teamId, count: sql<number>`count(*)::int` })
+      .from(integrationCredential)
+      .where(inArray(integrationCredential.teamId, ids))
+      .groupBy(integrationCredential.teamId),
   ]);
   const projects = new Map(projectCounts.map((r) => [r.teamId, r.count]));
   const members = new Map(memberCounts.map((r) => [r.teamId, r]));
+  const roles = new Map(roleCounts.map((r) => [r.teamId, r.count]));
+  const integrations = new Map(integrationCounts.map((r) => [r.teamId, r.count]));
 
   return rows.map((row) => ({
     id: row.id,
@@ -141,6 +156,8 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
     projectCount: projects.get(row.id) ?? 0,
     memberCount: members.get(row.id)?.count ?? 0,
     ownerCount: members.get(row.id)?.owners ?? 0,
+    roleCount: roles.get(row.id) ?? 0,
+    integrationCount: integrations.get(row.id) ?? 0,
     createdAt: iso(row.createdAt),
   }));
 }
@@ -157,26 +174,47 @@ export async function getTeamMembership(teamId: number, userId: string): Promise
   return rows[0] ? (rows[0].role as TeamRole) : null;
 }
 
-// The team with its members and the projects it owns. Returns null when the
-// caller is not a member of it.
+// The team itself: the row the list carries, with what the caller may do with the
+// resources it holds. Its members and its projects are read separately, one request
+// per section of the page. Returns null when the caller is not a member of it.
 export async function getTeam(teamId: number, userId: string): Promise<TeamDetail | null> {
   const [row] = await loadTeamRows(userId, teamId);
   if (!row) return null;
 
-  const [members, projects, projectOwners, permissions] = await Promise.all([
-    db
-      .select({
-        userId: user.id,
-        name: user.name,
-        email: user.email,
-        image: user.image,
-        role: teamMember.role,
-        joinedAt: teamMember.createdAt,
-      })
-      .from(teamMember)
-      .innerJoin(user, eq(user.id, teamMember.userId))
-      .where(eq(teamMember.teamId, teamId))
-      .orderBy(user.name),
+  const permissions =
+    row.role === 'member' ? await getTeamPermissions(teamId, userId) : fullPermissions();
+  return { ...row, permissions };
+}
+
+// The members of the team, by name.
+export async function listTeamMembers(teamId: number): Promise<TeamMemberRow[]> {
+  const rows = await db
+    .select({
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      role: teamMember.role,
+      joinedAt: teamMember.createdAt,
+    })
+    .from(teamMember)
+    .innerJoin(user, eq(user.id, teamMember.userId))
+    .where(eq(teamMember.teamId, teamId))
+    .orderBy(user.name);
+
+  return rows.map((m) => ({
+    userId: m.userId,
+    name: m.name,
+    email: m.email,
+    image: m.image,
+    role: m.role as TeamRole,
+    joinedAt: iso(m.joinedAt),
+  }));
+}
+
+// The projects the team owns, with the caller's own access to each.
+export async function listTeamProjects(teamId: number, userId: string): Promise<TeamProjectRow[]> {
+  const [projects, projectOwners] = await Promise.all([
     db
       .select({
         id: project.id,
@@ -204,7 +242,6 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
       .innerJoin(user, eq(user.id, projectMember.userId))
       .where(and(eq(project.teamId, teamId), eq(projectMember.role, 'owner')))
       .orderBy(user.name),
-    row.role === 'member' ? getTeamPermissions(teamId, userId) : fullPermissions(),
   ]);
 
   const ownersByProject = new Map<number, TeamProjectRow['owners']>();
@@ -214,28 +251,16 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
     ownersByProject.set(o.projectId, owners);
   }
 
-  return {
-    ...row,
-    members: members.map((m) => ({
-      userId: m.userId,
-      name: m.name,
-      email: m.email,
-      image: m.image,
-      role: m.role as TeamRole,
-      joinedAt: iso(m.joinedAt),
-    })),
-    projects: projects.map((p) => ({
-      id: p.id,
-      key: p.key,
-      name: p.name,
-      description: p.description,
-      memberCount: p.memberCount,
-      owners: ownersByProject.get(p.id) ?? [],
-      isMember: p.isMember ?? false,
-      createdAt: iso(p.createdAt),
-    })),
-    permissions,
-  };
+  return projects.map((p) => ({
+    id: p.id,
+    key: p.key,
+    name: p.name,
+    description: p.description,
+    memberCount: p.memberCount,
+    owners: ownersByProject.get(p.id) ?? [],
+    isMember: p.isMember ?? false,
+    createdAt: iso(p.createdAt),
+  }));
 }
 
 // When the project's issue feed last moved. Read as the newest row rather than a
@@ -326,6 +351,8 @@ export async function createTeam(name: string, ownerId: string): Promise<TeamRow
       projectCount: 0,
       memberCount: 1,
       ownerCount: 1,
+      roleCount: 1,
+      integrationCount: 0,
       createdAt: iso(row.createdAt),
     };
   });

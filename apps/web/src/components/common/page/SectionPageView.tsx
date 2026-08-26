@@ -3,9 +3,9 @@ import { cn } from '@/lib/utils';
 import PageHeader from './PageHeader';
 
 // The chrome for a section page rendered inside the app shell: the scroll
-// container, a centered column, and a header (title and description). Used by
-// the settings and members section pages. `widthClassName` overrides the centered
-// column's width constraints (e.g. a section that wants a narrower cap than `wide`).
+// container, a centered column, and a header (title and description).
+// `widthClassName` overrides the centered column's width constraints (e.g. a
+// section that wants a narrower cap than `wide`).
 // The column is a flex column at least as tall as the viewport area, so a child
 // marked `flex-1` (an empty state) fills the space left under the header.
 export default function SectionPageView({

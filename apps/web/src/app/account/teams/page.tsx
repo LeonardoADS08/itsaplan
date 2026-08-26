@@ -1,5 +1,5 @@
-import ManageTeamsPage from '@/features/teams/ManageTeamsPage';
+import ManageTeamsIndex from '@/features/teams/ManageTeamsIndex';
 
 export default function Page() {
-  return <ManageTeamsPage />;
+  return <ManageTeamsIndex />;
 }

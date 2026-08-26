@@ -23,6 +23,8 @@ export const TeamResponse = t.Object({
   projectCount: t.Number(),
   memberCount: t.Number(),
   ownerCount: t.Number({ description: 'How many members are owners; the last one cannot leave.' }),
+  roleCount: t.Number({ description: "How many roles the team's projects assign from." }),
+  integrationCount: t.Number({ description: 'How many integration credentials the team holds.' }),
   createdAt: t.String(),
 });
 
@@ -30,39 +32,39 @@ export const TeamListResponse = t.Array(TeamResponse);
 
 export const TeamDetailResponse = t.Composite([
   TeamResponse,
+  t.Object({ permissions: PermissionMatrixSchema }),
+]);
+
+export const TeamMemberListResponse = t.Array(
   t.Object({
-    members: t.Array(
+    userId: t.String(),
+    name: t.String(),
+    email: t.String(),
+    image: t.Nullable(t.String()),
+    role: t.Union([t.Literal('owner'), t.Literal('manager'), t.Literal('member')]),
+    joinedAt: t.String(),
+  }),
+);
+
+export const TeamProjectListResponse = t.Array(
+  t.Object({
+    id: t.Number(),
+    key: t.String(),
+    name: t.String(),
+    description: t.String(),
+    memberCount: t.Number(),
+    owners: t.Array(
       t.Object({
         userId: t.String(),
         name: t.String(),
-        email: t.String(),
         image: t.Nullable(t.String()),
-        role: t.Union([t.Literal('owner'), t.Literal('manager'), t.Literal('member')]),
-        joinedAt: t.String(),
       }),
+      { description: 'The project members who own it.' },
     ),
-    projects: t.Array(
-      t.Object({
-        id: t.Number(),
-        key: t.String(),
-        name: t.String(),
-        description: t.String(),
-        memberCount: t.Number(),
-        owners: t.Array(
-          t.Object({
-            userId: t.String(),
-            name: t.String(),
-            image: t.Nullable(t.String()),
-          }),
-          { description: 'The project members who own it.' },
-        ),
-        isMember: t.Boolean(),
-        createdAt: t.String(),
-      }),
-    ),
-    permissions: PermissionMatrixSchema,
+    isMember: t.Boolean(),
+    createdAt: t.String(),
   }),
-]);
+);
 
 // One project the team owns: how its issues stand, and the members with the access
 // each membership resolves to.

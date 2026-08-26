@@ -54,6 +54,8 @@ function useRoleMutation<TInput, TResult>(
     mutationFn,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.teamRoles(teamId) });
+      // The team list carries how many roles the team has.
+      qc.invalidateQueries({ queryKey: qk.teams });
       qc.invalidateQueries({ queryKey: qk.anyProjectRoles });
       qc.invalidateQueries({ queryKey: qk.anyRoleUsage });
       qc.invalidateQueries({ queryKey: qk.anyMembers });

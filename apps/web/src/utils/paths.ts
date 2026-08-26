@@ -128,8 +128,19 @@ export const startPagePath = (key: string, startPage: StartPage) => {
 };
 
 // The standalone Manage teams page, reached from the project switcher. Lists the
-// teams the user belongs to; an owner renames one, a member leaves.
+// teams the user belongs to and opens one beside the list; with no team in the URL
+// it redirects to the first of them.
 export const manageTeamsPath = () => '/account/teams';
+
+// Every section of a team is a route of its own, so each loads only what it shows.
+// The team itself is the index of the team, so it carries no section segment.
+export type TeamSection =
+  'info' | 'projects' | 'members' | 'roles' | 'integrations' | 'notifications';
+
+export const teamPath = (teamId: number) => `${manageTeamsPath()}/${teamId}`;
+
+export const teamSectionPath = (teamId: number, section: TeamSection) =>
+  section === 'info' ? teamPath(teamId) : `${teamPath(teamId)}/${section}`;
 
 // The invitee-facing link an owner shares. Points at this web app's public
 // /invite/:token page, which reads the token and shows the accept screen.

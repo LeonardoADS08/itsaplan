@@ -105,7 +105,7 @@ export default function TeamRolesToolbar({
   }, [copyRoles, pasteRoles]);
 
   return (
-    <div className="ms-auto flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5">
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -143,21 +143,10 @@ export default function TeamRolesToolbar({
         </Tooltip>
       )}
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 text-muted-foreground hover:text-foreground"
-            aria-label={t('newRole')}
-            disabled={!catalog}
-            onClick={onCreate}
-          >
-            <Plus className="size-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('newRole')}</TooltipContent>
-      </Tooltip>
+      <Button size="sm" className="h-8 gap-1.5" disabled={!catalog} onClick={onCreate}>
+        <Plus className="size-3.5" />
+        {t('newRole')}
+      </Button>
 
       {importing && (
         <RolesImportDialog teamId={teamId} planned={importing} onClose={() => setImporting(null)} />

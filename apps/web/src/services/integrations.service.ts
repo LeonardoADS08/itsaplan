@@ -61,7 +61,11 @@ export function useCreateCredential(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: NewCredentialInput) => api.createCredential(teamId, input),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.integrations }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.integrations });
+      // The team list carries how many credentials the team holds.
+      void qc.invalidateQueries({ queryKey: qk.teams });
+    },
   });
 }
 
@@ -78,6 +82,10 @@ export function useDeleteCredential(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.deleteCredential(teamId, id),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.integrations }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.integrations });
+      // The team list carries how many credentials the team holds.
+      void qc.invalidateQueries({ queryKey: qk.teams });
+    },
   });
 }

@@ -117,6 +117,10 @@ export interface Team {
   memberCount: number;
   // How many of those members are owners: the last one cannot leave.
   ownerCount: number;
+  // The roles the team's projects assign from, and the integration credentials they
+  // run on. Counted here so the page shows them beside the section without opening it.
+  roleCount: number;
+  integrationCount: number;
   createdAt: string;
 }
 
@@ -145,8 +149,6 @@ export interface TeamProject {
 }
 
 export interface TeamDetail extends Team {
-  members: TeamMember[];
-  projects: TeamProject[];
   // What the caller may do with the resources the team holds for all its projects.
   // Owners and managers get the full matrix; a member gets the permissions of their
   // project roles in the team, merged.
@@ -2534,6 +2536,8 @@ function subtaskQuery(disposition?: SubtaskDisposition): string {
 export const api = {
   listTeams: () => request<Team[]>('/teams'),
   getTeam: (teamId: number) => request<TeamDetail>(`/teams/${teamId}`),
+  listTeamMembers: (teamId: number) => request<TeamMember[]>(`/teams/${teamId}/members`),
+  listTeamProjects: (teamId: number) => request<TeamProject[]>(`/teams/${teamId}/projects`),
   getTeamProject: (teamId: number, projectId: number) =>
     request<TeamProjectDetail>(`/teams/${teamId}/projects/${projectId}`),
   createTeam: (input: { name: string }) =>
