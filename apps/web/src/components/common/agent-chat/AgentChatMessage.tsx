@@ -10,6 +10,7 @@ import { Marker, MarkerContent } from '@/components/ui/marker';
 import { Message, MessageContent, MessageFooter } from '@/components/ui/message';
 import { MessageScrollerItem } from '@/components/ui/message-scroller';
 import AgentChatToolCalls from './AgentChatToolCalls';
+import AgentChatUserText from './AgentChatUserText';
 import { useTranslations } from 'next-intl';
 
 type Block = { text: string } | { tools: AiChatToolPart[] };
@@ -60,7 +61,7 @@ export default function AgentChatMessage({
               ) : (
                 <BubbleContent key={index} className={cn(!isUser && 'w-full')}>
                   {isUser ? (
-                    <span className="whitespace-pre-wrap">{block.text}</span>
+                    <AgentChatUserText text={block.text} />
                   ) : (
                     <Markdown>{block.text}</Markdown>
                   )}

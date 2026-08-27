@@ -1278,6 +1278,56 @@ export const issueAttachment = pgTable(
   (t) => [index('issue_attachment_issue_idx').on(t.issueId)],
 );
 
+// A file uploaded in an agent chat. Bytes live in the S3-compatible object store;
+// this table holds the metadata and the object key. public_id is the unguessable
+// id used in the public download URL. Kept free of any workflow state so an
+// upload can serve more than one purpose (an issue import, a spec, a log).
+export const chatAttachment = pgTable(
+  'chat_attachment',
+  {
+    id: serial('id').primaryKey(),
+    publicId: uuid('public_id').notNull().defaultRandom().unique(),
+    projectId: integer('project_id')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
+    uploadedByUserId: text('uploaded_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    s3Key: text('s3_key').notNull(),
+    filename: text('filename').notNull(),
+    contentType: text('content_type').notNull(),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('chat_attachment_project_idx').on(t.projectId)],
+);
+
+// An import of issues from a chat attachment: the column mapping an agent saved
+// and the state of the draft. The file itself is the referenced chat_attachment;
+// creating the issues happens only through the confirm route, never by the model
+// itself.
+export const issueImport = pgTable(
+  'issue_import',
+  {
+    id: serial('id').primaryKey(),
+    publicId: uuid('public_id').notNull().defaultRandom().unique(),
+    projectId: integer('project_id')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
+    attachmentId: integer('attachment_id')
+      .notNull()
+      .references(() => chatAttachment.id, { onDelete: 'cascade' }),
+    // mapped: an agent saved a column mapping. confirmed: the issues were
+    // created. canceled and failed are terminal, with errorText on a failure.
+    status: text('status').notNull().default('mapped'),
+    mapping: jsonb('mapping'),
+    errorText: text('error_text'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('issue_import_project_idx').on(t.projectId)],
+);
+
 // Checklists on an issue: a lightweight list of steps that does not warrant a
 // subtask of its own. An issue holds several checklists, each ordered by position
 // among the issue's checklists.
