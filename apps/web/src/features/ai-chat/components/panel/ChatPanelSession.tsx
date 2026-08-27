@@ -2,12 +2,13 @@
 
 import { useCallback } from 'react';
 import type { AiAgent } from '@/lib/api';
+import { AgentContextSize } from '@/components/common/agent-chat/AgentContextSize';
 import { cn } from '@/lib/utils';
 import { AiChatSessionBadge } from '../shared/AiChatSessionBadge';
 import { AiChatThread } from '../shared/AiChatThread';
 import { ChatPanelAgentSwitcher } from './ChatPanelAgentSwitcher';
 import { ChatPanelHistory } from './ChatPanelHistory';
-import { useThreadSessionId } from '../../hooks/useThreadSessionId';
+import { useShownThread } from '../../hooks/useShownThread';
 import type { ChatSession, ChatSessionState } from '../../hooks/useChatSessions';
 
 // One open session of the chat panel. Every session is mounted, and the ones that are
@@ -49,7 +50,7 @@ export function ChatPanelSession({
     (state: ChatSessionState) => onStateChange(session.id, state),
     [session.id, onStateChange],
   );
-  const sessionId = useThreadSessionId(projectKey, agent.id, session.threadId);
+  const thread = useShownThread(projectKey, agent.id, session.threadId);
 
   return (
     <div className={cn('absolute inset-0', !active && 'hidden')}>
@@ -77,8 +78,11 @@ export function ChatPanelSession({
               onSelect={(threadId) => onSelectThread(agent.id, threadId)}
               onDeleted={onThreadDeleted}
             />
-            {sessionId && <AiChatSessionBadge sessionId={sessionId} />}
+            {thread?.cliSessionId && <AiChatSessionBadge sessionId={thread.cliSessionId} />}
           </>
+        }
+        composerEnd={
+          thread?.contextTokens !== undefined && <AgentContextSize tokens={thread.contextTokens} />
         }
       />
     </div>
