@@ -97,7 +97,7 @@ async function buildAgent(row: AiAgentRow, contextPreamble: string): Promise<Age
     tools: {
       ...buildRouteTools(project, apiKey, row.tools),
       ...buildLocalTools(row.projectId, row.tools),
-      ...(skills.length > 0 ? buildSkillTool(row.projectId, skills) : {}),
+      ...(skills.length > 0 ? buildSkillTool(project.teamId, skills) : {}),
       ...buildCustomTools(customTools),
     },
     // Conversation memory (last N messages of a thread) when enabled.

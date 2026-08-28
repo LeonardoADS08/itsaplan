@@ -1,4 +1,5 @@
 import {
+  agentSkill,
   db,
   integrationCredential,
   issue,
@@ -33,10 +34,12 @@ export interface TeamRow {
   memberCount: number;
   // How many of those members are owners: the last one cannot leave.
   ownerCount: number;
-  // The roles the team's projects assign from, and the integration credentials they
-  // run on. Counted here so the page shows them beside the section without opening it.
+  // The roles the team's projects assign from, the integration credentials they run
+  // on, and the skills their agents load. Counted here so the page shows them beside
+  // the section without opening it.
   roleCount: number;
   integrationCount: number;
+  skillCount: number;
   createdAt: string;
 }
 
@@ -117,36 +120,43 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.id);
-  const [projectCounts, memberCounts, roleCounts, integrationCounts] = await Promise.all([
-    db
-      .select({ teamId: project.teamId, count: sql<number>`count(*)::int` })
-      .from(project)
-      .where(inArray(project.teamId, ids))
-      .groupBy(project.teamId),
-    db
-      .select({
-        teamId: teamMember.teamId,
-        count: sql<number>`count(*)::int`,
-        owners: sql<number>`count(*) filter (where ${teamMember.role} = 'owner')::int`,
-      })
-      .from(teamMember)
-      .where(inArray(teamMember.teamId, ids))
-      .groupBy(teamMember.teamId),
-    db
-      .select({ teamId: teamRole.teamId, count: sql<number>`count(*)::int` })
-      .from(teamRole)
-      .where(inArray(teamRole.teamId, ids))
-      .groupBy(teamRole.teamId),
-    db
-      .select({ teamId: integrationCredential.teamId, count: sql<number>`count(*)::int` })
-      .from(integrationCredential)
-      .where(inArray(integrationCredential.teamId, ids))
-      .groupBy(integrationCredential.teamId),
-  ]);
+  const [projectCounts, memberCounts, roleCounts, integrationCounts, skillCounts] =
+    await Promise.all([
+      db
+        .select({ teamId: project.teamId, count: sql<number>`count(*)::int` })
+        .from(project)
+        .where(inArray(project.teamId, ids))
+        .groupBy(project.teamId),
+      db
+        .select({
+          teamId: teamMember.teamId,
+          count: sql<number>`count(*)::int`,
+          owners: sql<number>`count(*) filter (where ${teamMember.role} = 'owner')::int`,
+        })
+        .from(teamMember)
+        .where(inArray(teamMember.teamId, ids))
+        .groupBy(teamMember.teamId),
+      db
+        .select({ teamId: teamRole.teamId, count: sql<number>`count(*)::int` })
+        .from(teamRole)
+        .where(inArray(teamRole.teamId, ids))
+        .groupBy(teamRole.teamId),
+      db
+        .select({ teamId: integrationCredential.teamId, count: sql<number>`count(*)::int` })
+        .from(integrationCredential)
+        .where(inArray(integrationCredential.teamId, ids))
+        .groupBy(integrationCredential.teamId),
+      db
+        .select({ teamId: agentSkill.teamId, count: sql<number>`count(*)::int` })
+        .from(agentSkill)
+        .where(inArray(agentSkill.teamId, ids))
+        .groupBy(agentSkill.teamId),
+    ]);
   const projects = new Map(projectCounts.map((r) => [r.teamId, r.count]));
   const members = new Map(memberCounts.map((r) => [r.teamId, r]));
   const roles = new Map(roleCounts.map((r) => [r.teamId, r.count]));
   const integrations = new Map(integrationCounts.map((r) => [r.teamId, r.count]));
+  const skills = new Map(skillCounts.map((r) => [r.teamId, r.count]));
 
   return rows.map((row) => ({
     id: row.id,
@@ -158,6 +168,7 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
     ownerCount: members.get(row.id)?.owners ?? 0,
     roleCount: roles.get(row.id) ?? 0,
     integrationCount: integrations.get(row.id) ?? 0,
+    skillCount: skills.get(row.id) ?? 0,
     createdAt: iso(row.createdAt),
   }));
 }
@@ -353,6 +364,7 @@ export async function createTeam(name: string, ownerId: string): Promise<TeamRow
       ownerCount: 1,
       roleCount: 1,
       integrationCount: 0,
+      skillCount: 0,
       createdAt: iso(row.createdAt),
     };
   });

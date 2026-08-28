@@ -29,6 +29,10 @@
     "integrations": {
       "title": "Інтеграції",
       "description": "Ключі AI-провайдерів і облікові дані інструментів для проєктів команди."
+    },
+    "agentSkills": {
+      "title": "Навички",
+      "description": "Багаторазові інструкції, які внутрішні агенти завантажують за потреби."
     }
   },
   "info": {
@@ -218,5 +222,49 @@
       "integration": "Інтеграція",
       "credentials": "Облікові дані"
     }
+  },
+  "skills": {
+    "newSkill": "Нова навичка",
+    "create": "Створити навичку",
+    "delete": "Видалити навичку",
+    "deleteMessage": "Видалити навичку «{name}»? Її буде прибрано в усіх агентів, які її використовують.",
+    "edit": "Редагувати навичку",
+    "empty": "Навичок ще немає",
+    "emptyHint": "Напишіть markdown, завантажте файл або імпортуйте з GitHub.",
+    "name": "Назва (необов'язково)",
+    "namePlaceholder": "За замовчуванням — назва з frontmatter у SKILL.md",
+    "descriptionPlaceholder": "Показується агенту, щоб він вирішив, коли завантажити цю навичку",
+    "noDescription": "Без опису",
+    "unsaved": "Незбережені зміни",
+    "addReference": "Додати посилання",
+    "source": {
+      "inline": "Вписана",
+      "upload": "Завантажена",
+      "github": "GitHub"
+    },
+    "tabInline": "Написати markdown",
+    "tabUpload": "Завантажити файл",
+    "tabGithub": "Імпорт з GitHub",
+    "skillFile": "Файл SKILL.md",
+    "loaded": "Завантажено {file}",
+    "trustWarning": "Імпортуйте лише навички, яким довіряєте",
+    "trustWarning1": "Навичка стає інструкціями, яких дотримуються ваші агенти. Спершу перегляньте джерело.",
+    "trustWarning2": "Імпортуються лише SKILL.md та markdown-файли, на які він посилається. Скрипти пропускаються.",
+    "githubUrl": "GitHub URL",
+    "githubUrlPlaceholder": "https://github.com/owner/repo або тека навички",
+    "githubUrlHint": "Репозиторій, тека або SKILL.md.",
+    "findSkills": "Знайти навички",
+    "importTitle": "Імпорт навичок з GitHub",
+    "foundCount": "{count, plural, one {Знайдено # навичку. Виберіть, що імпортувати.} few {Знайдено # навички. Виберіть, що імпортувати.} many {Знайдено # навичок. Виберіть, що імпортувати.} other {Знайдено # навички. Виберіть, що імпортувати.}}",
+    "matchCount": "{shown} з {total, plural, one {# навички} few {# навичок} many {# навичок} other {# навички}} збігається",
+    "selectAll": "Вибрати все",
+    "searchPlaceholder": "Пошук за назвою або описом",
+    "noMatches": "Немає навичок за запитом «{query}».",
+    "importCount": "{count, plural, =0 {Імпортувати навички} one {Імпортувати # навичку} few {Імпортувати # навички} many {Імпортувати # навичок} other {Імпортувати # навички}}",
+    "files": "Файли",
+    "skill": "Навичка",
+    "description": "Опис",
+    "referenceCount": "{count, plural, one {# посилання} few {# посилання} many {# посилань} other {# посилання}}",
+    "noAccess": "У вас немає доступу до навичок цієї команди."
   }
 }

@@ -29,6 +29,10 @@
     "integrations": {
       "title": "Integrations",
       "description": "The AI provider keys and tool credentials the team's projects run on."
+    },
+    "agentSkills": {
+      "title": "Skills",
+      "description": "Reusable instructions internal agents load on demand."
     }
   },
   "info": {
@@ -218,5 +222,49 @@
       "integration": "Integration",
       "credentials": "Credentials"
     }
+  },
+  "skills": {
+    "newSkill": "New skill",
+    "create": "Create skill",
+    "delete": "Delete skill",
+    "deleteMessage": "Delete the skill “{name}”? It will be removed from every agent that uses it.",
+    "edit": "Edit skill",
+    "empty": "No skills yet",
+    "emptyHint": "Write markdown, upload a file, or import from GitHub.",
+    "name": "Name (optional)",
+    "namePlaceholder": "Defaults to the SKILL.md frontmatter name",
+    "descriptionPlaceholder": "Shown to the agent to decide when to load this skill",
+    "noDescription": "No description",
+    "unsaved": "Unsaved changes",
+    "addReference": "Add reference",
+    "source": {
+      "inline": "Inline",
+      "upload": "Uploaded",
+      "github": "GitHub"
+    },
+    "tabInline": "Write markdown",
+    "tabUpload": "Upload a file",
+    "tabGithub": "Import from GitHub",
+    "skillFile": "SKILL.md file",
+    "loaded": "Loaded {file}",
+    "trustWarning": "Import only skills you trust",
+    "trustWarning1": "A skill becomes instructions your agents follow. Review the source first.",
+    "trustWarning2": "Only SKILL.md and its markdown references are imported. Scripts are skipped.",
+    "githubUrl": "GitHub URL",
+    "githubUrlPlaceholder": "https://github.com/owner/repo or a skill folder",
+    "githubUrlHint": "A repository, a folder, or a SKILL.md.",
+    "findSkills": "Find skills",
+    "importTitle": "Import skills from GitHub",
+    "foundCount": "{count, plural, one {Found # skill. Pick which to import.} other {Found # skills. Pick which to import.}}",
+    "matchCount": "{shown} of {total, plural, one {# skill} other {# skills}} match",
+    "selectAll": "Select all",
+    "searchPlaceholder": "Search by name or description",
+    "noMatches": "No skills match “{query}”.",
+    "importCount": "{count, plural, =0 {Import skills} one {Import # skill} other {Import # skills}}",
+    "files": "Files",
+    "skill": "Skill",
+    "description": "Description",
+    "referenceCount": "{count, plural, one {# reference} other {# references}}",
+    "noAccess": "You do not have access to the skills of this team."
   }
 }

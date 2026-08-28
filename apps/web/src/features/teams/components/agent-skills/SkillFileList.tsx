@@ -31,7 +31,7 @@ export function SkillFileList({
   onDelete: (path: string) => void;
   onAddFile: (file: File) => void;
 }) {
-  const t = useTranslations('settings.skills');
+  const t = useTranslations('teams.skills');
   return (
     <div className="flex min-h-0 flex-col">
       <div className="px-1 pb-2 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">

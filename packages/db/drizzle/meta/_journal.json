@@ -820,6 +820,13 @@
       "when": 1787915233537,
       "tag": "0116_team_integration_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "7",
+      "when": 1787915234537,
+      "tag": "0117_team_agent_skills",
+      "breakpoints": true
     }
   ]
 }

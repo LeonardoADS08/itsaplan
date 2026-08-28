@@ -1,6 +1,5 @@
 import {
   Bot,
-  BookText,
   Clock3,
   Columns3,
   GitPullRequest,
@@ -18,7 +17,7 @@ import type { PermissionResource } from '@/lib/api';
 
 // The sidebar group a section is listed under: the project-level general
 // settings, workflow configuration, automation/integrations, or the AI section
-// (agents, providers, skills). 'ai-team' and 'ai' sections are listed in the main
+// (agents and tools). 'ai-team' and 'ai' sections are listed in the main
 // sidebar's AI Team group — 'ai-team' at its top level, 'ai' inside the
 // "Configure" item — not in the project settings sidebar.
 export type SettingsGroup = 'general' | 'configuration' | 'automation' | 'ai' | 'ai-team';
@@ -111,13 +110,6 @@ export const AI_AGENTS_SECTION: SettingsSection = {
   group: 'ai',
 };
 
-export const AGENT_SKILLS_SECTION: SettingsSection = {
-  slug: 'agent-skills',
-  icon: BookText,
-  resource: 'agent_skills',
-  group: 'ai',
-};
-
 export const AGENT_TOOLS_SECTION: SettingsSection = {
   slug: 'agent-tools',
   icon: Wrench,
@@ -126,11 +118,7 @@ export const AGENT_TOOLS_SECTION: SettingsSection = {
 };
 
 // The "Configure" nav items, in sidebar order.
-export const AI_SECTIONS: SettingsSection[] = [
-  AI_AGENTS_SECTION,
-  AGENT_SKILLS_SECTION,
-  AGENT_TOOLS_SECTION,
-];
+export const AI_SECTIONS: SettingsSection[] = [AI_AGENTS_SECTION, AGENT_TOOLS_SECTION];
 
 // The settings sections split by sidebar group.
 export const GENERAL_SECTIONS = SETTINGS_SECTIONS.filter((s) => s.group === 'general');

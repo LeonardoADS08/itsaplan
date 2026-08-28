@@ -29,6 +29,10 @@
     "integrations": {
       "title": "集成",
       "description": "团队项目使用的 AI 提供商密钥和工具凭据。"
+    },
+    "agentSkills": {
+      "title": "技能",
+      "description": "内置代理可按需加载的可复用指令。"
     }
   },
   "info": {
@@ -218,5 +222,49 @@
       "integration": "集成",
       "credentials": "凭据"
     }
+  },
+  "skills": {
+    "newSkill": "新建技能",
+    "create": "新建技能",
+    "delete": "删除技能",
+    "deleteMessage": "删除技能“{name}”？使用它的所有代理都会移除该技能。",
+    "edit": "编辑技能",
+    "empty": "暂无技能",
+    "emptyHint": "编写 Markdown、上传文件或从 GitHub 导入。",
+    "name": "名称（可选）",
+    "namePlaceholder": "默认使用 SKILL.md frontmatter 中的名称",
+    "descriptionPlaceholder": "向代理说明何时应加载此技能",
+    "noDescription": "无描述",
+    "unsaved": "有未保存的更改",
+    "addReference": "添加参考资料",
+    "source": {
+      "inline": "内联",
+      "upload": "已上传",
+      "github": "GitHub"
+    },
+    "tabInline": "编写 Markdown",
+    "tabUpload": "上传文件",
+    "tabGithub": "从 GitHub 导入",
+    "skillFile": "SKILL.md 文件",
+    "loaded": "已加载 {file}",
+    "trustWarning": "只导入你信任的技能",
+    "trustWarning1": "技能会成为代理遵循的指令，请先审查来源。",
+    "trustWarning2": "只导入 SKILL.md 及其 Markdown 参考资料，脚本会被跳过。",
+    "githubUrl": "GitHub URL",
+    "githubUrlPlaceholder": "https://github.com/owner/repo 或技能文件夹",
+    "githubUrlHint": "可以填写仓库、文件夹或 SKILL.md。",
+    "findSkills": "查找技能",
+    "importTitle": "从 GitHub 导入技能",
+    "foundCount": "{count, plural, other {找到 # 个技能。请选择要导入的技能。}}",
+    "matchCount": "显示 {shown} 个，共 {total, plural, other {# 个技能}}",
+    "selectAll": "全选",
+    "searchPlaceholder": "按名称或描述搜索",
+    "noMatches": "没有与“{query}”匹配的技能。",
+    "importCount": "{count, plural, =0 {导入技能} other {导入 # 个技能}}",
+    "files": "文件",
+    "skill": "技能",
+    "description": "描述",
+    "referenceCount": "{count, plural, other {# 份参考资料}}",
+    "noAccess": "你没有权限查看该团队的技能。"
   }
 }

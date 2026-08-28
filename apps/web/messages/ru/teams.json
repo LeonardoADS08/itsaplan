@@ -29,6 +29,10 @@
     "integrations": {
       "title": "Интеграции",
       "description": "Ключи AI-провайдеров и учётные данные инструментов для проектов команды."
+    },
+    "agentSkills": {
+      "title": "Навыки",
+      "description": "Многоразовые инструкции, которые внутренние агенты загружают по необходимости."
     }
   },
   "info": {
@@ -218,5 +222,49 @@
       "integration": "Интеграция",
       "credentials": "Учётные данные"
     }
+  },
+  "skills": {
+    "newSkill": "Новый навык",
+    "create": "Создать навык",
+    "delete": "Удалить навык",
+    "deleteMessage": "Удалить навык «{name}»? Он будет убран у всех агентов, которые его используют.",
+    "edit": "Редактировать навык",
+    "empty": "Навыков пока нет",
+    "emptyHint": "Напишите markdown, загрузите файл или импортируйте из GitHub.",
+    "name": "Название (необязательно)",
+    "namePlaceholder": "По умолчанию берётся из frontmatter в SKILL.md",
+    "descriptionPlaceholder": "Показывается агенту, чтобы он решил, когда загружать этот навык",
+    "noDescription": "Без описания",
+    "unsaved": "Несохранённые изменения",
+    "addReference": "Добавить ссылку",
+    "source": {
+      "inline": "Внутри",
+      "upload": "Загружен",
+      "github": "GitHub"
+    },
+    "tabInline": "Написать markdown",
+    "tabUpload": "Загрузить файл",
+    "tabGithub": "Импорт из GitHub",
+    "skillFile": "Файл SKILL.md",
+    "loaded": "Загружен {file}",
+    "trustWarning": "Импортируйте только навыки, которым доверяете",
+    "trustWarning1": "Навык становится инструкциями, которым следуют ваши агенты. Сначала просмотрите источник.",
+    "trustWarning2": "Импортируются только SKILL.md и его markdown-ссылки. Скрипты пропускаются.",
+    "githubUrl": "URL на GitHub",
+    "githubUrlPlaceholder": "https://github.com/owner/repo или папка навыка",
+    "githubUrlHint": "Репозиторий, папка или SKILL.md.",
+    "findSkills": "Найти навыки",
+    "importTitle": "Импорт навыков из GitHub",
+    "foundCount": "{count, plural, one {Найден # навык. Выберите, что импортировать.} few {Найдено # навыка. Выберите, что импортировать.} many {Найдено # навыков. Выберите, что импортировать.} other {Найдено # навыка. Выберите, что импортировать.}}",
+    "matchCount": "Подходит {shown} из {total, plural, one {# навыка} few {# навыков} many {# навыков} other {# навыков}}",
+    "selectAll": "Выбрать всё",
+    "searchPlaceholder": "Поиск по названию или описанию",
+    "noMatches": "Нет навыков по запросу «{query}».",
+    "importCount": "{count, plural, =0 {Импортировать навыки} one {Импортировать # навык} few {Импортировать # навыка} many {Импортировать # навыков} other {Импортировать # навыка}}",
+    "files": "Файлы",
+    "skill": "Навык",
+    "description": "Описание",
+    "referenceCount": "{count, plural, one {# ссылка} few {# ссылки} many {# ссылок} other {# ссылки}}",
+    "noAccess": "У вас нет доступа к навыкам этой команды."
   }
 }

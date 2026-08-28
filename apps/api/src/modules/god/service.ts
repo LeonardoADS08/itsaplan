@@ -342,6 +342,18 @@ export interface InstanceProjectPage {
   total: number;
 }
 
+// How many skills each of the given projects can draw on: the library belongs to the
+// team that owns the project, so two projects of one team report the same number.
+async function skillCountByProject(projectIds: number[]): Promise<Map<number, number>> {
+  const rows = await db
+    .select({ projectId: project.id, count: sql<number>`count(${agentSkill.id})::int` })
+    .from(project)
+    .leftJoin(agentSkill, eq(agentSkill.teamId, project.teamId))
+    .where(inArray(project.id, projectIds))
+    .groupBy(project.id);
+  return new Map(rows.map((r) => [r.projectId, r.count]));
+}
+
 // How many rows each of the given projects has in a project-scoped table.
 async function countByProject(
   table: PgTable,
@@ -397,7 +409,7 @@ async function loadProjectFacts(projectIds: number[]): Promise<(id: number) => P
     countByProject(projectDashboard, projectDashboard.projectId, projectIds),
     countByProject(projectView, projectView.projectId, projectIds),
     countByProject(aiAgent, aiAgent.projectId, projectIds),
-    countByProject(agentSkill, agentSkill.projectId, projectIds),
+    skillCountByProject(projectIds),
     countByProject(agentTool, agentTool.projectId, projectIds),
     // The feed has no project column of its own; it reaches one through its issue.
     // Reduced to the latest per project below, because aggregating in SQL would

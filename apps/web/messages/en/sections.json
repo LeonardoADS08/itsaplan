@@ -93,10 +93,6 @@
       "label": "Agents",
       "description": "Bot users you can delegate issues to."
     },
-    "agent-skills": {
-      "label": "Skills",
-      "description": "Reusable instructions internal agents load on demand."
-    },
     "agent-tools": {
       "label": "Tools",
       "description": "Tools agents can call, each connected to an integration credential."

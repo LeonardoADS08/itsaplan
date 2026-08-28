@@ -1,27 +1,32 @@
 import { useState } from 'react';
-import type { AgentSkill, ProjectDetail } from '@/lib/api';
+import { useTranslations } from 'next-intl';
+import type { AgentSkill, ResourcePermissions } from '@/lib/api';
 import { useSkillsQuery, useDeleteSkill } from '@/services/agentSkills.service';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EmptyState } from '@/components/common/page/EmptyState';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
-import SettingsConfirmDeleteDialog from '../crud/SettingsConfirmDeleteDialog';
-import { useSettingsCan } from '../../context/settingsPermission';
+import ConfirmDialog from '@/components/common/overlay/ConfirmDialog';
 import { SkillEditDialog } from './SkillEditDialog';
 import { SkillRow } from './SkillRow';
-import { useTranslations } from 'next-intl';
 
-// Project settings for the agent skill library: reusable instructions given to
-// internal agents. A skill is a SKILL.md plus optional reference files; it can be
-// written inline, uploaded, or imported from GitHub. Creating opens a dialog;
-// editing opens a separate dialog that also manages reference files.
-export default function SettingsAgentSkills({ project }: { project: ProjectDetail }) {
-  const t = useTranslations('settings.skills');
+// The team's skill library as a table: reusable instructions the internal agents of
+// its projects load on demand. A skill is a SKILL.md plus optional reference files;
+// it can be written inline, uploaded, or imported from GitHub. Editing opens a
+// separate dialog that also manages the reference files.
+export default function TeamAgentSkills({
+  teamId,
+  teamName,
+  permissions,
+}: {
+  teamId: number;
+  teamName: string;
+  permissions: ResourcePermissions;
+}) {
+  const t = useTranslations('teams.skills');
   const tCommon = useTranslations('common');
-  const projectKey = project.project.key;
-  const skillsQuery = useSkillsQuery(projectKey);
+  const skillsQuery = useSkillsQuery(teamId);
   const skills = skillsQuery.data ?? [];
-  const deleteSkill = useDeleteSkill(projectKey);
-  const can = useSettingsCan();
+  const deleteSkill = useDeleteSkill(teamId);
 
   const [editing, setEditing] = useState<AgentSkill | null>(null);
   const [deleting, setDeleting] = useState<AgentSkill | null>(null);
@@ -33,7 +38,7 @@ export default function SettingsAgentSkills({ project }: { project: ProjectDetai
       ) : skills.length === 0 ? (
         <EmptyState title={t('empty')} description={t('emptyHint')} />
       ) : (
-        <div className="space-y-4">
+        <div className="overflow-x-auto">
           <Table className="min-w-[820px] table-fixed">
             <colgroup>
               <col className="w-[28%]" />
@@ -54,14 +59,14 @@ export default function SettingsAgentSkills({ project }: { project: ProjectDetai
               </TableRow>
             </TableHeader>
             <TableBody>
-              {skills.map((s) => (
+              {skills.map((skill) => (
                 <SkillRow
-                  key={s.id}
-                  skill={s}
-                  canEdit={can('edit')}
-                  canDelete={can('delete')}
-                  onEdit={() => setEditing(s)}
-                  onDelete={() => setDeleting(s)}
+                  key={skill.id}
+                  skill={skill}
+                  canEdit={permissions.edit}
+                  canDelete={permissions.delete}
+                  onEdit={() => setEditing(skill)}
+                  onDelete={() => setDeleting(skill)}
                 />
               ))}
             </TableBody>
@@ -71,28 +76,28 @@ export default function SettingsAgentSkills({ project }: { project: ProjectDetai
 
       {editing && (
         <SkillEditDialog
-          projectKey={projectKey}
+          teamId={teamId}
+          teamName={teamName}
           skill={editing}
-          canEdit={can('edit')}
+          canEdit={permissions.edit}
           onClose={() => setEditing(null)}
         />
       )}
 
       {deleting && (
-        <SettingsConfirmDeleteDialog
+        <ConfirmDialog
           title={t('delete')}
           confirmLabel={t('delete')}
-          message={
-            <>
-              Delete the skill “{deleting.name}”? It will be removed from every agent that uses it.
-            </>
-          }
           onConfirm={async () => {
             await deleteSkill.mutateAsync(deleting.id);
             setDeleting(null);
           }}
           onClose={() => setDeleting(null)}
-        />
+        >
+          <div className="text-sm text-muted-foreground">
+            {t('deleteMessage', { name: deleting.name })}
+          </div>
+        </ConfirmDialog>
       )}
     </>
   );

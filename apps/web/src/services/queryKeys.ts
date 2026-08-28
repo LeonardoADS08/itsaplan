@@ -118,8 +118,8 @@ export const qk = {
   // credential mutation refreshes them too.
   integrationOptions: (projectKey: string, kind?: string) =>
     ['integrations', projectKey, 'options', kind ?? 'all'] as const,
-  // The project skill library (the Skills page).
-  agentSkills: (projectKey: string) => ['agentSkills', projectKey] as const,
+  // The team skill library (the team's Skills section).
+  agentSkills: (teamId: number) => ['agentSkills', teamId] as const,
   // Configured tools (the Tools page) and the tools enabled on one agent (the agent
   // editor's Tools section).
   configuredTools: (projectKey: string) => ['configuredTools', projectKey] as const,

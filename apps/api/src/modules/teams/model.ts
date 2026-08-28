@@ -25,6 +25,7 @@ export const TeamResponse = t.Object({
   ownerCount: t.Number({ description: 'How many members are owners; the last one cannot leave.' }),
   roleCount: t.Number({ description: "How many roles the team's projects assign from." }),
   integrationCount: t.Number({ description: 'How many integration credentials the team holds.' }),
+  skillCount: t.Number({ description: 'How many agent skills the team library holds.' }),
   createdAt: t.String(),
 });
 

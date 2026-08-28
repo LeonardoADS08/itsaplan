@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sparkles, Wrench } from 'lucide-react';
 import type { AiAgent } from '@/lib/api';
-import { agentSkillsPath, agentToolsPath } from '@/utils/paths';
+import { agentToolsPath, teamSectionPath } from '@/utils/paths';
 import {
   useCreateAiAgent,
   useUpdateAiAgent,
@@ -24,6 +24,7 @@ import {
   useSetAgentTools,
 } from '@/services/customTools.service';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useShell } from '@/context/shellContext';
 import { Button } from '@/components/ui/button';
 import { AgentCapabilityList } from './AgentCapabilityList';
 import { AgentEmptyNotice } from './AgentEmptyNotice';
@@ -87,8 +88,10 @@ export function AgentSheetForm({
     value.kind === 'internal' ? selectedProvider : null,
   );
   const rolesQuery = useProjectRolesQuery(projectKey, value.kind === 'external');
+  // The skill library belongs to the team that owns this project.
+  const teamId = useShell().project?.project.teamId ?? null;
   const skillsLibraryQuery = useSkillsQuery(
-    value.kind === 'internal' && canManageSkills ? projectKey : null,
+    value.kind === 'internal' && canManageSkills ? teamId : null,
   );
   const agentSkillsQuery = useAgentSkillsQuery(
     projectKey,
@@ -202,7 +205,7 @@ export function AgentSheetForm({
         icon={Sparkles}
         title={t('noSkills')}
         hint={t('noSkillsHint')}
-        href={agentSkillsPath(projectKey)}
+        href={teamId ? teamSectionPath(teamId, 'agent-skills') : '#'}
         linkLabel={t('goToSkills')}
       />
     ) : (

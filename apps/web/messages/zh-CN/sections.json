@@ -93,10 +93,6 @@
       "label": "代理",
       "description": "可以接受工作项委派的 AI 代理。"
     },
-    "agent-skills": {
-      "label": "技能",
-      "description": "内置代理可按需加载的可复用指令。"
-    },
     "agent-tools": {
       "label": "工具",
       "description": "代理可以调用的工具，每个工具连接到一个集成凭据。"

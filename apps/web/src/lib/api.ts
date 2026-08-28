@@ -117,10 +117,12 @@ export interface Team {
   memberCount: number;
   // How many of those members are owners: the last one cannot leave.
   ownerCount: number;
-  // The roles the team's projects assign from, and the integration credentials they
-  // run on. Counted here so the page shows them beside the section without opening it.
+  // The roles the team's projects assign from, the integration credentials they run
+  // on, and the skills their agents load. Counted here so the page shows them beside
+  // the section without opening it.
   roleCount: number;
   integrationCount: number;
+  skillCount: number;
   createdAt: string;
 }
 
@@ -541,11 +543,12 @@ export interface SkillRef {
   size: number;
 }
 
-// A skill in the project library: a SKILL.md plus optional reference files, given
-// to internal agents. Content lives in the object store; this is the metadata.
+// A skill in the team library: a SKILL.md plus optional reference files, given to
+// the internal agents of the team's projects. Content lives in the object store;
+// this is the metadata.
 export interface AgentSkill {
   id: number;
-  projectId: number;
+  teamId: number;
   name: string;
   description: string;
   source: 'upload' | 'inline' | 'github';
@@ -3328,64 +3331,52 @@ export const api = {
   deleteCredential: (teamId: number, credentialId: number) =>
     request<void>(`/teams/${teamId}/integrations/${credentialId}`, { method: 'DELETE' }),
 
-  // Agent skills: the project skill library and the skills enabled on an agent.
-  listSkills: (projectKey: string) => request<AgentSkill[]>(`/projects/${projectKey}/agent-skills`),
-  getSkillMarkdown: (projectKey: string, skillId: number) =>
-    request<{ markdown: string }>(`/projects/${projectKey}/agent-skills/${skillId}/markdown`),
-  getSkillReferenceContent: (projectKey: string, skillId: number, path: string) =>
+  // Agent skills: the team skill library and the skills enabled on an agent.
+  listSkills: (teamId: number) => request<AgentSkill[]>(`/teams/${teamId}/agent-skills`),
+  getSkillMarkdown: (teamId: number, skillId: number) =>
+    request<{ markdown: string }>(`/teams/${teamId}/agent-skills/${skillId}/markdown`),
+  getSkillReferenceContent: (teamId: number, skillId: number, path: string) =>
     request<{ content: string }>(
-      `/projects/${projectKey}/agent-skills/${skillId}/references/content?path=${encodeURIComponent(path)}`,
+      `/teams/${teamId}/agent-skills/${skillId}/references/content?path=${encodeURIComponent(path)}`,
     ),
-  createSkill: (projectKey: string, input: NewSkillInput) =>
-    request<AgentSkill>(`/projects/${projectKey}/agent-skills`, {
+  createSkill: (teamId: number, input: NewSkillInput) =>
+    request<AgentSkill>(`/teams/${teamId}/agent-skills`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-  discoverGithubSkills: (projectKey: string, url: string) =>
-    request<GithubSkillCandidate[]>(`/projects/${projectKey}/agent-skills/github/discover`, {
+  discoverGithubSkills: (teamId: number, url: string) =>
+    request<GithubSkillCandidate[]>(`/teams/${teamId}/agent-skills/github/discover`, {
       method: 'POST',
       body: JSON.stringify({ url }),
     }),
-  updateSkill: (projectKey: string, skillId: number, patch: SkillPatch) =>
-    request<AgentSkill>(`/projects/${projectKey}/agent-skills/${skillId}`, {
+  updateSkill: (teamId: number, skillId: number, patch: SkillPatch) =>
+    request<AgentSkill>(`/teams/${teamId}/agent-skills/${skillId}`, {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
-  deleteSkill: (projectKey: string, skillId: number) =>
-    request<void>(`/projects/${projectKey}/agent-skills/${skillId}`, { method: 'DELETE' }),
+  deleteSkill: (teamId: number, skillId: number) =>
+    request<void>(`/teams/${teamId}/agent-skills/${skillId}`, { method: 'DELETE' }),
   // Multipart upload for a skill reference — see sendAttachmentFile for why
   // request() cannot be used.
-  addSkillReference: async (
-    projectKey: string,
-    skillId: number,
-    file: File,
-  ): Promise<AgentSkill> => {
+  addSkillReference: async (teamId: number, skillId: number, file: File): Promise<AgentSkill> => {
     const form = new FormData();
     form.append('file', file);
-    const res = await fetch(
-      `${API_URL}/projects/${projectKey}/agent-skills/${skillId}/references`,
-      {
-        method: 'POST',
-        credentials: 'include',
-        body: form,
-      },
-    );
+    const res = await fetch(`${API_URL}/teams/${teamId}/agent-skills/${skillId}/references`, {
+      method: 'POST',
+      credentials: 'include',
+      body: form,
+    });
     if (!res.ok) throw await apiFailure(res);
     return res.json();
   },
-  updateSkillReferenceContent: (
-    projectKey: string,
-    skillId: number,
-    path: string,
-    content: string,
-  ) =>
-    request<AgentSkill>(`/projects/${projectKey}/agent-skills/${skillId}/references/content`, {
+  updateSkillReferenceContent: (teamId: number, skillId: number, path: string, content: string) =>
+    request<AgentSkill>(`/teams/${teamId}/agent-skills/${skillId}/references/content`, {
       method: 'PATCH',
       body: JSON.stringify({ path, content }),
     }),
-  deleteSkillReference: (projectKey: string, skillId: number, path: string) =>
+  deleteSkillReference: (teamId: number, skillId: number, path: string) =>
     request<AgentSkill>(
-      `/projects/${projectKey}/agent-skills/${skillId}/references?path=${encodeURIComponent(path)}`,
+      `/teams/${teamId}/agent-skills/${skillId}/references?path=${encodeURIComponent(path)}`,
       { method: 'DELETE' },
     ),
   listAgentSkills: (projectKey: string, agentId: number) =>

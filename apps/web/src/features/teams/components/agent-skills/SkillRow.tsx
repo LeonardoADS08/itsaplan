@@ -21,7 +21,7 @@ export function SkillRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const t = useTranslations('settings.skills');
+  const t = useTranslations('teams.skills');
   const refCount = skill.files.length;
   return (
     <TableRow className="group/item">

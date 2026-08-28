@@ -1,84 +1,83 @@
+// The team's skill library, and the skills enabled on one agent of a project. The
+// library belongs to the team, so its hooks are keyed by the team; which of those
+// skills an agent loads belongs to the agent, so those hooks are keyed by the project.
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type NewSkillInput, type SkillPatch } from '@/lib/api';
 import { qk } from '@/services/queryKeys';
 
-export function useSkillsQuery(projectKey: string | null) {
+export function useSkillsQuery(teamId: number | null) {
   return useQuery({
-    queryKey: qk.agentSkills(projectKey ?? ''),
-    queryFn: () => api.listSkills(projectKey!),
-    enabled: projectKey != null,
+    queryKey: qk.agentSkills(teamId ?? 0),
+    queryFn: () => api.listSkills(teamId!),
+    enabled: teamId != null,
   });
 }
 
-export function useCreateSkill(projectKey: string | null) {
+export function useCreateSkill(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: NewSkillInput) => api.createSkill(projectKey!, input),
+    mutationFn: (input: NewSkillInput) => api.createSkill(teamId, input),
     onSuccess: () => {
-      if (projectKey) void qc.invalidateQueries({ queryKey: qk.agentSkills(projectKey) });
+      void qc.invalidateQueries({ queryKey: qk.agentSkills(teamId) });
+      // The team list carries how many skills the team holds.
+      void qc.invalidateQueries({ queryKey: qk.teams });
     },
   });
 }
 
 // Lists the skills at a GitHub URL so the user can pick which to import. Read-only:
 // no cache invalidation.
-export function useDiscoverGithubSkills(projectKey: string | null) {
+export function useDiscoverGithubSkills(teamId: number) {
   return useMutation({
-    mutationFn: (url: string) => api.discoverGithubSkills(projectKey!, url),
+    mutationFn: (url: string) => api.discoverGithubSkills(teamId, url),
   });
 }
 
-export function useUpdateSkill(projectKey: string | null) {
+export function useUpdateSkill(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, patch }: { id: number; patch: SkillPatch }) =>
-      api.updateSkill(projectKey!, id, patch),
-    onSuccess: () => {
-      if (projectKey) void qc.invalidateQueries({ queryKey: qk.agentSkills(projectKey) });
-    },
+      api.updateSkill(teamId, id, patch),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.agentSkills(teamId) }),
   });
 }
 
-export function useDeleteSkill(projectKey: string | null) {
+export function useDeleteSkill(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => api.deleteSkill(projectKey!, id),
+    mutationFn: (id: number) => api.deleteSkill(teamId, id),
     onSuccess: () => {
-      if (projectKey) void qc.invalidateQueries({ queryKey: qk.agentSkills(projectKey) });
+      void qc.invalidateQueries({ queryKey: qk.agentSkills(teamId) });
+      void qc.invalidateQueries({ queryKey: qk.teams });
     },
   });
 }
 
-export function useAddSkillReference(projectKey: string | null) {
+export function useAddSkillReference(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, file }: { id: number; file: File }) =>
-      api.addSkillReference(projectKey!, id, file),
-    onSuccess: () => {
-      if (projectKey) void qc.invalidateQueries({ queryKey: qk.agentSkills(projectKey) });
-    },
+      api.addSkillReference(teamId, id, file),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.agentSkills(teamId) }),
   });
 }
 
-export function useUpdateSkillReference(projectKey: string | null) {
+export function useUpdateSkillReference(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, path, content }: { id: number; path: string; content: string }) =>
-      api.updateSkillReferenceContent(projectKey!, id, path, content),
-    onSuccess: () => {
-      if (projectKey) void qc.invalidateQueries({ queryKey: qk.agentSkills(projectKey) });
-    },
+      api.updateSkillReferenceContent(teamId, id, path, content),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.agentSkills(teamId) }),
   });
 }
 
-export function useDeleteSkillReference(projectKey: string | null) {
+export function useDeleteSkillReference(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, path }: { id: number; path: string }) =>
-      api.deleteSkillReference(projectKey!, id, path),
-    onSuccess: () => {
-      if (projectKey) void qc.invalidateQueries({ queryKey: qk.agentSkills(projectKey) });
-    },
+      api.deleteSkillReference(teamId, id, path),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: qk.agentSkills(teamId) }),
   });
 }
 

@@ -3,20 +3,23 @@ import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { untaggedRoutes } from '#tests/helpers/mcp';
+import { addProjectMember } from '#tests/helpers/members';
+import { createRole } from '#tests/helpers/roles';
 
-// The project skill library: SKILL.md documents (plus optional reference files) given
-// to internal agents. Content lives in the object store; the row holds metadata.
-// Access is the ai_agents permission resource. These tests need the object store
-// (MinIO), like the attachments test.
+// The team skill library: SKILL.md documents (plus optional reference files) given to
+// the internal agents of every project the team owns. Content lives in the object
+// store; the row holds metadata. Access is the agent_skills permission resource,
+// resolved on the team. These tests need the object store (MinIO), like the
+// attachments test.
 
 async function setup() {
   const owner = await signUpTestUser({ name: 'Owner' });
   const asOwner = authedApi(owner.cookie);
-  await asOwner.projects.post({ key: 'MKT', name: 'Marketing' });
-  return { owner, asOwner };
+  const project = await asOwner.projects.post({ key: 'MKT', name: 'Marketing' });
+  return { owner, asOwner, teamId: project.data!.teamId };
 }
 
-const skills = (api: Api) => api.projects({ projectKey: 'MKT' })['agent-skills'];
+const skills = (api: Api, teamId: number) => api.teams({ teamId })['agent-skills'];
 const agents = (api: Api) => api.projects({ projectKey: 'MKT' })['ai-agents'];
 
 const SKILL_MD = `---
@@ -32,8 +35,8 @@ describe('agent skills', () => {
   });
 
   it('creates an inline skill and takes name/description from the frontmatter', async () => {
-    const { asOwner } = await setup();
-    const res = await skills(asOwner).post({ source: 'inline', markdown: SKILL_MD });
+    const { asOwner, teamId } = await setup();
+    const res = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
     expect(res.status).toBe(201);
     expect(res.data).toMatchObject({
       name: 'Triage',
@@ -43,16 +46,16 @@ describe('agent skills', () => {
   });
 
   it('serves the stored markdown back', async () => {
-    const { asOwner } = await setup();
-    const created = await skills(asOwner).post({ source: 'inline', markdown: SKILL_MD });
-    const md = await skills(asOwner)({ skillId: created.data!.id }).markdown.get();
+    const { asOwner, teamId } = await setup();
+    const created = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
+    const md = await skills(asOwner, teamId)({ skillId: created.data!.id }).markdown.get();
     expect(md.status).toBe(200);
     expect(md.data?.markdown).toBe(SKILL_MD);
   });
 
   it('rejects a skill with no resolvable name', async () => {
-    const { asOwner } = await setup();
-    const res = await skills(asOwner).post({
+    const { asOwner, teamId } = await setup();
+    const res = await skills(asOwner, teamId).post({
       source: 'inline',
       markdown: 'Just a body, no frontmatter.',
     });
@@ -60,31 +63,41 @@ describe('agent skills', () => {
   });
 
   it('rejects a duplicate name', async () => {
-    const { asOwner } = await setup();
-    await skills(asOwner).post({ source: 'inline', markdown: SKILL_MD });
-    const dup = await skills(asOwner).post({ source: 'inline', name: 'Triage', markdown: 'body' });
+    const { asOwner, teamId } = await setup();
+    await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
+    const dup = await skills(asOwner, teamId).post({
+      source: 'inline',
+      name: 'Triage',
+      markdown: 'body',
+    });
     expect(dup.status).toBe(409);
   });
 
   it('updates the name and markdown', async () => {
-    const { asOwner } = await setup();
-    const created = await skills(asOwner).post({ source: 'inline', markdown: SKILL_MD });
-    const upd = await skills(asOwner)({ skillId: created.data!.id }).patch({
+    const { asOwner, teamId } = await setup();
+    const created = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
+    const upd = await skills(
+      asOwner,
+      teamId,
+    )({ skillId: created.data!.id }).patch({
       name: 'Renamed',
       markdown: 'new body',
     });
     expect(upd.status).toBe(200);
     expect(upd.data).toMatchObject({ name: 'Renamed' });
-    const md = await skills(asOwner)({ skillId: created.data!.id }).markdown.get();
+    const md = await skills(asOwner, teamId)({ skillId: created.data!.id }).markdown.get();
     expect(md.data?.markdown).toBe('new body');
   });
 
   it('adds a reference file and reads its content back', async () => {
-    const { asOwner } = await setup();
-    const created = await skills(asOwner).post({ source: 'inline', markdown: SKILL_MD });
+    const { asOwner, teamId } = await setup();
+    const created = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
     const skillId = created.data!.id;
 
-    const withRef = await skills(asOwner)({ skillId }).references.post({
+    const withRef = await skills(
+      asOwner,
+      teamId,
+    )({ skillId }).references.post({
       file: new File(['# Checklist\n\nItem one'], 'checklist.md', { type: 'text/markdown' }),
     });
     expect(withRef.status).toBe(200);
@@ -92,22 +105,31 @@ describe('agent skills', () => {
     const path = withRef.data!.files[0].path;
     expect(path).toBe('refs/checklist.md');
 
-    const content = await skills(asOwner)({ skillId }).references.content.get({ query: { path } });
+    const content = await skills(
+      asOwner,
+      teamId,
+    )({ skillId }).references.content.get({ query: { path } });
     expect(content.status).toBe(200);
     expect(content.data?.content).toBe('# Checklist\n\nItem one');
   });
 
   it("overwrites a reference file's content and updates its size", async () => {
-    const { asOwner } = await setup();
-    const created = await skills(asOwner).post({ source: 'inline', markdown: SKILL_MD });
+    const { asOwner, teamId } = await setup();
+    const created = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
     const skillId = created.data!.id;
-    const withRef = await skills(asOwner)({ skillId }).references.post({
+    const withRef = await skills(
+      asOwner,
+      teamId,
+    )({ skillId }).references.post({
       file: new File(['old'], 'checklist.md', { type: 'text/markdown' }),
     });
     const path = withRef.data!.files[0].path;
 
     const body = '# New\n\nDifferent content';
-    const upd = await skills(asOwner)({ skillId }).references.content.patch({
+    const upd = await skills(
+      asOwner,
+      teamId,
+    )({ skillId }).references.content.patch({
       path,
       content: body,
     });
@@ -115,21 +137,30 @@ describe('agent skills', () => {
     const ref = upd.data?.files.find((f) => f.path === path);
     expect(ref?.size).toBe(Buffer.byteLength(body));
 
-    const after = await skills(asOwner)({ skillId }).references.content.get({ query: { path } });
+    const after = await skills(
+      asOwner,
+      teamId,
+    )({ skillId }).references.content.get({ query: { path } });
     expect(after.data?.content).toBe(body);
   });
 
   it('returns 404 for an unknown reference path on read and write', async () => {
-    const { asOwner } = await setup();
-    const created = await skills(asOwner).post({ source: 'inline', markdown: SKILL_MD });
+    const { asOwner, teamId } = await setup();
+    const created = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
     const skillId = created.data!.id;
 
-    const read = await skills(asOwner)({ skillId }).references.content.get({
+    const read = await skills(
+      asOwner,
+      teamId,
+    )({ skillId }).references.content.get({
       query: { path: 'refs/nope.md' },
     });
     expect(read.status).toBe(404);
 
-    const write = await skills(asOwner)({ skillId }).references.content.patch({
+    const write = await skills(
+      asOwner,
+      teamId,
+    )({ skillId }).references.content.patch({
       path: 'refs/nope.md',
       content: 'x',
     });
@@ -137,16 +168,16 @@ describe('agent skills', () => {
   });
 
   it('deletes a skill', async () => {
-    const { asOwner } = await setup();
-    const created = await skills(asOwner).post({ source: 'inline', markdown: SKILL_MD });
-    const del = await skills(asOwner)({ skillId: created.data!.id }).delete();
+    const { asOwner, teamId } = await setup();
+    const created = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
+    const del = await skills(asOwner, teamId)({ skillId: created.data!.id }).delete();
     expect(del.status).toBe(204);
-    expect((await skills(asOwner).get()).data).toHaveLength(0);
+    expect((await skills(asOwner, teamId).get()).data).toHaveLength(0);
   });
 
   it('enables skills on an internal agent and lists them', async () => {
-    const { asOwner } = await setup();
-    const created = await skills(asOwner).post({ source: 'inline', markdown: SKILL_MD });
+    const { asOwner, teamId } = await setup();
+    const created = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
     const agent = await agents(asOwner).post({
       name: 'Bot',
       username: 'bot',
@@ -166,38 +197,78 @@ describe('agent skills', () => {
     expect(clear.data).toHaveLength(0);
   });
 
+  it('ignores a skill of another team when enabling skills on an agent', async () => {
+    const { asOwner, teamId } = await setup();
+    const mine = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
+    const otherTeam = await asOwner.teams.post({ name: 'Design' });
+    const theirs = await skills(asOwner, otherTeam.data!.id).post({
+      source: 'inline',
+      markdown: SKILL_MD,
+    });
+    const agent = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'internal' });
+
+    const set = await agents(asOwner)({ agentId: agent.data!.agent.id }).skills.put({
+      skillIds: [mine.data!.id, theirs.data!.id],
+    });
+    expect(set.data?.map((skill) => skill.id)).toEqual([mine.data!.id]);
+  });
+
   // A skill library is managed over MCP, so every route here is tagged except the file
   // upload: an MCP call carries JSON, and uploading files is left to the UI.
   it('exposes every skill route to MCP', () => {
     const untagged = untaggedRoutes(
       (route) => route.includes('agent-skills') || route.endsWith('/skills'),
     );
-    expect(untagged).toEqual(['POST /projects/:projectKey/agent-skills/:skillId/references']);
+    expect(untagged).toEqual(['POST /teams/:teamId/agent-skills/:skillId/references']);
   });
 
-  it('denies a non-member', async () => {
-    await setup();
+  it('lets a team member read the library when their project role grants it', async () => {
+    const { asOwner, teamId } = await setup();
+    await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
+    const role = await createRole(asOwner, 'MKT', {
+      name: 'Skill reader',
+      permissions: { agent_skills: { read: true } },
+    });
+    const asMember = await addProjectMember(asOwner, 'MKT', role.data!.id);
+
+    const list = await skills(asMember, teamId).get();
+    expect(list.status).toBe(200);
+    expect(list.data).toHaveLength(1);
+    // Reading is all that role grants.
+    expect(
+      (await skills(asMember, teamId).post({ source: 'inline', markdown: 'body' })).status,
+    ).toBe(403);
+  });
+
+  it('hides the team from someone who does not belong to it', async () => {
+    const { teamId } = await setup();
     const outsider = await signUpTestUser({ name: 'Outsider' });
     const asOutsider = authedApi(outsider.cookie);
-    expect((await skills(asOutsider).get()).status).toBe(403);
-    expect((await skills(asOutsider).post({ source: 'inline', markdown: SKILL_MD })).status).toBe(
-      403,
-    );
+    expect((await skills(asOutsider, teamId).get()).status).toBe(404);
+    expect(
+      (await skills(asOutsider, teamId).post({ source: 'inline', markdown: SKILL_MD })).status,
+    ).toBe(404);
     // The reference-content routes are gated too (read for GET, edit for PATCH).
     expect(
       (
-        await skills(asOutsider)({ skillId: 1 }).references.content.get({
+        await skills(
+          asOutsider,
+          teamId,
+        )({ skillId: 1 }).references.content.get({
           query: { path: 'refs/x.md' },
         })
       ).status,
-    ).toBe(403);
+    ).toBe(404);
     expect(
       (
-        await skills(asOutsider)({ skillId: 1 }).references.content.patch({
+        await skills(
+          asOutsider,
+          teamId,
+        )({ skillId: 1 }).references.content.patch({
           path: 'refs/x.md',
           content: 'x',
         })
       ).status,
-    ).toBe(403);
+    ).toBe(404);
   });
 });

@@ -26,23 +26,17 @@ import {
 } from './service';
 import { GIT_SETTING_KEY } from '#modules/git/service';
 import { listAgents, createAgent, type NewAgentInput } from '#modules/agents/core/service';
-import {
-  listSkills,
-  getSkillMarkdown,
-  createSkillFromFiles,
-  setAgentSkills,
-  listAgentSkills,
-} from '#modules/agents/skills/service';
+import { setAgentSkills, listAgentSkills } from '#modules/agents/skills/service';
 import { listAgentToolLinks, setAgentTools } from '#modules/agents/tools/service';
 import { listAgentSchedules, createAgentSchedule } from '#modules/agents/schedules/service';
 import { nextCronRun } from '#modules/agents/schedules/cron';
-import { getObject } from '#shared/s3';
 
-// Which parts of a source project the copy carries over. Each key mirrors a section
-// of the project settings menu. A key set false skips that entity. Some sections
-// depend on others (a view's filters reference states/types/labels/fields); those
-// dependencies are force-enabled in normalizeInclude so a partial selection can
-// never leave an id pointing at the source project.
+// Which parts of a source project the copy carries over. A key set false skips that
+// entity. Some sections depend on others (a view's filters reference
+// states/types/labels/fields); those dependencies are force-enabled in
+// normalizeInclude so a partial selection can never leave an id pointing at the
+// source project. `skills` carries no entity of its own — the library belongs to the
+// team — only which of the team's skills the copied agents keep enabled.
 export interface CopyProjectInclude {
   states: boolean;
   issueTypes: boolean;
@@ -211,24 +205,15 @@ function remapActionEffect(effect: unknown, maps: CopyIdMaps): unknown {
   return out;
 }
 
-// Reads a whole object from the store into a Buffer, for copying a skill's reference
-// files into the new project's own object prefix.
-async function readObjectBytes(key: string): Promise<{ bytes: Buffer; contentType: string }> {
-  const { body, contentType } = await getObject(key);
-  const bytes = Buffer.from(await new Response(body).arrayBuffer());
-  return { bytes, contentType };
-}
-
 // Creates a new project that copies the selected parts of the source project's
 // configuration, but none of its issues. The creator becomes the new project's owner.
 //
 // Pure-database entities (states, types, labels, custom fields, views, dashboards,
 // actions, settings, webhooks, configured tools) are copied in one transaction,
 // recording old id → new id so the ids that views/actions and tools/agents reference
-// are remapped to the copied entities. Entities with side
-// effects outside the database are copied after that transaction commits: skills copy
-// their object-store files, agents create their own bot user and API key, and both go
-// through the same service functions the UI uses.
+// are remapped to the copied entities. Agents are created after that transaction
+// commits, because each gets its own bot user and API key, through the same service
+// function the UI uses.
 export async function copyProject(
   sourceProjectId: number,
   input: { key: string; name: string; description?: string },
@@ -247,7 +232,6 @@ export async function copyProject(
     option: new Map(),
   };
   const toolMap = new Map<number, number>();
-  const skillMap = new Map<number, number>();
   const agentMap = new Map<number, number>();
 
   const source = await getProjectById(sourceProjectId);
@@ -534,32 +518,9 @@ export async function copyProject(
     return proj;
   });
 
-  // Skills: copy each skill's object-store files into the new project's own prefix,
-  // then create the row through the same service the UI uses.
-  if (inc.skills) {
-    for (const s of await listSkills(sourceProjectId)) {
-      const markdown = await getSkillMarkdown(s.id, sourceProjectId);
-      const refs = [];
-      for (const f of s.files) {
-        const { bytes, contentType } = await readObjectBytes(f.s3Key);
-        refs.push({ path: f.path, bytes, contentType });
-      }
-      const created = await createSkillFromFiles(newProject.id, {
-        name: s.name,
-        description: s.description,
-        source: s.source,
-        sourceUrl: s.sourceUrl,
-        markdown,
-        refs,
-      });
-      skillMap.set(s.id, created.id);
-    }
-  }
-
   // Agents: each gets its own bot user and API key through createAgent. An external
   // agent's key is regenerated and cannot be recovered here — its operator resets it in
-  // the new project. Skill and tool links are re-created only for the skills/tools that
-  // were also copied.
+  // the new project. Tool links are re-created only for the tools that were also copied.
   if (inc.agents) {
     for (const a of await listAgents(sourceProjectId)) {
       const agentInput: NewAgentInput = {
@@ -591,11 +552,11 @@ export async function copyProject(
       const { agent } = await createAgent(newProject.id, agentInput);
       agentMap.set(a.id, agent.id);
 
-      if (inc.skills) {
-        const skillIds = (await listAgentSkills(a.id))
-          .map((s) => skillMap.get(s.id))
-          .filter((id): id is number => id != null);
-        if (skillIds.length > 0) await setAgentSkills(agent.id, newProject.id, skillIds);
+      // The skill library belongs to the team, so the copy enables the same skills on
+      // the agent — only inside the source team, where those skills exist.
+      if (inc.skills && sameTeam) {
+        const skillIds = (await listAgentSkills(a.id)).map((s) => s.id);
+        if (skillIds.length > 0) await setAgentSkills(agent.id, ownerTeam.id, skillIds);
       }
       if (inc.tools) {
         const toolIds = (await listAgentToolLinks(a.id))

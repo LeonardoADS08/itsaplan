@@ -844,19 +844,20 @@ export const notificationDelivery = pgTable(
   ],
 );
 
-// Skill library for a project. A skill is a unit of knowledge given to an internal
-// agent (Anthropic Agent Skill format): a SKILL.md with YAML frontmatter
-// (name/description) plus optional reference files, no executable scripts. The
-// markdown and reference bytes live in the S3 object store under s3_prefix; `files`
-// lists the reference file paths and their object keys. Sourced from an upload,
-// inline text, or a GitHub URL. Enabled on an agent via agent_skill_link.
+// Skill library of a team, shared by every project it owns. A skill is a unit of
+// knowledge given to an internal agent (Anthropic Agent Skill format): a SKILL.md
+// with YAML frontmatter (name/description) plus optional reference files, no
+// executable scripts. The markdown and reference bytes live in the S3 object store
+// under s3_prefix; `files` lists the reference file paths and their object keys.
+// Sourced from an upload, inline text, or a GitHub URL. Enabled on an agent via
+// agent_skill_link.
 export const agentSkill = pgTable(
   'agent_skill',
   {
     id: serial('id').primaryKey(),
-    projectId: integer('project_id')
+    teamId: integer('team_id')
       .notNull()
-      .references(() => project.id, { onDelete: 'cascade' }),
+      .references(() => team.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     description: text('description').notNull().default(''),
     source: text('source').notNull(),
@@ -868,9 +869,9 @@ export const agentSkill = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique().on(t.projectId, t.name),
+    unique().on(t.teamId, t.name),
     check('agent_skill_source_check', sql`${t.source} IN ('upload', 'inline', 'github')`),
-    index('agent_skill_project_idx').on(t.projectId),
+    index('agent_skill_team_idx').on(t.teamId),
   ],
 );
 
