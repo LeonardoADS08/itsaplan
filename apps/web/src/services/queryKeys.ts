@@ -106,23 +106,21 @@ export const qk = {
   // Everything integration-scoped. A credential belongs to the team, so changing one
   // is invalidated at this prefix: the pickers its projects fill from go stale too.
   integrations: ['integrations'] as const,
-  // The team's stored credentials and the same catalog the team panel reads.
+  // The team's stored credentials, the integration catalog and an LLM provider's
+  // models (the agent model select and the tool forms).
   teamCredentials: (teamId: number) => ['integrations', 'team', teamId] as const,
-  teamIntegrationCatalog: (teamId: number) => ['integrations', 'team', teamId, 'catalog'] as const,
-  // The integration catalog and an LLM provider's models, as a project reads them
-  // (the agent model select and the tool forms).
-  integrationCatalog: (projectKey: string) => ['integrations', projectKey, 'catalog'] as const,
-  integrationModels: (projectKey: string, provider: string) =>
-    ['integrations', projectKey, 'models', provider] as const,
+  integrationCatalog: (teamId: number) => ['integrations', 'team', teamId, 'catalog'] as const,
+  integrationModels: (teamId: number, provider: string) =>
+    ['integrations', 'team', teamId, 'models', provider] as const,
   // The connected integrations as picker options, under the same prefix so a
   // credential mutation refreshes them too.
-  integrationOptions: (projectKey: string, kind?: string) =>
-    ['integrations', projectKey, 'options', kind ?? 'all'] as const,
+  integrationOptions: (teamId: number, kind?: string) =>
+    ['integrations', 'team', teamId, 'options', kind ?? 'all'] as const,
   // The team skill library (the team's Skills section).
   agentSkills: (teamId: number) => ['agentSkills', teamId] as const,
-  // Configured tools (the Tools page) and the tools enabled on one agent (the agent
-  // editor's Tools section).
-  configuredTools: (projectKey: string) => ['configuredTools', projectKey] as const,
+  // The team's configured tools (its Tools section) and the tools enabled on one agent
+  // (the agent editor's Tools section).
+  configuredTools: (teamId: number) => ['configuredTools', teamId] as const,
   agentToolLinks: (projectKey: string, agentId: number) =>
     ['aiAgents', projectKey, agentId, 'tool-configs'] as const,
   issue: (id: number) => ['issue', id] as const,

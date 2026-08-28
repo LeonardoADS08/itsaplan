@@ -10,16 +10,14 @@ import {
   SlidersHorizontal,
   Tags,
   Webhook,
-  Wrench,
   Zap,
 } from 'lucide-react';
 import type { PermissionResource } from '@/lib/api';
 
-// The sidebar group a section is listed under: the project-level general
-// settings, workflow configuration, automation/integrations, or the AI section
-// (agents and tools). 'ai-team' and 'ai' sections are listed in the main
-// sidebar's AI Team group — 'ai-team' at its top level, 'ai' inside the
-// "Configure" item — not in the project settings sidebar.
+// The sidebar group a section is listed under: the project-level general settings,
+// workflow configuration, automation/integrations, or the AI section. 'ai-team' and
+// 'ai' sections are listed in the main sidebar's AI Team group — 'ai-team' at its top
+// level, 'ai' inside the "Configure" item — not in the project settings sidebar.
 export type SettingsGroup = 'general' | 'configuration' | 'automation' | 'ai' | 'ai-team';
 
 // The project settings sections, each mounted as its own page at
@@ -110,15 +108,8 @@ export const AI_AGENTS_SECTION: SettingsSection = {
   group: 'ai',
 };
 
-export const AGENT_TOOLS_SECTION: SettingsSection = {
-  slug: 'agent-tools',
-  icon: Wrench,
-  resource: 'agent_tools',
-  group: 'ai',
-};
-
 // The "Configure" nav items, in sidebar order.
-export const AI_SECTIONS: SettingsSection[] = [AI_AGENTS_SECTION, AGENT_TOOLS_SECTION];
+export const AI_SECTIONS: SettingsSection[] = [AI_AGENTS_SECTION];
 
 // The settings sections split by sidebar group.
 export const GENERAL_SECTIONS = SETTINGS_SECTIONS.filter((s) => s.group === 'general');

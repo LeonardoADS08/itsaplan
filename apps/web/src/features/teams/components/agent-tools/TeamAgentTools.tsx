@@ -1,35 +1,37 @@
 import { useMemo, useState } from 'react';
-import type { ConfiguredTool, ProjectDetail } from '@/lib/api';
+import { useTranslations } from 'next-intl';
+import type { ConfiguredTool, IntegrationMeta, ResourcePermissions } from '@/lib/api';
 import { useConfiguredToolsQuery, useDeleteConfiguredTool } from '@/services/customTools.service';
-import { useIntegrationCatalogQuery } from '@/services/integrations.service';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { EmptyState } from '@/components/common/page/EmptyState';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
-import SettingsConfirmDeleteDialog from '../crud/SettingsConfirmDeleteDialog';
-import { useSettingsCan } from '../../context/settingsPermission';
-import { ToolConfigRow } from './ToolConfigRow';
+import ConfirmDialog from '@/components/common/overlay/ConfirmDialog';
 import { integrationLabel } from '@/utils/integrationLabels';
-import { useTranslations } from 'next-intl';
+import { ToolConfigRow } from './ToolConfigRow';
 
-// Project settings for configured tools: a catalog tool bound to an integration
-// credential. Adding picks one or more tools of one integration and a credential of
-// that integration; deleting confirms first. Enabling a configured tool on an agent is
-// done on the agent editor.
-export default function SettingsAgentTools({ project }: { project: ProjectDetail }) {
-  const t = useTranslations('settings.tools');
+// The team's configured tools as a table: a catalog tool bound to an integration
+// credential, callable by the internal agents of every project the team owns. Adding
+// happens in a dialog opened from the section header; deleting confirms first.
+// Enabling a configured tool on an agent is done in the agent editor.
+export default function TeamAgentTools({
+  teamId,
+  catalog,
+  permissions,
+}: {
+  teamId: number;
+  catalog: IntegrationMeta[];
+  permissions: ResourcePermissions;
+}) {
+  const t = useTranslations('teams.tools');
   const tCommon = useTranslations('common');
-  const projectKey = project.project.key;
-  const toolsQuery = useConfiguredToolsQuery(projectKey);
+  const toolsQuery = useConfiguredToolsQuery(teamId);
   const tools = toolsQuery.data ?? [];
-  const catalogQuery = useIntegrationCatalogQuery(projectKey);
-  const catalog = useMemo(() => catalogQuery.data ?? [], [catalogQuery.data]);
-  const deleteTool = useDeleteConfiguredTool(projectKey);
-  const can = useSettingsCan();
+  const deleteTool = useDeleteConfiguredTool(teamId);
 
   const [deleting, setDeleting] = useState<ConfiguredTool | null>(null);
 
   const catalogTools = useMemo(() => catalog.flatMap((i) => i.tools), [catalog]);
-  const catalogTool = (toolKey: string) => catalogTools.find((t) => t.key === toolKey);
+  const catalogTool = (toolKey: string) => catalogTools.find((tool) => tool.key === toolKey);
   const toolLabel = (toolKey: string) => catalogTool(toolKey)?.label ?? toolKey;
   const toolScopes = (toolKey: string) => catalogTool(toolKey)?.scopes ?? [];
 
@@ -40,7 +42,7 @@ export default function SettingsAgentTools({ project }: { project: ProjectDetail
       ) : tools.length === 0 ? (
         <EmptyState title={t('empty')} description={t('emptyHint')} />
       ) : (
-        <div className="space-y-4">
+        <div className="overflow-x-auto">
           <Table className="min-w-[760px] table-fixed">
             <colgroup>
               <col className="w-[34%]" />
@@ -68,7 +70,7 @@ export default function SettingsAgentTools({ project }: { project: ProjectDetail
                   toolLabel={toolLabel(tool.toolKey)}
                   integrationLabel={integrationLabel(catalog, tool.integrationKey)}
                   scopes={toolScopes(tool.toolKey)}
-                  canDelete={can('delete')}
+                  canDelete={permissions.delete}
                   onDelete={() => setDeleting(tool)}
                 />
               ))}
@@ -78,16 +80,19 @@ export default function SettingsAgentTools({ project }: { project: ProjectDetail
       )}
 
       {deleting && (
-        <SettingsConfirmDeleteDialog
+        <ConfirmDialog
           title={t('delete')}
           confirmLabel={t('delete')}
-          message={<>{t('deleteMessage', { tool: toolLabel(deleting.toolKey) })}</>}
           onConfirm={async () => {
             await deleteTool.mutateAsync(deleting.id);
             setDeleting(null);
           }}
           onClose={() => setDeleting(null)}
-        />
+        >
+          <div className="text-sm text-muted-foreground">
+            {t('deleteMessage', { tool: toolLabel(deleting.toolKey) })}
+          </div>
+        </ConfirmDialog>
       )}
     </>
   );

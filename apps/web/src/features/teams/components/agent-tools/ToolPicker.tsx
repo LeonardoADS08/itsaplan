@@ -20,7 +20,7 @@ export function ToolPicker({
   options: ToolOption[];
   onSubmit: (tools: ToolOption[]) => void;
 }) {
-  const t = useTranslations('settings.tools');
+  const t = useTranslations('teams.tools');
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
 

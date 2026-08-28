@@ -2,7 +2,10 @@ import { t } from 'elysia';
 
 export { agentParams } from '../model';
 
-export const toolParams = t.Object({ projectKey: t.String(), agentToolId: t.Numeric() });
+export const toolParams = t.Object({
+  teamId: t.Numeric(),
+  agentToolId: t.Numeric({ description: 'Configured tool id from list_configured_tools.' }),
+});
 
 // A built-in agent action in the catalog (ToolMeta from ../core/runtime/tools).
 // `always` marks the read-only actions granted unconditionally, that cannot be
@@ -20,7 +23,7 @@ export const ToolMetaListResponse = t.Array(ToolMetaResponse);
 // The tool catalog itself is served by the integrations catalog (kind 'tool').
 export const AgentToolResponse = t.Object({
   id: t.Number(),
-  projectId: t.Number(),
+  teamId: t.Number(),
   toolKey: t.String(),
   credentialId: t.Number(),
   integrationKey: t.String(),

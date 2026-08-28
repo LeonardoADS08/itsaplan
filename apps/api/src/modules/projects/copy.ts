@@ -11,7 +11,6 @@ import {
   projectView,
   projectDashboard,
   projectAction,
-  agentTool,
   webhook,
   projectSetting,
 } from '@repo/db';
@@ -35,8 +34,9 @@ import { nextCronRun } from '#modules/agents/schedules/cron';
 // entity. Some sections depend on others (a view's filters reference
 // states/types/labels/fields); those dependencies are force-enabled in
 // normalizeInclude so a partial selection can never leave an id pointing at the
-// source project. `skills` carries no entity of its own — the library belongs to the
-// team — only which of the team's skills the copied agents keep enabled.
+// source project. `skills` and `tools` carry no entity of their own — both belong to
+// the team — only which of the team's skills and tools the copied agents keep
+// enabled.
 export interface CopyProjectInclude {
   states: boolean;
   issueTypes: boolean;
@@ -231,7 +231,6 @@ export async function copyProject(
     field: new Map(),
     option: new Map(),
   };
-  const toolMap = new Map<number, number>();
   const agentMap = new Map<number, number>();
 
   const source = await getProjectById(sourceProjectId);
@@ -498,29 +497,12 @@ export async function copyProject(
       }
     }
 
-    // Configured tools: each binds a tool key to one integration credential, so a copy
-    // into another team leaves the tools behind.
-    if (inc.tools && sameTeam) {
-      const toolRows = await tx
-        .select()
-        .from(agentTool)
-        .where(eq(agentTool.projectId, sourceProjectId))
-        .orderBy(agentTool.id);
-      for (const tRow of toolRows) {
-        const [created] = await tx
-          .insert(agentTool)
-          .values({ projectId: proj.id, toolKey: tRow.toolKey, credentialId: tRow.credentialId })
-          .returning({ id: agentTool.id });
-        toolMap.set(tRow.id, created.id);
-      }
-    }
-
     return proj;
   });
 
   // Agents: each gets its own bot user and API key through createAgent. An external
   // agent's key is regenerated and cannot be recovered here — its operator resets it in
-  // the new project. Tool links are re-created only for the tools that were also copied.
+  // the new project.
   if (inc.agents) {
     for (const a of await listAgents(sourceProjectId)) {
       const agentInput: NewAgentInput = {
@@ -558,11 +540,11 @@ export async function copyProject(
         const skillIds = (await listAgentSkills(a.id)).map((s) => s.id);
         if (skillIds.length > 0) await setAgentSkills(agent.id, ownerTeam.id, skillIds);
       }
-      if (inc.tools) {
-        const toolIds = (await listAgentToolLinks(a.id))
-          .map((tRow) => toolMap.get(tRow.id))
-          .filter((id): id is number => id != null);
-        if (toolIds.length > 0) await setAgentTools(agent.id, newProject.id, toolIds);
+      // Configured tools belong to the team too, so the copy enables the same tools on
+      // the agent — only inside the source team, where those tools exist.
+      if (inc.tools && sameTeam) {
+        const toolIds = (await listAgentToolLinks(a.id)).map((tRow) => tRow.id);
+        if (toolIds.length > 0) await setAgentTools(agent.id, ownerTeam.id, toolIds);
       }
     }
   }

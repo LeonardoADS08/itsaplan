@@ -118,11 +118,12 @@ export interface Team {
   // How many of those members are owners: the last one cannot leave.
   ownerCount: number;
   // The roles the team's projects assign from, the integration credentials they run
-  // on, and the skills their agents load. Counted here so the page shows them beside
-  // the section without opening it.
+  // on, and the skills and tools their agents use. Counted here so the page shows them
+  // beside the section without opening it.
   roleCount: number;
   integrationCount: number;
   skillCount: number;
+  toolCount: number;
   createdAt: string;
 }
 
@@ -585,7 +586,7 @@ export interface GithubSkillCandidate {
 // AgentTool, which is a built-in capability tool in the agent's Actions list.)
 export interface ConfiguredTool {
   id: number;
-  projectId: number;
+  teamId: number;
   toolKey: string;
   credentialId: number;
   integrationKey: string;
@@ -3301,22 +3302,18 @@ export const api = {
 
   // Integrations: the team's stored credentials for LLM providers and tool
   // integrations, shared by every project it owns. The secret is write-only —
-  // responses carry only a redacted view. The catalog and the models a provider offers
-  // are read through the project that needs them; the team panel reads the same
-  // catalog under its own id, knowing no project.
-  listIntegrationCatalog: (projectKey: string) =>
-    request<IntegrationMeta[]>(`/projects/${projectKey}/integrations/catalog`),
-  listTeamIntegrationCatalog: (teamId: number) =>
+  // responses carry only a redacted view.
+  listIntegrationCatalog: (teamId: number) =>
     request<IntegrationMeta[]>(`/teams/${teamId}/integrations/catalog`),
-  listIntegrationModels: (projectKey: string, provider: string) =>
+  listIntegrationModels: (teamId: number, provider: string) =>
     request<ProviderModel[]>(
-      `/projects/${projectKey}/integrations/models/${encodeURIComponent(provider)}`,
+      `/teams/${teamId}/integrations/models/${encodeURIComponent(provider)}`,
     ),
   listCredentials: (teamId: number) =>
     request<IntegrationCredential[]>(`/teams/${teamId}/integrations`),
-  listIntegrationOptions: (projectKey: string, kind?: IntegrationKind) =>
+  listIntegrationOptions: (teamId: number, kind?: IntegrationKind) =>
     request<IntegrationOption[]>(
-      `/projects/${projectKey}/integrations/options${kind ? `?kind=${kind}` : ''}`,
+      `/teams/${teamId}/integrations/options${kind ? `?kind=${kind}` : ''}`,
     ),
   createCredential: (teamId: number, input: NewCredentialInput) =>
     request<IntegrationCredential>(`/teams/${teamId}/integrations`, {
@@ -3387,17 +3384,17 @@ export const api = {
       body: JSON.stringify({ skillIds }),
     }),
 
-  // Configured tools: a project's tools bound to a credential, and the tools enabled
-  // on one agent. The tool catalog itself comes from the integrations catalog.
-  listConfiguredTools: (projectKey: string) =>
-    request<ConfiguredTool[]>(`/projects/${projectKey}/agent-tools`),
-  createConfiguredTool: (projectKey: string, input: NewConfiguredToolInput) =>
-    request<ConfiguredTool>(`/projects/${projectKey}/agent-tools`, {
+  // Configured tools: a team's tools bound to a credential, and the tools enabled on
+  // one agent. The tool catalog itself comes from the integrations catalog.
+  listConfiguredTools: (teamId: number) =>
+    request<ConfiguredTool[]>(`/teams/${teamId}/agent-tools`),
+  createConfiguredTool: (teamId: number, input: NewConfiguredToolInput) =>
+    request<ConfiguredTool>(`/teams/${teamId}/agent-tools`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-  deleteConfiguredTool: (projectKey: string, agentToolId: number) =>
-    request<void>(`/projects/${projectKey}/agent-tools/${agentToolId}`, { method: 'DELETE' }),
+  deleteConfiguredTool: (teamId: number, agentToolId: number) =>
+    request<void>(`/teams/${teamId}/agent-tools/${agentToolId}`, { method: 'DELETE' }),
   listAgentToolLinks: (projectKey: string, agentId: number) =>
     request<ConfiguredTool[]>(`/projects/${projectKey}/ai-agents/${agentId}/tool-configs`),
   setAgentTools: (projectKey: string, agentId: number, agentToolIds: number[]) =>

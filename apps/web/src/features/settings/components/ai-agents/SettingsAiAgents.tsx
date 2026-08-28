@@ -25,7 +25,7 @@ export default function SettingsAiAgents({ project }: { project: ProjectDetail }
   const agents = agentsQuery.data ?? [];
   const deleteAgent = useDeleteAiAgent(projectKey);
   // The integration catalog maps a provider key to a readable label for the meta row.
-  const catalog = useIntegrationCatalogQuery(projectKey).data ?? [];
+  const catalog = useIntegrationCatalogQuery(project.project.teamId).data ?? [];
 
   // The open sheet: null means closed, agentId null means create, a set id means edit
   // that agent. Held in a single object so `null` distinguishes closed from create.

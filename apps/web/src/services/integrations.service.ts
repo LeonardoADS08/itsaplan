@@ -16,31 +16,21 @@ export function useCredentialsQuery(teamId: number) {
 }
 
 // The connected integrations as picker options, for the agent and tool forms. Open
-// to any project member, unlike the credential list above.
-export function useIntegrationOptionsQuery(projectKey: string | null, kind?: IntegrationKind) {
+// to any team member, unlike the credential list above.
+export function useIntegrationOptionsQuery(teamId: number | null, kind?: IntegrationKind) {
   return useQuery({
-    queryKey: qk.integrationOptions(projectKey ?? '', kind),
-    queryFn: () => api.listIntegrationOptions(projectKey!, kind),
-    enabled: projectKey != null,
+    queryKey: qk.integrationOptions(teamId ?? 0, kind),
+    queryFn: () => api.listIntegrationOptions(teamId!, kind),
+    enabled: teamId != null,
   });
 }
 
 // The integrations the instance offers. Changes only on deploy, so it is cached
 // for the session.
-export function useIntegrationCatalogQuery(projectKey: string | null) {
+export function useIntegrationCatalogQuery(teamId: number | null) {
   return useQuery({
-    queryKey: qk.integrationCatalog(projectKey ?? ''),
-    queryFn: () => api.listIntegrationCatalog(projectKey!),
-    enabled: projectKey != null,
-    staleTime: Infinity,
-  });
-}
-
-// The same catalog for the team panel, which knows the team and no project.
-export function useTeamIntegrationCatalogQuery(teamId: number | null) {
-  return useQuery({
-    queryKey: qk.teamIntegrationCatalog(teamId ?? 0),
-    queryFn: () => api.listTeamIntegrationCatalog(teamId!),
+    queryKey: qk.integrationCatalog(teamId ?? 0),
+    queryFn: () => api.listIntegrationCatalog(teamId!),
     enabled: teamId != null,
     staleTime: Infinity,
   });
@@ -48,11 +38,11 @@ export function useTeamIntegrationCatalogQuery(teamId: number | null) {
 
 // Models an LLM provider offers (from the models.dev registry). Fetched only when a
 // provider is chosen; cached for the session.
-export function useIntegrationModelsQuery(projectKey: string, provider: string | null) {
+export function useIntegrationModelsQuery(teamId: number | null, provider: string | null) {
   return useQuery({
-    queryKey: qk.integrationModels(projectKey, provider ?? ''),
-    queryFn: () => api.listIntegrationModels(projectKey, provider!),
-    enabled: provider != null && provider.length > 0,
+    queryKey: qk.integrationModels(teamId ?? 0, provider ?? ''),
+    queryFn: () => api.listIntegrationModels(teamId!, provider!),
+    enabled: teamId != null && provider != null && provider.length > 0,
     staleTime: Infinity,
   });
 }

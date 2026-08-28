@@ -9,6 +9,7 @@ import {
   Plug,
   ShieldCheck,
   Users,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -19,8 +20,9 @@ import { SectionNav, type SectionNavItem } from '@/components/common/page/Sectio
 // The sections of the open team, as the page's second rail: the team itself, its
 // projects and members, and what it configures for every project it owns — the roles
 // they assign from, the integration credentials their agents run on, the skills those
-// agents load, and the providers they deliver notifications through. The counts come
-// with the team list, so each is shown before its section is opened.
+// agents load, the tools they can call, and the providers they deliver notifications
+// through. The counts come with the team list, so each is shown before its section is
+// opened.
 export default function TeamSectionNav({ team }: { team: Team }) {
   const t = useTranslations('teams.sections');
   const pathname = usePathname();
@@ -47,6 +49,7 @@ export default function TeamSectionNav({ team }: { team: Team }) {
     section('roles', t('roles.title'), ShieldCheck, team.roleCount),
     section('integrations', t('integrations.title'), Plug, team.integrationCount),
     section('agent-skills', t('agentSkills.title'), BookText, team.skillCount),
+    section('agent-tools', t('agentTools.title'), Wrench, team.toolCount),
     section('notifications', t('notifications.title'), Bell),
   ];
 

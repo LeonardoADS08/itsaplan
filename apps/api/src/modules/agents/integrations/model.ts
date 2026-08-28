@@ -6,7 +6,7 @@ export const credentialParams = t.Object({
 });
 
 export const providerParams = t.Object({
-  projectKey: t.String(),
+  teamId: t.Numeric(),
   provider: t.String({ description: "LLM provider key from list_integrations, e.g. 'anthropic'." }),
 });
 

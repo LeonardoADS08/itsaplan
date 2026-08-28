@@ -92,10 +92,6 @@
     "ai-agents": {
       "label": "Agents",
       "description": "Bot users you can delegate issues to."
-    },
-    "agent-tools": {
-      "label": "Tools",
-      "description": "Tools agents can call, each connected to an integration credential."
     }
   }
 }

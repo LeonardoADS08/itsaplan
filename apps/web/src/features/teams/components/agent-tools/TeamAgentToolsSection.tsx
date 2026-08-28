@@ -8,32 +8,31 @@ import { useIntegrationCatalogQuery } from '@/services/integrations.service';
 import SectionPageView from '@/components/common/page/SectionPageView';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
 import { Button } from '@/components/ui/button';
-import { CredentialDialog } from './CredentialDialog';
-import TeamIntegrations from './TeamIntegrations';
+import { ToolConfigDialog } from './ToolConfigDialog';
+import TeamAgentTools from './TeamAgentTools';
 
-// The integrations of a team: the API keys of AI providers and the credentials of
-// tool integrations, shared by every project the team owns. Secrets are write-only,
-// so the list shows only a masked view.
-export default function TeamIntegrationsSection({ teamId }: { teamId: number }) {
+// The configured tools of a team: external integrations the internal agents of its
+// projects can call, each bound to one of the team's credentials.
+export default function TeamAgentToolsSection({ teamId }: { teamId: number }) {
   const t = useTranslations('teams');
   const { data: team } = useTeamQuery(teamId);
-  const permissions = team?.permissions.integrations;
-  // The catalog names the integrations and builds the credential form, so it is
-  // fetched for anyone who may read or add a credential.
+  const permissions = team?.permissions.agent_tools;
+  // The catalog names the tools and their integrations, so it is fetched for anyone
+  // who may read the list or add a tool.
   const canSee = !!permissions && (permissions.read || permissions.create);
   const catalog = useIntegrationCatalogQuery(canSee ? teamId : null).data ?? [];
   const [creating, setCreating] = useState(false);
 
   return (
     <SectionPageView
-      title={t('sections.integrations.title')}
-      description={t('sections.integrations.description')}
+      title={t('sections.agentTools.title')}
+      description={t('sections.agentTools.description')}
       wide
       actions={
         permissions?.create ? (
           <Button size="sm" className="h-8 gap-1.5" onClick={() => setCreating(true)}>
             <Plus className="size-3.5" />
-            {t('integrations.add')}
+            {t('tools.add')}
           </Button>
         ) : undefined
       }
@@ -41,16 +40,16 @@ export default function TeamIntegrationsSection({ teamId }: { teamId: number }) 
       {!permissions ? (
         <ListSkeleton rows={3} rowClassName="h-12" />
       ) : !permissions.read ? (
-        <p className="text-sm text-muted-foreground">{t('integrations.noAccess')}</p>
+        <p className="text-sm text-muted-foreground">{t('tools.noAccess')}</p>
       ) : (
-        <TeamIntegrations teamId={teamId} catalog={catalog} permissions={permissions} />
+        <TeamAgentTools teamId={teamId} catalog={catalog} permissions={permissions} />
       )}
 
-      {creating && (
-        <CredentialDialog
+      {creating && team && (
+        <ToolConfigDialog
           teamId={teamId}
+          teamName={team.name}
           catalog={catalog}
-          existing={null}
           onClose={() => setCreating(false)}
         />
       )}

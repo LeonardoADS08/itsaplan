@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useConfiguredToolsQuery, useCreateConfiguredTool } from '@/services/customTools.service';
+import { useIntegrationOptionsQuery } from '@/services/integrations.service';
 import { IntegrationIcon } from '@/components/common/IntegrationIcon';
 import type { ToolOption } from './ToolConfigDialog';
 import { useTranslations } from 'next-intl';
@@ -27,26 +28,28 @@ const credLabel = (c: IntegrationOption) => c.label ?? `Credential #${c.id}`;
 // 409 for a duplicate and that would abort the rest of the batch. `onBack` returns to the
 // tool picker.
 export function ToolCredentialStep({
-  projectKey,
+  teamId,
   tools,
-  credentials,
   onBack,
   onDone,
 }: {
-  projectKey: string;
+  teamId: number;
   tools: ToolOption[];
-  credentials: IntegrationOption[];
   onBack: () => void;
   onDone: () => void;
 }) {
-  const t = useTranslations('settings.tools');
+  const t = useTranslations('teams.tools');
   const tCommon = useTranslations('common');
   const { integrationKey, integrationLabel } = tools[0];
+  const credentials = useIntegrationOptionsQuery(teamId, 'tool').data ?? [];
   const matching = credentials.filter((c) => c.integrationKey === integrationKey);
-  const [credentialId, setCredentialId] = useState<number | null>(matching[0]?.id ?? null);
+  // The credential list arrives with the query, so the choice falls back to the first
+  // one rather than being seeded into state.
+  const [picked, setPicked] = useState<number | null>(null);
+  const credentialId = picked ?? matching[0]?.id ?? null;
   const [busy, setBusy] = useState(false);
 
-  const configured = useConfiguredToolsQuery(projectKey).data ?? [];
+  const configured = useConfiguredToolsQuery(teamId).data ?? [];
   const pending = tools.filter(
     (tool) =>
       !configured.some((c) => c.toolKey === tool.toolKey && c.credentialId === credentialId),
@@ -54,7 +57,7 @@ export function ToolCredentialStep({
   const skipped = tools.length - pending.length;
   const scopes = [...new Set(tools.flatMap((tool) => tool.scopes))];
 
-  const create = useCreateConfiguredTool(projectKey);
+  const create = useCreateConfiguredTool(teamId);
   const canSubmit = credentialId != null && pending.length > 0 && !busy;
 
   async function submit() {
@@ -125,7 +128,7 @@ export function ToolCredentialStep({
         ) : (
           <Select
             value={credentialId != null ? String(credentialId) : ''}
-            onValueChange={(v) => setCredentialId(Number(v))}
+            onValueChange={(v) => setPicked(Number(v))}
           >
             <SelectTrigger>
               <SelectValue placeholder={t('chooseCredential')} />

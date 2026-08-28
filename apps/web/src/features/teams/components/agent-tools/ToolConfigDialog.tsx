@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { IntegrationMeta, IntegrationOption } from '@/lib/api';
+import type { IntegrationMeta } from '@/lib/api';
 import Modal from '@/components/common/overlay/Modal';
 import { ToolPicker } from './ToolPicker';
 import { ToolCredentialStep } from './ToolCredentialStep';
@@ -20,17 +20,17 @@ export interface ToolOption {
 // the searchable, grouped catalog (ToolPicker), then pick a credential of that
 // integration to run them on (ToolCredentialStep).
 export function ToolConfigDialog({
-  projectKey,
+  teamId,
+  teamName,
   catalog,
-  credentials,
   onClose,
 }: {
-  projectKey: string;
+  teamId: number;
+  teamName: string;
   catalog: IntegrationMeta[];
-  credentials: IntegrationOption[];
   onClose: () => void;
 }) {
-  const t = useTranslations('settings.tools');
+  const t = useTranslations('teams.tools');
   const toolOptions = useMemo<ToolOption[]>(
     () =>
       catalog
@@ -51,12 +51,11 @@ export function ToolConfigDialog({
   const [tools, setTools] = useState<ToolOption[]>([]);
 
   return (
-    <Modal title={t('add')} scope={projectKey} onClose={onClose} wide>
+    <Modal title={t('add')} scope={teamName} onClose={onClose} wide>
       {tools.length > 0 ? (
         <ToolCredentialStep
-          projectKey={projectKey}
+          teamId={teamId}
           tools={tools}
-          credentials={credentials}
           onBack={() => setTools([])}
           onDone={onClose}
         />

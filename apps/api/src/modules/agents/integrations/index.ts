@@ -5,7 +5,6 @@ import { authContext } from '#shared/auth-context';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
-import { getProjectTeamId } from '#modules/projects/service';
 import { teamParams } from '#modules/teams/model';
 import { INTEGRATION_CATALOG, integrationKind } from './catalog';
 import { listModelsForProvider } from './provider-models';
@@ -23,17 +22,14 @@ import {
 } from './model';
 import { listCredentials, createCredential, updateCredential, deleteCredential } from './service';
 
-// The credential store belongs to the team and serves every project it owns, so the
-// writes sit under :teamId, gated by the integrations resource on the team: its owner
+// The credential store belongs to the team and serves every project it owns, so every
+// route sits under :teamId, gated by the integrations resource on the team: its owner
 // and managers always, an owner of one of its projects always, another member when a
-// project role of theirs grants it.
-//
-// The reads a project needs — the catalog, a provider's models, the picker options and
-// the credential list — stay under :projectKey, the same as list_roles for a resource
-// the team also owns. That is what keeps them behind the per-project MCP toggle: the
-// team guards resolve membership only, so a tool tagged on a :teamId route would answer
-// an MCP call against a project that has MCP off. The writes are not exposed as MCP
-// tools, because a credential body carries the provider's secret in plain text.
+// project role of theirs grants it. The catalog, a provider's models and the picker
+// options are open to any team member — the first two are constants of this codebase
+// and a public registry, and the options carry no credential field. The writes are not
+// exposed as MCP tools, because a credential body carries the provider's secret in
+// plain text.
 export const integrationRoutes = new Elysia({
   name: 'integrations',
   detail: { tags: ['Integrations'] },
@@ -41,10 +37,11 @@ export const integrationRoutes = new Elysia({
   .use(authContext)
   .use(guards)
 
-  // The frontend builds the credential form from credentialSchema. Open to any project
-  // member: the catalog is a constant in this codebase, not project data.
-  .get('/projects/:projectKey/integrations/catalog', () => INTEGRATION_CATALOG, {
-    projectMember: true,
+  // The frontend builds the credential form from credentialSchema. Open to any team
+  // member: the catalog is a constant in this codebase, not team data.
+  .get('/teams/:teamId/integrations/catalog', () => INTEGRATION_CATALOG, {
+    params: teamParams,
+    teamMember: true,
     response: { 200: IntegrationCatalogResponse, ...accessErrors },
     detail: {
       summary: 'List available integrations',
@@ -56,14 +53,14 @@ export const integrationRoutes = new Elysia({
   })
 
   // The models an LLM provider offers, from the models.dev registry. Backs the model
-  // select in the agent config UI. Open to any project member: the list comes from a
-  // public registry and holds no project data.
+  // select in the agent config UI. Open to any team member: the list comes from a
+  // public registry and holds no team data.
   .get(
-    '/projects/:projectKey/integrations/models/:provider',
+    '/teams/:teamId/integrations/models/:provider',
     ({ params }) => listModelsForProvider(params.provider),
     {
       params: providerParams,
-      projectMember: true,
+      teamMember: true,
       response: { 200: ProviderModelListResponse, ...accessErrors },
       detail: {
         summary: "List a provider's models",
@@ -76,13 +73,13 @@ export const integrationRoutes = new Elysia({
     },
   )
 
-  // Fills the credential selects in the agent and tool forms. Open to any project
-  // member, and deliberately separate from the credential list below: that one is the
+  // Fills the credential selects in the agent and tool forms. Open to any team member,
+  // and deliberately separate from the credential list below: that one is the
   // integrations admin view and may grow fields this one must not carry.
   .get(
-    '/projects/:projectKey/integrations/options',
-    async ({ project, query }) => {
-      const credentials = await listCredentials(await getProjectTeamId(project.id));
+    '/teams/:teamId/integrations/options',
+    async ({ membership, query }) => {
+      const credentials = await listCredentials(membership.teamId);
       return credentials.flatMap((c) => {
         const kind = integrationKind(c.integrationKey);
         if (!kind || (query.kind && kind !== query.kind)) return [];
@@ -90,8 +87,9 @@ export const integrationRoutes = new Elysia({
       });
     },
     {
+      params: teamParams,
       query: integrationOptionsQuery,
-      projectMember: true,
+      teamMember: true,
       response: { 200: IntegrationOptionListResponse, ...commonErrors },
       detail: {
         summary: 'List integration options',
@@ -101,44 +99,17 @@ export const integrationRoutes = new Elysia({
     },
   )
 
-  // The admin view of what the project's team has stored, for a caller who reaches it
-  // through the project. The UI reads the same list under :teamId; this one is what an
-  // MCP client calls, so it carries the tool tag.
-  .get(
-    '/projects/:projectKey/integrations',
-    async ({ project }) => listCredentials(await getProjectTeamId(project.id)),
-    {
-      permission: ['integrations', 'read'],
-      response: { 200: CredentialListResponse, ...accessErrors },
-      detail: {
-        summary: "List the team's credentials",
-        description:
-          "List the integration credentials of the project's team, secrets redacted. The id " +
-          'of a credential on an LLM provider is what modelCredentialId on create_ai_agent / ' +
-          'update_ai_agent takes. A credential is added in the UI, not here.',
-        ...mcpTool('list_integration_credentials'),
-      },
-    },
-  )
-
-  // The same catalog for the team panel, which knows the team and no project.
-  .get('/teams/:teamId/integrations/catalog', () => INTEGRATION_CATALOG, {
-    params: teamParams,
-    teamMember: true,
-    response: { 200: IntegrationCatalogResponse, ...accessErrors },
-    detail: {
-      summary: 'List available integrations for a team',
-      description: "The integration catalog, for the team panel's integrations tab.",
-    },
-  })
-
   .get('/teams/:teamId/integrations', ({ membership }) => listCredentials(membership.teamId), {
     params: teamParams,
     teamPermission: ['integrations', 'read'],
     response: { 200: CredentialListResponse, ...accessErrors },
     detail: {
       summary: 'List credentials',
-      description: "List a team's integration credentials, secrets redacted.",
+      description:
+        "List a team's integration credentials, secrets redacted. The id of a credential on " +
+        'an LLM provider is what modelCredentialId on create_ai_agent / update_ai_agent takes. ' +
+        'A credential is added in the UI, not here.',
+      ...mcpTool('list_integration_credentials'),
     },
   })
 

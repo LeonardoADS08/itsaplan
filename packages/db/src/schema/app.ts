@@ -893,18 +893,19 @@ export const agentSkillLink = pgTable(
   ],
 );
 
-// A custom tool configured in a project: a tool from the catalog (tool_key) bound to
-// one integration_credential. The tool's integration owns the secret, so the tool
-// holds no secret of its own — it references the credential the runtime decrypts at
-// call time. Different tools of the same integration may be bound to different
-// credentials (e.g. two Jina keys). Enabled on an agent via agent_tool_link.
+// A tool configured for a team, shared by every project it owns: a tool from the
+// catalog (tool_key) bound to one integration_credential. The tool's integration owns
+// the secret, so the tool holds no secret of its own — it references the credential
+// the runtime decrypts at call time. Different tools of the same integration may be
+// bound to different credentials (e.g. two Jina keys). Enabled on an agent via
+// agent_tool_link.
 export const agentTool = pgTable(
   'agent_tool',
   {
     id: serial('id').primaryKey(),
-    projectId: integer('project_id')
+    teamId: integer('team_id')
       .notNull()
-      .references(() => project.id, { onDelete: 'cascade' }),
+      .references(() => team.id, { onDelete: 'cascade' }),
     toolKey: text('tool_key').notNull(),
     credentialId: integer('credential_id')
       .notNull()
@@ -912,8 +913,8 @@ export const agentTool = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    unique().on(t.projectId, t.toolKey, t.credentialId),
-    index('agent_tool_project_idx').on(t.projectId),
+    unique().on(t.teamId, t.toolKey, t.credentialId),
+    index('agent_tool_team_idx').on(t.teamId),
     index('agent_tool_credential_idx').on(t.credentialId),
   ],
 );

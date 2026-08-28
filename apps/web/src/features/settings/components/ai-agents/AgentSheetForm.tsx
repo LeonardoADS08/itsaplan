@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sparkles, Wrench } from 'lucide-react';
 import type { AiAgent } from '@/lib/api';
-import { agentToolsPath, teamSectionPath } from '@/utils/paths';
+import { teamSectionPath } from '@/utils/paths';
 import {
   useCreateAiAgent,
   useUpdateAiAgent,
@@ -77,19 +77,20 @@ export function AgentSheetForm({
   const canManageSkills = can('agent_skills', 'edit');
   const canManageTools = can('agent_tools', 'edit');
 
+  // The credentials, the skill library and the configured tools belong to the team
+  // that owns this project.
+  const teamId = useShell().project?.project.teamId ?? null;
   const toolsQuery = useAgentToolsQuery(projectKey);
-  const catalogQuery = useIntegrationCatalogQuery(projectKey);
+  const catalogQuery = useIntegrationCatalogQuery(teamId);
   const catalog = catalogQuery.data ?? [];
-  const llmCredentials = useIntegrationOptionsQuery(projectKey, 'llm').data ?? [];
+  const llmCredentials = useIntegrationOptionsQuery(teamId, 'llm').data ?? [];
   const selectedProvider =
     llmCredentials.find((c) => c.id === value.modelCredentialId)?.integrationKey ?? null;
   const providerModelsQuery = useIntegrationModelsQuery(
-    projectKey,
+    teamId,
     value.kind === 'internal' ? selectedProvider : null,
   );
   const rolesQuery = useProjectRolesQuery(projectKey, value.kind === 'external');
-  // The skill library belongs to the team that owns this project.
-  const teamId = useShell().project?.project.teamId ?? null;
   const skillsLibraryQuery = useSkillsQuery(
     value.kind === 'internal' && canManageSkills ? teamId : null,
   );
@@ -98,7 +99,7 @@ export function AgentSheetForm({
     agent && agent.kind === 'internal' && canManageSkills ? agent.id : null,
   );
   const toolsLibraryQuery = useConfiguredToolsQuery(
-    value.kind === 'internal' && canManageTools ? projectKey : null,
+    value.kind === 'internal' && canManageTools ? teamId : null,
   );
   const agentToolsQuery = useAgentToolLinksQuery(
     projectKey,
@@ -233,7 +234,7 @@ export function AgentSheetForm({
         icon={Wrench}
         title={t('noTools')}
         hint={t('noToolsHint')}
-        href={agentToolsPath(projectKey)}
+        href={teamId ? teamSectionPath(teamId, 'agent-tools') : '#'}
         linkLabel={t('goToTools')}
       />
     ) : (

@@ -827,6 +827,13 @@
       "when": 1787915234537,
       "tag": "0117_team_agent_skills",
       "breakpoints": true
+    },
+    {
+      "idx": 118,
+      "version": "7",
+      "when": 1787915235537,
+      "tag": "0118_team_agent_tools",
+      "breakpoints": true
     }
   ]
 }

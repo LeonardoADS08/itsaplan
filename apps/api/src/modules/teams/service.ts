@@ -1,5 +1,6 @@
 import {
   agentSkill,
+  agentTool,
   db,
   integrationCredential,
   issue,
@@ -35,11 +36,12 @@ export interface TeamRow {
   // How many of those members are owners: the last one cannot leave.
   ownerCount: number;
   // The roles the team's projects assign from, the integration credentials they run
-  // on, and the skills their agents load. Counted here so the page shows them beside
-  // the section without opening it.
+  // on, and the skills and tools their agents use. Counted here so the page shows them
+  // beside the section without opening it.
   roleCount: number;
   integrationCount: number;
   skillCount: number;
+  toolCount: number;
   createdAt: string;
 }
 
@@ -120,7 +122,7 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.id);
-  const [projectCounts, memberCounts, roleCounts, integrationCounts, skillCounts] =
+  const [projectCounts, memberCounts, roleCounts, integrationCounts, skillCounts, toolCounts] =
     await Promise.all([
       db
         .select({ teamId: project.teamId, count: sql<number>`count(*)::int` })
@@ -151,12 +153,18 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
         .from(agentSkill)
         .where(inArray(agentSkill.teamId, ids))
         .groupBy(agentSkill.teamId),
+      db
+        .select({ teamId: agentTool.teamId, count: sql<number>`count(*)::int` })
+        .from(agentTool)
+        .where(inArray(agentTool.teamId, ids))
+        .groupBy(agentTool.teamId),
     ]);
   const projects = new Map(projectCounts.map((r) => [r.teamId, r.count]));
   const members = new Map(memberCounts.map((r) => [r.teamId, r]));
   const roles = new Map(roleCounts.map((r) => [r.teamId, r.count]));
   const integrations = new Map(integrationCounts.map((r) => [r.teamId, r.count]));
   const skills = new Map(skillCounts.map((r) => [r.teamId, r.count]));
+  const tools = new Map(toolCounts.map((r) => [r.teamId, r.count]));
 
   return rows.map((row) => ({
     id: row.id,
@@ -169,6 +177,7 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
     roleCount: roles.get(row.id) ?? 0,
     integrationCount: integrations.get(row.id) ?? 0,
     skillCount: skills.get(row.id) ?? 0,
+    toolCount: tools.get(row.id) ?? 0,
     createdAt: iso(row.createdAt),
   }));
 }
@@ -365,6 +374,7 @@ export async function createTeam(name: string, ownerId: string): Promise<TeamRow
       roleCount: 1,
       integrationCount: 0,
       skillCount: 0,
+      toolCount: 0,
       createdAt: iso(row.createdAt),
     };
   });

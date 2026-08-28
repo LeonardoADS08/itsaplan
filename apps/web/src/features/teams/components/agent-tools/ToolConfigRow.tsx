@@ -23,7 +23,7 @@ export function ToolConfigRow({
   canDelete: boolean;
   onDelete: () => void;
 }) {
-  const t = useTranslations('settings.tools');
+  const t = useTranslations('teams.tools');
   const on = tool.credentialLabel
     ? `${integrationLabel} · ${tool.credentialLabel}`
     : integrationLabel;

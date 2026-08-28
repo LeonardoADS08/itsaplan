@@ -15,7 +15,7 @@ import { useProviderLabel } from '../../hooks/useProviderLabel';
 export const ChatPanelBody = memo(function ChatPanelBody({ projectKey }: { projectKey: string }) {
   const agentsQuery = useAiAgentsQuery(projectKey);
   const agents = agentsQuery.data ?? [];
-  const providerLabel = useProviderLabel(projectKey);
+  const providerLabel = useProviderLabel();
   const {
     sessions,
     active,

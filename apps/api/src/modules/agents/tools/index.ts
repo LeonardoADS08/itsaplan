@@ -5,6 +5,7 @@ import { authContext } from '#shared/auth-context';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
+import { teamParams } from '#modules/teams/model';
 import { agentInProject } from '../core/service';
 import { AGENT_ACTIONS, ALWAYS_ON_ACTIONS } from '../core/runtime/tools/catalog';
 import {
@@ -27,9 +28,13 @@ import {
 // Two tool systems live under this tag. Built-in agent actions (create_issue,
 // search_issues, ...) are the catalog an internal agent is granted through its
 // `tools` field; the catalog route is read-only and ai_agents-gated. Configured tools
-// bind an external tool to an integration credential and are gated under the
-// agent_tools resource; binding one to a credential is done in the UI, so only reading
+// bind an external tool to an integration credential; the credential belongs to the
+// team, so they do too, and their routes sit under :teamId, gated by the agent_tools
+// resource on the team. Binding one to a credential is done in the UI, so only reading
 // them and enabling them on an agent are exposed over MCP.
+//
+// Which tools an agent has enabled stays under :projectKey — the agent is a project
+// entity, and only the tools of its project's team may be enabled on it.
 export const agentToolRoutes = new Elysia({
   name: 'agent-tools',
   detail: { tags: ['Agent Tools'] },
@@ -49,13 +54,14 @@ export const agentToolRoutes = new Elysia({
     },
   })
 
-  .get('/projects/:projectKey/agent-tools', ({ project }) => listAgentTools(project.id), {
-    permission: ['agent_tools', 'read'],
+  .get('/teams/:teamId/agent-tools', ({ membership }) => listAgentTools(membership.teamId), {
+    params: teamParams,
+    teamPermission: ['agent_tools', 'read'],
     response: { 200: AgentToolListResponse, ...accessErrors },
     detail: {
       summary: 'List configured tools',
       description:
-        "List a project's tools configured on integration credentials. An id here is what " +
+        "List a team's tools configured on integration credentials. An id here is what " +
         'set_ai_agent_configured_tools takes to enable a tool on an agent. Separate from the ' +
         'built-in actions in list_ai_agent_tools.',
       ...mcpTool('list_configured_tools'),
@@ -63,14 +69,15 @@ export const agentToolRoutes = new Elysia({
   })
 
   .post(
-    '/projects/:projectKey/agent-tools',
-    async ({ project, body, set }) => {
+    '/teams/:teamId/agent-tools',
+    async ({ membership, body, set }) => {
       set.status = 201;
-      return createAgentTool(project.id, body);
+      return createAgentTool(membership.teamId, body);
     },
     {
+      params: teamParams,
       body: createAgentToolBody,
-      permission: ['agent_tools', 'create'],
+      teamPermission: ['agent_tools', 'create'],
       response: { 201: AgentToolResponse, ...commonErrors, ...errors(409) },
       detail: {
         summary: 'Configure a tool',
@@ -80,15 +87,15 @@ export const agentToolRoutes = new Elysia({
   )
 
   .delete(
-    '/projects/:projectKey/agent-tools/:agentToolId',
-    async ({ params, project }) => {
-      const ok = await deleteAgentTool(params.agentToolId, project.id);
+    '/teams/:teamId/agent-tools/:agentToolId',
+    async ({ params, membership }) => {
+      const ok = await deleteAgentTool(params.agentToolId, membership.teamId);
       if (!ok) throw new HttpError(404, 'Configured tool not found');
       return noContent();
     },
     {
       params: toolParams,
-      permission: ['agent_tools', 'delete'],
+      teamPermission: ['agent_tools', 'delete'],
       response: { 204: t.Void(), ...accessErrors },
       detail: { summary: 'Delete a configured tool', description: 'Delete a configured tool.' },
     },
@@ -120,7 +127,7 @@ export const agentToolRoutes = new Elysia({
       if (!(await agentInProject(params.agentId, project.id))) {
         throw new HttpError(404, 'Agent not found');
       }
-      await setAgentTools(params.agentId, project.id, body.agentToolIds);
+      await setAgentTools(params.agentId, project.teamId, body.agentToolIds);
       return listAgentToolLinks(params.agentId);
     },
     {
@@ -132,7 +139,7 @@ export const agentToolRoutes = new Elysia({
         summary: "Set an agent's enabled tools",
         description:
           'Replace the set of configured tools enabled on an agent. Send the full set: a tool ' +
-          'left out is disabled.',
+          "left out is disabled. Ids that are not tools of the project's team are ignored.",
         ...mcpTool('set_ai_agent_configured_tools'),
       },
     },

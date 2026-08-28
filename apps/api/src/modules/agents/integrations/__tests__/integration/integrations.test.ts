@@ -9,9 +9,8 @@ import { createRole } from '#tests/helpers/roles';
 // Integration credentials for a team: one store for LLM provider keys (kind 'llm')
 // and tool credentials (kind 'tool'), shared by every project the team owns. The
 // secret is stored encrypted and never returned — a response carries only a redacted
-// view. Access is the integrations permission resource: the writes resolve it on the
-// team, the reads a project needs resolve it on that project, which is what keeps
-// them behind the per-project MCP toggle.
+// view. Access is the integrations permission resource, resolved on the team; the
+// catalog and the picker options open to any member of it.
 
 async function setup() {
   const owner = await signUpTestUser({ name: 'Owner' });
@@ -21,10 +20,7 @@ async function setup() {
 }
 
 const integrations = (api: Api, teamId: number) => api.teams({ teamId }).integrations;
-const projectIntegrations = (api: Api, projectKey = 'MKT') =>
-  api.projects({ projectKey }).integrations;
-const options = (api: Api, projectKey = 'MKT') => projectIntegrations(api, projectKey).options;
-const asMcp = { headers: { 'x-mcp-loopback': '1' } };
+const options = (api: Api, teamId: number) => integrations(api, teamId).options;
 
 describe('integrations', () => {
   beforeEach(async () => {
@@ -149,71 +145,18 @@ describe('integrations', () => {
     expect((await integrations(asOwner, teamId).get()).data).toHaveLength(0);
   });
 
-  it('serves one credential to every project of the team', async () => {
-    const { asOwner, teamId } = await setup();
-    await asOwner.teams({ teamId }).projects.post({ key: 'SUP', name: 'Support' });
-    await integrations(asOwner, teamId).post({
-      integrationKey: 'openai',
-      label: 'Team',
-      credential: { apiKey: 'sk-secret-1234' },
-    });
-
-    const res = await options(asOwner, 'SUP').get();
-    expect(res.data).toEqual([expect.objectContaining({ integrationKey: 'openai', kind: 'llm' })]);
-  });
-
-  // An agent's provider and model are picked over MCP, so the project-scoped reads are
-  // tagged. The writes are not: a credential body carries the provider's secret in
-  // plain text. Nothing under :teamId is tagged — the team guards resolve membership
-  // only, so a tool there would answer an MCP call against a project with MCP off. The
+  // An agent's provider and model are picked over MCP, so the reads are tagged. The
+  // writes are not: a credential body carries the provider's secret in plain text. The
   // options route is untagged too: it is what the UI pickers read, and the credential
   // list already covers the same ground for an agent.
-  it('exposes the project-scoped credential reads to MCP, not the writes', () => {
+  it('exposes the credential reads to MCP, not the writes', () => {
     const untagged = untaggedRoutes((route) => route.includes('integrations'));
     expect(untagged).toEqual([
-      'GET /projects/:projectKey/integrations/options',
-      'GET /teams/:teamId/integrations/catalog',
-      'GET /teams/:teamId/integrations',
+      'GET /teams/:teamId/integrations/options',
       'POST /teams/:teamId/integrations',
       'PATCH /teams/:teamId/integrations/:credentialId',
       'DELETE /teams/:teamId/integrations/:credentialId',
     ]);
-  });
-
-  // The credential store is the team's, but the tagged reads hang off a project, so a
-  // project with MCP off keeps them out of reach of an MCP client.
-  describe('mcp', () => {
-    it('blocks the tagged reads while the project has MCP off, and allows them once on', async () => {
-      const { asOwner, teamId } = await setup();
-      await integrations(asOwner, teamId).post({
-        integrationKey: 'openai',
-        credential: { apiKey: 'sk-secret-1234' },
-      });
-      await asOwner.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: false });
-
-      expect((await projectIntegrations(asOwner).get()).status).toBe(200);
-      expect((await projectIntegrations(asOwner).get(asMcp)).status).toBe(403);
-      expect((await projectIntegrations(asOwner).catalog.get(asMcp)).status).toBe(403);
-
-      await asOwner.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: true });
-      expect((await projectIntegrations(asOwner).get(asMcp)).status).toBe(200);
-      expect((await projectIntegrations(asOwner).catalog.get(asMcp)).status).toBe(200);
-    });
-
-    it("lists the team's credentials through the project that shares them", async () => {
-      const { asOwner, teamId } = await setup();
-      await asOwner.teams({ teamId }).projects.post({ key: 'SUP', name: 'Support' });
-      await integrations(asOwner, teamId).post({
-        integrationKey: 'openai',
-        label: 'Team',
-        credential: { apiKey: 'sk-secret-1234' },
-      });
-
-      const res = await projectIntegrations(asOwner, 'SUP').get();
-      expect(res.status).toBe(200);
-      expect(res.data).toEqual([expect.objectContaining({ teamId, integrationKey: 'openai' })]);
-      expect(JSON.stringify(res.data)).not.toContain('sk-secret');
-    });
   });
 
   describe('access', () => {
@@ -309,7 +252,7 @@ describe('integrations', () => {
         credential: { apiKey: 'jina-secret-1234' },
       });
 
-      const res = await options(asOwner).get();
+      const res = await options(asOwner, teamId).get();
       expect(res.status).toBe(200);
       expect(res.data).toEqual(
         expect.arrayContaining([
@@ -319,7 +262,7 @@ describe('integrations', () => {
       );
       expect(JSON.stringify(res.data)).not.toContain('••••');
 
-      const llm = await options(asOwner).get({ query: { kind: 'llm' } });
+      const llm = await options(asOwner, teamId).get({ query: { kind: 'llm' } });
       expect(llm.data!.map((o) => o.integrationKey)).toEqual(['openai']);
     });
 
@@ -335,13 +278,13 @@ describe('integrations', () => {
       });
       const asMember = await addProjectMember(asOwner, 'MKT', role.data!.id);
 
-      expect((await options(asMember).get()).status).toBe(200);
+      expect((await options(asMember, teamId).get()).status).toBe(200);
     });
 
-    it('denies a non-member', async () => {
-      await setup();
+    it('hides the options from someone who does not belong to the team', async () => {
+      const { teamId } = await setup();
       const asOutsider = authedApi((await signUpTestUser({ name: 'Outsider' })).cookie);
-      expect((await options(asOutsider).get()).status).toBe(403);
+      expect((await options(asOutsider, teamId).get()).status).toBe(404);
     });
   });
 });

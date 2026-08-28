@@ -40,13 +40,10 @@ export const notificationsPath = (key: string) => `${projectPath(key)}/notificat
 
 export const aiAgentsPath = (key: string) => `${projectPath(key)}/ai-agents`;
 
-export const agentToolsPath = (key: string) => `${projectPath(key)}/agent-tools`;
-
 // The AI configuration sections (see AI_SECTIONS) keyed by slug. Each is its own
 // top-level route rather than a /settings/:slug page.
 const AI_SECTION_PATH: Record<string, (key: string) => string> = {
   'ai-agents': aiAgentsPath,
-  'agent-tools': agentToolsPath,
 };
 
 export const aiSectionPath = (key: string, slug: string) => AI_SECTION_PATH[slug](key);
@@ -132,7 +129,14 @@ export const manageTeamsPath = () => '/account/teams';
 // Every section of a team is a route of its own, so each loads only what it shows.
 // The team itself is the index of the team, so it carries no section segment.
 export type TeamSection =
-  'info' | 'projects' | 'members' | 'roles' | 'integrations' | 'agent-skills' | 'notifications';
+  | 'info'
+  | 'projects'
+  | 'members'
+  | 'roles'
+  | 'integrations'
+  | 'agent-skills'
+  | 'agent-tools'
+  | 'notifications';
 
 export const teamPath = (teamId: number) => `${manageTeamsPath()}/${teamId}`;
 
