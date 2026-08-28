@@ -16,6 +16,7 @@ import { getTeamMembership } from '#modules/teams/service';
 import {
   AutoArchiveResponse,
   EstimatesResponse,
+  PROJECT_DESCRIPTION_LIMIT,
   ProjectBoardResponse,
   ProjectListResponse,
   ProjectResponse,
@@ -187,7 +188,10 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
       response: { 200: ProjectResponse, ...commonErrors },
       detail: {
         summary: 'Update a project',
-        description: "Update a project's name and/or description. The key is immutable.",
+        description:
+          "Update a project's name and/or description. The description is given to the " +
+          `agents of the project in their system prompt; up to ${PROJECT_DESCRIPTION_LIMIT} ` +
+          'characters. The key is immutable.',
         ...mcpTool('update_project'),
       },
     },

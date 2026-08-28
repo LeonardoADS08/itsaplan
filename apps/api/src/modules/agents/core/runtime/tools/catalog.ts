@@ -4,13 +4,14 @@
 // - AGENT_ACTIONS: actions the user opts an agent into. The enabled subset is stored
 //   in ai_agent.tools and becomes the tools the runtime exposes. Mutating actions
 //   belong here; so do the note board reads, since notes are an optional feature.
-// - ALWAYS_ON_ACTIONS: read-only actions always granted, so an agent can always see
-//   its project regardless of which actions it is allowed to take. Listed only so
-//   the UI can show them (always enabled, not editable); their keys are never
-//   stored on the agent.
+// - ALWAYS_ON_ACTIONS: actions always granted, so an agent can always see its
+//   project and read the files dropped in its chat regardless of which other
+//   actions it is allowed to take. Listed only so the UI can show them (always
+//   enabled, not editable); their keys are never stored on the agent.
 //
-// Every key is the name of a route tagged with mcpTool() — the one exception is
-// get_current_date, which has no route behind it (see tools/local.ts). What a tool
+// Every key is the name of a route tagged with mcpTool() — the exceptions are
+// get_current_date and prepare_issue_import, which have no route behind them (see
+// tools/local.ts). What a tool
 // accepts and who may call it come from the route itself (see tools/route-tools.ts);
 // this file adds the allowlist, the UI copy, and the agent-only overrides (see
 // ToolMeta.overrides). An agent's effective rights are the intersection of these keys
@@ -109,6 +110,13 @@ export const AGENT_ACTIONS: ToolMeta[] = [
     group: 'issues',
     label: 'Delete attachments',
     description: 'Delete file attachments from issues.',
+    always: false,
+  },
+  {
+    key: 'prepare_issue_import',
+    group: 'issues',
+    label: 'Import issues from files',
+    description: 'Turn a table attached in the chat (.xlsx, .csv, .docx) into issues.',
     always: false,
   },
   {
@@ -245,9 +253,9 @@ export const AGENT_ACTIONS: ToolMeta[] = [
   },
 ];
 
-// Actions that change nothing, always granted to an internal agent so it can read its
-// project and show what it found, regardless of which actions it is allowed to take.
-// Listed for the UI only; these keys are never stored on the agent (see normalizeToolKeys).
+// Always granted to an internal agent so it can read its project and show what it
+// found, regardless of which actions it is allowed to take. Listed for the UI only;
+// these keys are never stored on the agent (see normalizeToolKeys).
 export const ALWAYS_ON_ACTIONS: ToolMeta[] = [
   {
     key: 'create_chart',
@@ -303,6 +311,21 @@ export const ALWAYS_ON_ACTIONS: ToolMeta[] = [
     group: 'issues',
     label: 'List attachments',
     description: 'View the file attachment metadata on an issue.',
+    always: true,
+  },
+  {
+    key: 'upload_chat_attachment',
+    group: 'issues',
+    label: 'Upload chat attachments',
+    description: 'Store a file for the chat (base64 content), for an agent to read or import from.',
+    always: true,
+  },
+  {
+    key: 'read_chat_attachment',
+    group: 'issues',
+    label: 'Read chat attachments',
+    description:
+      'Read a file uploaded in the chat: its metadata and, for a spreadsheet or text file, its content.',
     always: true,
   },
   {

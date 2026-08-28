@@ -1,6 +1,6 @@
 import { t } from 'elysia';
 
-import { agentRunTrigger } from '../model';
+import { agentRunTrigger, runContextTokens } from '../model';
 
 export { agentParams } from '../model';
 
@@ -164,6 +164,7 @@ export const AgentRunResponse = t.Object({
   attempts: t.Number(),
   lastError: t.Nullable(t.String()),
   output: t.Nullable(t.String()),
+  contextTokens: runContextTokens,
   nextAttemptAt: t.String(),
   createdAt: t.String(),
 });
@@ -183,6 +184,26 @@ export const ChatThreadResponse = t.Object({
       description:
         "The coding agent session an external agent's runner keeps for this thread on its " +
         'own machine. Always null for an internal agent, which runs in this process.',
+    }),
+  ),
+  contextTokens: t.Optional(
+    t.Nullable(
+      t.Number({
+        description:
+          'The tokens the last completed answer of this thread read and wrote, which is ' +
+          'the size of its context. Absent while no answer has completed; null where the ' +
+          'agent reports no counts that can be read as a context size.',
+      }),
+    ),
+  ),
+  favorite: t.Boolean({ description: 'Whether the caller starred this conversation.' }),
+  snippet: t.Optional(
+    t.String({ description: 'Search only: the text around the match in a message.' }),
+  ),
+  match: t.Optional(
+    t.Union([t.Literal('title'), t.Literal('user'), t.Literal('assistant')], {
+      description:
+        "Search only: where the match was found — the title, the member's message, or the agent's reply.",
     }),
   ),
   createdAt: t.String(),
@@ -251,3 +272,19 @@ export const renameThreadBody = t.Object({
 
 // Both the thread list and a thread's transcript are read a page at a time.
 export const threadPageQuery = t.Object({ page: t.Optional(t.Numeric({ minimum: 0 })) });
+
+// The history list also searches and shows the starred conversations. `favorites` is a
+// group of its own: it is not paginated and ignores the page.
+export const threadListQuery = t.Object({
+  page: t.Optional(t.Numeric({ minimum: 0 })),
+  q: t.Optional(
+    t.String({
+      description:
+        'Case-insensitive substring, matched against the thread title and the message text of ' +
+        'both roles. Shorter than two characters searches nothing.',
+    }),
+  ),
+  favorites: t.Optional(
+    t.Boolean({ description: 'Return the starred conversations instead of the page.' }),
+  ),
+});

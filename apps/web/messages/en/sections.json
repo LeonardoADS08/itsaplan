@@ -21,7 +21,7 @@
     },
     "general": {
       "label": "General",
-      "description": "The instance-wide defaults a new project starts with. Each one stays editable per project afterwards."
+      "description": "Defaults for new projects."
     },
     "authentication": {
       "label": "Authentication",

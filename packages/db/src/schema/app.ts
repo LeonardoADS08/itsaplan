@@ -546,6 +546,11 @@ export const agentRun = pgTable(
     nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
     lastError: text('last_error'),
     output: text('output'),
+    // What the last model call of the run read and wrote, cache included. Null for a run
+    // that finished before this was recorded, and for one whose agent reports no counts;
+    // the run history shows nothing for either.
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
     startedAt: timestamp('started_at', { withTimezone: true }),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -648,6 +653,50 @@ export const agentChatEvent = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('agent_chat_event_message_idx').on(t.messageId, t.id)],
+);
+
+// The token counts of the last completed answer of one chat thread, which is what the
+// chat panel shows as the size of that conversation's context. One row per thread,
+// overwritten by every answer: only the last number says how close the conversation is
+// to the agent's limit. Null counts mean the agent reports none that can be read as a
+// context size, which the panel shows as a dash. An autonomous run keeps its own counts
+// on agent_run instead, one row per run.
+//
+// A thread of an external agent is stored in agent_chat_thread and one of an internal
+// agent in Mastra's own tables, so the row carries no foreign key to a thread. Every id
+// is minted by runtime/thread-ids, which prefixes each kind of thread with what it is
+// scoped to, so no two kinds collide. The row is deleted where the thread is deleted,
+// and the cascade covers the deletion of the agent.
+export const agentChatUsage = pgTable(
+  'agent_chat_usage',
+  {
+    threadId: text('thread_id').primaryKey(),
+    agentId: integer('agent_id')
+      .notNull()
+      .references(() => aiAgent.id, { onDelete: 'cascade' }),
+    inputTokens: integer('input_tokens'),
+    outputTokens: integer('output_tokens'),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('agent_chat_usage_agent_idx').on(t.agentId)],
+);
+
+// The conversations a member has starred, so they stay within reach in the chat
+// history. Like agent_chat_usage the row carries no foreign key to the thread: an
+// internal agent's thread lives in Mastra's own tables. Deleting a thread deletes its
+// row; a row left behind is harmless, since the history is built from the threads.
+export const agentChatFavorite = pgTable(
+  'agent_chat_favorite',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    agentId: integer('agent_id')
+      .notNull()
+      .references(() => aiAgent.id, { onDelete: 'cascade' }),
+    threadId: text('thread_id').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.threadId] })],
 );
 
 // Stored credentials for a team's integrations, shared by every project it owns. One
@@ -1115,6 +1164,9 @@ export const issue = pgTable(
     index('issue_project_active_idx')
       .on(t.projectId, t.columnId)
       .where(sql`${t.archivedAt} IS NULL`),
+    // Backs the import duplicate check: the titles a project already holds,
+    // archived ones included, normalised the way titleKey compares them.
+    index('issue_project_title_idx').on(t.projectId, sql`lower(btrim(${t.title}))`),
     // Backs reading a parent's subtasks, on the issue page and on every write that
     // has to know whether an issue has any.
     index('issue_parent_idx')
@@ -1324,6 +1376,56 @@ export const issueAttachment = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('issue_attachment_issue_idx').on(t.issueId)],
+);
+
+// A file uploaded in an agent chat. Bytes live in the S3-compatible object store;
+// this table holds the metadata and the object key. public_id is the unguessable
+// id used in the public download URL. Kept free of any workflow state so an
+// upload can serve more than one purpose (an issue import, a spec, a log).
+export const chatAttachment = pgTable(
+  'chat_attachment',
+  {
+    id: serial('id').primaryKey(),
+    publicId: uuid('public_id').notNull().defaultRandom().unique(),
+    projectId: integer('project_id')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
+    uploadedByUserId: text('uploaded_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    s3Key: text('s3_key').notNull(),
+    filename: text('filename').notNull(),
+    contentType: text('content_type').notNull(),
+    sizeBytes: bigint('size_bytes', { mode: 'number' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('chat_attachment_project_idx').on(t.projectId)],
+);
+
+// An import of issues from a chat attachment: the column mapping an agent saved
+// and the state of the draft. The file itself is the referenced chat_attachment;
+// creating the issues happens only through the confirm route, never by the model
+// itself.
+export const issueImport = pgTable(
+  'issue_import',
+  {
+    id: serial('id').primaryKey(),
+    publicId: uuid('public_id').notNull().defaultRandom().unique(),
+    projectId: integer('project_id')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
+    attachmentId: integer('attachment_id')
+      .notNull()
+      .references(() => chatAttachment.id, { onDelete: 'cascade' }),
+    // mapped: an agent saved a column mapping. confirmed: the issues were
+    // created. canceled and failed are terminal, with errorText on a failure.
+    status: text('status').notNull().default('mapped'),
+    mapping: jsonb('mapping'),
+    errorText: text('error_text'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('issue_import_project_idx').on(t.projectId)],
 );
 
 // Checklists on an issue: a lightweight list of steps that does not warrant a

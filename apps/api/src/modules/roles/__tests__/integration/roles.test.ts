@@ -27,7 +27,8 @@ async function setupOwner(projectKey = 'MKT'): Promise<Actor> {
 }
 
 // Adds a fresh user to MKT on the default role by inviting them and accepting on
-// their behalf. They join the project, not the team that owns it.
+// their behalf. Joining a project also joins the team that owns it, on the plain
+// 'member' team role.
 async function addMember(owner: Actor): Promise<Actor> {
   const user = await signUpTestUser();
   const created = await owner.api
@@ -88,12 +89,14 @@ describe('roles', () => {
       expect(res.data?.map((r) => r.name)).toEqual(['Member', 'Editor', 'Viewer']);
     });
 
-    it('denies someone outside the team with 404', async () => {
+    it('is readable by a plain member of the team', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
 
       const res = await member.api.teams({ teamId: owner.teamId }).roles.get();
-      expect(res.status).toBe(404);
+
+      expect(res.status).toBe(200);
+      expect(res.data?.map((r) => r.name)).toEqual(['Member']);
     });
 
     it('denies an anonymous request with 401', async () => {
@@ -118,7 +121,7 @@ describe('roles', () => {
       expect(res.data?.map((r) => r.name)).toEqual(['Member', 'Editor']);
     });
 
-    it('is readable by a plain member, who is outside the team', async () => {
+    it('is readable by a plain member of the project', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
 
@@ -198,7 +201,7 @@ describe('roles', () => {
       expect(res.status).toBe(400);
     });
 
-    it('denies someone outside the team with 404', async () => {
+    it('denies a member who does not own the team with 403', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
 
@@ -206,7 +209,7 @@ describe('roles', () => {
         name: 'Editor',
         permissions: {},
       });
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(403);
     });
   });
 
@@ -315,7 +318,7 @@ describe('roles', () => {
       expect(res.status).toBe(400);
     });
 
-    it('denies someone outside the team with 404', async () => {
+    it('denies a member who does not own the team with 403', async () => {
       const owner = await setupOwner();
       const roleId = await makeRole(owner);
       const member = await addMember(owner);
@@ -324,7 +327,7 @@ describe('roles', () => {
         .teams({ teamId: owner.teamId })
         .roles({ roleId })
         .patch({ name: 'Reviewer' });
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(403);
     });
   });
 
@@ -503,13 +506,13 @@ describe('roles', () => {
       expect(res.status).toBe(404);
     });
 
-    it('denies someone outside the team with 404', async () => {
+    it('denies a member who does not own the team with 403', async () => {
       const owner = await setupOwner();
       const roleId = await makeRole(owner);
       const member = await addMember(owner);
 
       const res = await member.api.teams({ teamId: owner.teamId }).roles({ roleId }).delete();
-      expect(res.status).toBe(404);
+      expect(res.status).toBe(403);
     });
   });
 });

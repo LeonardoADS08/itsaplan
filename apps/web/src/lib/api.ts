@@ -365,6 +365,9 @@ export interface AgentRun {
   attempts: number;
   lastError: string | null;
   output: string | null;
+  // What the last model call of the run read and wrote: absent for a run that finished
+  // before this was recorded and for one whose agent reports no counts.
+  contextTokens?: number;
   nextAttemptAt: string;
   createdAt: string;
 }
@@ -410,6 +413,9 @@ export interface AgentScheduleRun {
   attempts: number;
   lastError: string | null;
   output: string | null;
+  // What the last model call of the run read and wrote: absent for a run that finished
+  // before this was recorded and for one whose agent reports no counts.
+  contextTokens?: number;
   scheduledFor: string | null;
   startedAt: string | null;
   finishedAt: string | null;
@@ -607,10 +613,19 @@ export type AgentRunEvent =
 // prompt (truncated); null when it was never set. `cliSessionId` is the coding agent
 // session an external agent's runner keeps for the thread on its own machine — null
 // before the runner has reported one, and always null for an internal agent.
+// `contextTokens` is the size of the conversation's context after its last completed
+// answer: absent while no answer has completed, null where the agent reports no counts
+// that can be read as one.
+// `favorite` is the star the caller put on the conversation. `snippet` and `match` come
+// back from a search: the text around the hit, and where it was found.
 export interface AiChatThread {
   id: string;
   title: string | null;
   cliSessionId: string | null;
+  contextTokens?: number | null;
+  favorite: boolean;
+  snippet?: string;
+  match?: 'title' | 'user' | 'assistant';
   createdAt: string;
   updatedAt: string;
 }
@@ -700,6 +715,75 @@ async function* readSseFrames(res: Response): AsyncGenerator<{ id: number | null
       };
     }
   }
+}
+
+// --- Chat attachments: a file dropped in an agent chat, for an agent to read or
+// import issues from.
+
+export interface ChatAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
+  url: string;
+}
+
+// The upload route takes the bytes as base64 rather than multipart, so the chat
+// composer and an MCP client call the same route.
+export async function uploadChatAttachment(
+  projectKey: string,
+  file: File,
+): Promise<ChatAttachment> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read the file'));
+    reader.readAsDataURL(file);
+  });
+  return request(`/projects/${projectKey}/chat-attachments`, {
+    method: 'POST',
+    body: JSON.stringify({
+      filename: file.name,
+      contentBase64: dataUrl.slice(dataUrl.indexOf(',') + 1),
+      contentType: file.type || undefined,
+    }),
+  });
+}
+
+// --- Issue imports: a chat attachment an agent mapped into issues, awaiting confirmation.
+
+export interface IssueImport {
+  id: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  status: 'mapped' | 'confirmed' | 'canceled' | 'failed';
+  mapping: Record<string, string> | null;
+  errorText: string | null;
+  createdAt: string;
+  preview?: {
+    columns: { field: string; header: string }[];
+    rows: { cells: string[]; skip: string | null }[];
+    totalRows: number;
+  };
+}
+
+export interface ImportConfirmResult {
+  imported: { key: string; title: string }[];
+  skipped: { row: number; reason: string }[];
+}
+
+export async function getImport(importId: string): Promise<IssueImport> {
+  return request(`/imports/${importId}`);
+}
+
+export async function confirmImport(importId: string): Promise<ImportConfirmResult> {
+  return request(`/imports/${importId}/confirm`, { method: 'POST' });
+}
+
+export async function discardImport(importId: string): Promise<void> {
+  await request(`/imports/${importId}/cancel`, { method: 'POST' });
 }
 
 // What an external agent's runner reports while it answers, as AG-UI events
@@ -3172,9 +3256,29 @@ export const api = {
       `/projects/${projectKey}/agent-schedules/${scheduleId}/runs${runId != null ? `/${runId}` : ''}/cancel`,
       { method: 'POST' },
     ),
-  // One page of the caller's own chat threads with an agent, newest first.
-  listAiAgentThreads: (projectKey: string, agentId: number, page: number) =>
-    request<AiChatThreadPage>(`/projects/${projectKey}/ai-agents/${agentId}/threads?page=${page}`),
+  // One page of the caller's own chat threads with an agent, newest first. `q` searches
+  // them by title and message text instead, over every page.
+  listAiAgentThreads: (projectKey: string, agentId: number, page: number, q = '') =>
+    request<AiChatThreadPage>(
+      `/projects/${projectKey}/ai-agents/${agentId}/threads?page=${page}` +
+        (q ? `&q=${encodeURIComponent(q)}` : ''),
+    ),
+  // The conversations the caller starred with an agent, newest first, in one go.
+  listAiAgentFavoriteThreads: (projectKey: string, agentId: number) =>
+    request<AiChatThreadPage>(
+      `/projects/${projectKey}/ai-agents/${agentId}/threads?favorites=true`,
+    ),
+  // Stars one of the caller's conversations, or takes the star off it.
+  setAiAgentThreadFavorite: (
+    projectKey: string,
+    agentId: number,
+    threadId: string,
+    favorite: boolean,
+  ) =>
+    request<void>(
+      `/projects/${projectKey}/ai-agents/${agentId}/threads/${encodeURIComponent(threadId)}/favorite`,
+      { method: favorite ? 'PUT' : 'DELETE' },
+    ),
   // The transcript of one chat thread, to restore the conversation.
   getAiAgentThreadMessages: (projectKey: string, agentId: number, threadId: string, page: number) =>
     request<AiChatMessagePage>(
