@@ -4,6 +4,7 @@ import { type IssueRef, type ProjectDetail } from '@/lib/api';
 import { issuePath } from '@/utils/paths';
 import { Button } from '@/components/ui/button';
 import ArchivedBadge from '@/components/common/ArchivedBadge';
+import { historyScrollRestorationLinkProps } from '@/hooks/useHistoryScrollRestoration';
 import { StateIcon } from '../shared/IssueIcons';
 
 // One other issue in the Links or Subtasks panel — the far end of a relation, a
@@ -46,7 +47,11 @@ export default function IssueRefRow({
       );
     if (readOnly) return <div className={labelClass}>{label}</div>;
     return (
-      <Link href={issuePath(project.project.key, issue.sequenceNumber)} className={labelClass}>
+      <Link
+        {...historyScrollRestorationLinkProps}
+        href={issuePath(project.project.key, issue.sequenceNumber)}
+        className={labelClass}
+      >
         {label}
       </Link>
     );
