@@ -112,8 +112,11 @@ const ViewerResponse = t.Object({
   role: t.Union([t.Literal('owner'), t.Literal('member')]),
   // The caller's standing in the team that owns the project, null when they are not
   // a member of it. An owner or manager of the team governs the project's settings
-  // alongside the project's own owner.
-  teamRole: t.Nullable(t.Union([t.Literal('owner'), t.Literal('manager'), t.Literal('member')])),
+  // alongside the project's own owner; 'agent' is a bot user reading its own board,
+  // which governs nothing.
+  teamRole: t.Nullable(
+    t.Union([t.Literal('owner'), t.Literal('manager'), t.Literal('member'), t.Literal('agent')]),
+  ),
 });
 
 // The project board scaffold (GET /projects/:projectKey): the project plus its

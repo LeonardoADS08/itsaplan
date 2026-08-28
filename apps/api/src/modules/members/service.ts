@@ -203,7 +203,12 @@ export async function listAssigneeCandidates(projectId: number): Promise<Assigne
       })
       .from(aiAgent)
       .innerJoin(user, eq(user.id, aiAgent.userId))
-      .where(eq(aiAgent.projectId, projectId)),
+      // The agents working in the project: the ones its member list holds. An agent of
+      // the team that is not a member is not offered, because the API refuses it.
+      .innerJoin(
+        projectMember,
+        and(eq(projectMember.userId, aiAgent.userId), eq(projectMember.projectId, projectId)),
+      ),
   ]);
   const members: AssigneeCandidate[] = memberRows.map((r) => ({
     userId: r.userId,

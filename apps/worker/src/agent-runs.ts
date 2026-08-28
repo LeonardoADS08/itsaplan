@@ -52,7 +52,7 @@ async function claimDueRuns(): Promise<ClaimedRun[]> {
     RETURNING
       r.id, r.agent_id AS "agentId", r.issue_id AS "issueId",
       r.schedule_id AS "scheduleId", r.trigger, r.prompt, r.attempts,
-      (SELECT project_id FROM ai_agent a WHERE a.id = r.agent_id) AS "projectId",
+      r.project_id AS "projectId",
       (SELECT user_id FROM ai_agent a WHERE a.id = r.agent_id) AS "agentUserId",
       (SELECT username FROM ai_agent a WHERE a.id = r.agent_id) AS "agentUsername",
       (SELECT p.key || '-' || i.sequence_number FROM issue i JOIN project p ON p.id = i.project_id WHERE i.id = r.issue_id) AS "issueIdentifier",

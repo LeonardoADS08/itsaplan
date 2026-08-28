@@ -131,7 +131,11 @@ export async function deleteRole(
       .update(projectMember)
       .set({ roleId: targetRoleId })
       .where(eq(projectMember.roleId, roleId));
-    await tx.update(aiAgent).set({ roleId: targetRoleId }).where(eq(aiAgent.roleId, roleId));
+    // An agent always holds a role, and getRoleUsage counts the agents on this one, so
+    // the caller has named where they move before it asks for the deletion.
+    if (targetRoleId != null) {
+      await tx.update(aiAgent).set({ roleId: targetRoleId }).where(eq(aiAgent.roleId, roleId));
+    }
     await tx
       .update(teamInvite)
       .set({ roleId: targetRoleId })

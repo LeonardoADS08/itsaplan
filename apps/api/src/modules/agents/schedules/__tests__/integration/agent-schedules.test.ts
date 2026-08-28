@@ -3,6 +3,7 @@ import { apiKeyApi, authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { untaggedRoutes } from '#tests/helpers/mcp';
+import { createAgent, teamOf } from '#tests/helpers/agents';
 
 // A schedule sends a fixed task to an internal agent on a cron, in UTC. The worker
 // picks up the queued runs, so a run created here stays pending. Access is the
@@ -17,11 +18,11 @@ async function setup() {
   return { asOwner };
 }
 
-async function createAgent(
+async function makeAgent(
   api: Api,
   opts: { username?: string; kind?: 'internal' | 'external'; projectKey?: string } = {},
 ): Promise<number> {
-  const res = await api.projects({ projectKey: opts.projectKey ?? 'MKT' })['ai-agents'].post({
+  const res = await createAgent(api, opts.projectKey ?? 'MKT', {
     name: 'Triage Bot',
     username: opts.username ?? 'triage',
     kind: opts.kind ?? 'internal',
@@ -44,7 +45,7 @@ async function addSecondOwner(asOwner: Api): Promise<Api> {
 // An external agent plus a client authenticated as its runner, which is how a run gets
 // claimed (and stamped as started) without a worker.
 async function createRunnerAgent(api: Api): Promise<{ agentId: number; asRunner: Api }> {
-  const res = await api.projects({ projectKey: 'MKT' })['ai-agents'].post({
+  const res = await createAgent(api, 'MKT', {
     name: 'Runner Bot',
     username: 'runner',
     kind: 'external',
@@ -68,7 +69,7 @@ describe('agent schedules', () => {
 
   it('creates a schedule and lists it with its next run', async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner);
+    const agentId = await makeAgent(asOwner);
     const created = await createSchedule(asOwner, agentId);
     expect(created.status).toBe(201);
     expect(created.data).toMatchObject({
@@ -91,14 +92,14 @@ describe('agent schedules', () => {
 
   it('rejects an invalid cron expression', async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner);
+    const agentId = await makeAgent(asOwner);
     const res = await createSchedule(asOwner, agentId, 'not a cron');
     expect(res.status).toBe(400);
   });
 
   it('rejects a blank name', async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner);
+    const agentId = await makeAgent(asOwner);
     const res = await schedules(asOwner).post({
       agentId,
       name: ' ',
@@ -110,15 +111,15 @@ describe('agent schedules', () => {
 
   it('schedules an external agent, whose runner claims the run', async () => {
     const { asOwner } = await setup();
-    const externalId = await createAgent(asOwner, { username: 'hook', kind: 'external' });
+    const externalId = await makeAgent(asOwner, { username: 'hook', kind: 'external' });
     expect((await createSchedule(asOwner, externalId)).status).toBe(201);
   });
 
   it("keeps an 'owner'-scoped agent's tasks to its owner", async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner, { username: 'hook', kind: 'external' });
+    const agentId = await makeAgent(asOwner, { username: 'hook', kind: 'external' });
     await asOwner
-      .projects({ projectKey: 'MKT' })
+      .teams({ teamId: await teamOf(asOwner, 'MKT') })
       ['ai-agents']({ agentId })
       .patch({ runnerScope: 'owner' });
     const asSecond = await addSecondOwner(asOwner);
@@ -140,13 +141,13 @@ describe('agent schedules', () => {
     const { asOwner } = await setup();
 
     await asOwner.projects.post({ key: 'ENG', name: 'Engineering' });
-    const foreignId = await createAgent(asOwner, { username: 'eng', projectKey: 'ENG' });
+    const foreignId = await makeAgent(asOwner, { username: 'eng', projectKey: 'ENG' });
     expect((await createSchedule(asOwner, foreignId)).status).toBe(400);
   });
 
   it('pauses a schedule and moves the next run when it is resumed', async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner);
+    const agentId = await makeAgent(asOwner);
     const created = await createSchedule(asOwner, agentId);
     const scheduleId = created.data!.id;
 
@@ -164,7 +165,7 @@ describe('agent schedules', () => {
 
   it('recomputes the next run when the cron changes', async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner);
+    const agentId = await makeAgent(asOwner);
     const created = await createSchedule(asOwner, agentId, '0 9 * * *');
     const updated = await schedules(asOwner)({ scheduleId: created.data!.id }).patch({
       cron: '30 9 * * *',
@@ -180,7 +181,7 @@ describe('agent schedules', () => {
 
   it('queues a manual run and reports it in the run history', async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner);
+    const agentId = await makeAgent(asOwner);
     const created = await createSchedule(asOwner, agentId);
     const scheduleId = created.data!.id;
 
@@ -247,7 +248,7 @@ describe('agent schedules', () => {
 
   it('ends every pending run of a schedule', async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner, { username: 'hook', kind: 'external' });
+    const agentId = await makeAgent(asOwner, { username: 'hook', kind: 'external' });
     const scheduleId = (await createSchedule(asOwner, agentId)).data!.id;
     await schedules(asOwner)({ scheduleId }).run.post();
     await schedules(asOwner)({ scheduleId }).run.post();
@@ -273,7 +274,7 @@ describe('agent schedules', () => {
 
   it('ends one pending run and 404s on it afterwards', async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner, { username: 'hook', kind: 'external' });
+    const agentId = await makeAgent(asOwner, { username: 'hook', kind: 'external' });
     const scheduleId = (await createSchedule(asOwner, agentId)).data!.id;
     const kept = (await schedules(asOwner)({ scheduleId }).run.post()).data!.runId;
     const runId = (await schedules(asOwner)({ scheduleId }).run.post()).data!.runId;
@@ -311,11 +312,12 @@ describe('agent schedules', () => {
 
   it('deletes a schedule with its runs and 404s on it afterwards', async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner);
+    const agentId = await makeAgent(asOwner);
     const scheduleId = (await createSchedule(asOwner, agentId)).data!.id;
     await schedules(asOwner)({ scheduleId }).run.post();
+    const teamId = await teamOf(asOwner, 'MKT');
     const agentRuns = () =>
-      asOwner.projects({ projectKey: 'MKT' })['ai-agents']({ agentId }).runs.get({ query: {} });
+      asOwner.teams({ teamId })['ai-agents']({ agentId }).runs.get({ query: {} });
     expect((await agentRuns()).data?.items).toHaveLength(1);
 
     expect((await schedules(asOwner)({ scheduleId }).delete()).status).toBe(204);
@@ -338,7 +340,7 @@ describe('agent schedules', () => {
 
   it('denies a non-member', async () => {
     const { asOwner } = await setup();
-    const agentId = await createAgent(asOwner);
+    const agentId = await makeAgent(asOwner);
     const scheduleId = (await createSchedule(asOwner, agentId)).data!.id;
     const outsider = await signUpTestUser({ name: 'Outsider' });
     const asOutsider = authedApi(outsider.cookie);

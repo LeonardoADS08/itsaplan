@@ -2,6 +2,11 @@ import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+export const sectionNavItemClass =
+  'flex h-8 w-full items-center gap-2 rounded-md px-2 text-start text-sm transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/60';
+
+export const sectionNavIdleClass = 'text-foreground/85 hover:bg-accent/60 hover:text-foreground';
+
 export interface SectionNavItem {
   id: string;
   label: string;
@@ -35,10 +40,8 @@ export function SectionNav({
           const active = section.id === activeId;
           const Icon = section.icon;
           const itemClassName = cn(
-            'flex h-8 w-full items-center gap-2 rounded-md px-2 text-start text-sm transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
-            active
-              ? 'bg-secondary font-medium text-secondary-foreground'
-              : 'text-foreground/85 hover:bg-accent/60 hover:text-foreground',
+            sectionNavItemClass,
+            active ? 'bg-secondary font-medium text-secondary-foreground' : sectionNavIdleClass,
           );
           const content = (
             <>

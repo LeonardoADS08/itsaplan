@@ -6,7 +6,7 @@ import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
 import { teamParams } from '#modules/teams/model';
-import { agentInProject } from '../core/service';
+import { agentInTeam } from '../core/service';
 import { AGENT_ACTIONS, ALWAYS_ON_ACTIONS } from '../core/runtime/tools/catalog';
 import {
   AgentToolListResponse,
@@ -33,8 +33,8 @@ import {
 // resource on the team. Binding one to a credential is done in the UI, so only reading
 // them and enabling them on an agent are exposed over MCP.
 //
-// Which tools an agent has enabled stays under :projectKey — the agent is a project
-// entity, and only the tools of its project's team may be enabled on it.
+// Which tools an agent has enabled sits under :teamId too — the agent belongs to the
+// team, and only that team's tools may be enabled on it.
 export const agentToolRoutes = new Elysia({
   name: 'agent-tools',
   detail: { tags: ['Agent Tools'] },
@@ -42,8 +42,9 @@ export const agentToolRoutes = new Elysia({
   .use(authContext)
   .use(guards)
 
-  .get('/projects/:projectKey/ai-agents/tools', () => [...AGENT_ACTIONS, ...ALWAYS_ON_ACTIONS], {
-    permission: ['ai_agents', 'read'],
+  .get('/teams/:teamId/ai-agents/tools', () => [...AGENT_ACTIONS, ...ALWAYS_ON_ACTIONS], {
+    params: teamParams,
+    teamPermission: ['ai_agents', 'read'],
     response: { 200: ToolMetaListResponse, ...accessErrors },
     detail: {
       summary: 'List built-in agent actions',
@@ -102,16 +103,16 @@ export const agentToolRoutes = new Elysia({
   )
 
   .get(
-    '/projects/:projectKey/ai-agents/:agentId/tool-configs',
-    async ({ params, project }) => {
-      if (!(await agentInProject(params.agentId, project.id))) {
+    '/teams/:teamId/ai-agents/:agentId/tool-configs',
+    async ({ params, membership }) => {
+      if (!(await agentInTeam(params.agentId, membership.teamId))) {
         throw new HttpError(404, 'Agent not found');
       }
       return listAgentToolLinks(params.agentId);
     },
     {
       params: agentParams,
-      permission: ['agent_tools', 'read'],
+      teamPermission: ['agent_tools', 'read'],
       response: { 200: AgentToolListResponse, ...accessErrors },
       detail: {
         summary: "List an agent's enabled tools",
@@ -122,24 +123,24 @@ export const agentToolRoutes = new Elysia({
   )
 
   .put(
-    '/projects/:projectKey/ai-agents/:agentId/tool-configs',
-    async ({ params, project, body }) => {
-      if (!(await agentInProject(params.agentId, project.id))) {
+    '/teams/:teamId/ai-agents/:agentId/tool-configs',
+    async ({ params, membership, body }) => {
+      if (!(await agentInTeam(params.agentId, membership.teamId))) {
         throw new HttpError(404, 'Agent not found');
       }
-      await setAgentTools(params.agentId, project.teamId, body.agentToolIds);
+      await setAgentTools(params.agentId, membership.teamId, body.agentToolIds);
       return listAgentToolLinks(params.agentId);
     },
     {
       body: setAgentToolsBody,
       params: agentParams,
-      permission: ['agent_tools', 'edit'],
+      teamPermission: ['agent_tools', 'edit'],
       response: { 200: AgentToolListResponse, ...commonErrors },
       detail: {
         summary: "Set an agent's enabled tools",
         description:
           'Replace the set of configured tools enabled on an agent. Send the full set: a tool ' +
-          "left out is disabled. Ids that are not tools of the project's team are ignored.",
+          "left out is disabled. Ids that are not tools of the agent's team are ignored.",
         ...mcpTool('set_ai_agent_configured_tools'),
       },
     },

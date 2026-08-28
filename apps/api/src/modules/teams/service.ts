@@ -1,6 +1,7 @@
 import {
   agentSkill,
   agentTool,
+  aiAgent,
   db,
   integrationCredential,
   issue,
@@ -23,35 +24,55 @@ import {
 } from '#modules/members/service';
 import { getStats, type StatsDto } from '#modules/analytics/service';
 
+// The rank a person holds in a team.
 export type TeamRole = 'owner' | 'manager' | 'member';
+
+// What a team_member row can say. An agent's bot user belongs to the team and appears
+// in its member list, but its standing grants nothing: what it may do is the team role
+// on its ai_agent row.
+export type TeamStanding = TeamRole | 'agent';
+
+// Owners and managers run the team, so they hold everything it can grant. Everyone
+// else — a member, and an agent — holds what their project roles in it grant.
+export function runsTeam(standing: TeamStanding | null): boolean {
+  return standing === 'owner' || standing === 'manager';
+}
 
 export interface TeamRow {
   id: number;
   name: string;
-  // The caller's rank in the team, not a property of the team itself.
-  role: TeamRole;
+  // The caller's standing in the team, not a property of the team itself. An agent
+  // reading its own team is 'agent', which runs nothing.
+  role: TeamStanding;
   joinedAt: string;
   projectCount: number;
   memberCount: number;
   // How many of those members are owners: the last one cannot leave.
   ownerCount: number;
   // The roles the team's projects assign from, the integration credentials they run
-  // on, and the skills and tools their agents use. Counted here so the page shows them
-  // beside the section without opening it.
+  // on, the agents that work in them, and the skills and tools those agents use.
+  // Counted here so the page shows them beside the section without opening it.
   roleCount: number;
   integrationCount: number;
+  agentCount: number;
   skillCount: number;
   toolCount: number;
   createdAt: string;
 }
 
-// One member of a team, as the team detail lists them.
+// One member of a team, as the team detail lists them: a person, or the bot user of
+// one of the team's agents. An agent carries the id and handle it is addressed by and
+// the name of the team role it acts under — its standing in the team is 'agent', which
+// says nothing about what it may do.
 export interface TeamMemberRow {
   userId: string;
   name: string;
   email: string;
   image: string | null;
-  role: TeamRole;
+  role: TeamStanding;
+  agentId: number | null;
+  username: string | null;
+  agentRoleName: string | null;
   joinedAt: string;
 }
 
@@ -122,60 +143,74 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.id);
-  const [projectCounts, memberCounts, roleCounts, integrationCounts, skillCounts, toolCounts] =
-    await Promise.all([
-      db
-        .select({ teamId: project.teamId, count: sql<number>`count(*)::int` })
-        .from(project)
-        .where(inArray(project.teamId, ids))
-        .groupBy(project.teamId),
-      db
-        .select({
-          teamId: teamMember.teamId,
-          count: sql<number>`count(*)::int`,
-          owners: sql<number>`count(*) filter (where ${teamMember.role} = 'owner')::int`,
-        })
-        .from(teamMember)
-        .where(inArray(teamMember.teamId, ids))
-        .groupBy(teamMember.teamId),
-      db
-        .select({ teamId: teamRole.teamId, count: sql<number>`count(*)::int` })
-        .from(teamRole)
-        .where(inArray(teamRole.teamId, ids))
-        .groupBy(teamRole.teamId),
-      db
-        .select({ teamId: integrationCredential.teamId, count: sql<number>`count(*)::int` })
-        .from(integrationCredential)
-        .where(inArray(integrationCredential.teamId, ids))
-        .groupBy(integrationCredential.teamId),
-      db
-        .select({ teamId: agentSkill.teamId, count: sql<number>`count(*)::int` })
-        .from(agentSkill)
-        .where(inArray(agentSkill.teamId, ids))
-        .groupBy(agentSkill.teamId),
-      db
-        .select({ teamId: agentTool.teamId, count: sql<number>`count(*)::int` })
-        .from(agentTool)
-        .where(inArray(agentTool.teamId, ids))
-        .groupBy(agentTool.teamId),
-    ]);
+  const [
+    projectCounts,
+    memberCounts,
+    roleCounts,
+    integrationCounts,
+    agentCounts,
+    skillCounts,
+    toolCounts,
+  ] = await Promise.all([
+    db
+      .select({ teamId: project.teamId, count: sql<number>`count(*)::int` })
+      .from(project)
+      .where(inArray(project.teamId, ids))
+      .groupBy(project.teamId),
+    db
+      .select({
+        teamId: teamMember.teamId,
+        count: sql<number>`count(*)::int`,
+        owners: sql<number>`count(*) filter (where ${teamMember.role} = 'owner')::int`,
+      })
+      .from(teamMember)
+      .where(inArray(teamMember.teamId, ids))
+      .groupBy(teamMember.teamId),
+    db
+      .select({ teamId: teamRole.teamId, count: sql<number>`count(*)::int` })
+      .from(teamRole)
+      .where(inArray(teamRole.teamId, ids))
+      .groupBy(teamRole.teamId),
+    db
+      .select({ teamId: integrationCredential.teamId, count: sql<number>`count(*)::int` })
+      .from(integrationCredential)
+      .where(inArray(integrationCredential.teamId, ids))
+      .groupBy(integrationCredential.teamId),
+    db
+      .select({ teamId: aiAgent.teamId, count: sql<number>`count(*)::int` })
+      .from(aiAgent)
+      .where(inArray(aiAgent.teamId, ids))
+      .groupBy(aiAgent.teamId),
+    db
+      .select({ teamId: agentSkill.teamId, count: sql<number>`count(*)::int` })
+      .from(agentSkill)
+      .where(inArray(agentSkill.teamId, ids))
+      .groupBy(agentSkill.teamId),
+    db
+      .select({ teamId: agentTool.teamId, count: sql<number>`count(*)::int` })
+      .from(agentTool)
+      .where(inArray(agentTool.teamId, ids))
+      .groupBy(agentTool.teamId),
+  ]);
   const projects = new Map(projectCounts.map((r) => [r.teamId, r.count]));
   const members = new Map(memberCounts.map((r) => [r.teamId, r]));
   const roles = new Map(roleCounts.map((r) => [r.teamId, r.count]));
   const integrations = new Map(integrationCounts.map((r) => [r.teamId, r.count]));
+  const agents = new Map(agentCounts.map((r) => [r.teamId, r.count]));
   const skills = new Map(skillCounts.map((r) => [r.teamId, r.count]));
   const tools = new Map(toolCounts.map((r) => [r.teamId, r.count]));
 
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
-    role: row.role as TeamRole,
+    role: row.role as TeamStanding,
     joinedAt: iso(row.joinedAt),
     projectCount: projects.get(row.id) ?? 0,
     memberCount: members.get(row.id)?.count ?? 0,
     ownerCount: members.get(row.id)?.owners ?? 0,
     roleCount: roles.get(row.id) ?? 0,
     integrationCount: integrations.get(row.id) ?? 0,
+    agentCount: agents.get(row.id) ?? 0,
     skillCount: skills.get(row.id) ?? 0,
     toolCount: tools.get(row.id) ?? 0,
     createdAt: iso(row.createdAt),
@@ -186,12 +221,15 @@ export async function listTeams(userId: string): Promise<TeamRow[]> {
   return loadTeamRows(userId);
 }
 
-export async function getTeamMembership(teamId: number, userId: string): Promise<TeamRole | null> {
+export async function getTeamMembership(
+  teamId: number,
+  userId: string,
+): Promise<TeamStanding | null> {
   const rows = await db
     .select({ role: teamMember.role })
     .from(teamMember)
     .where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)));
-  return rows[0] ? (rows[0].role as TeamRole) : null;
+  return rows[0] ? (rows[0].role as TeamStanding) : null;
 }
 
 // The team itself: the row the list carries, with what the caller may do with the
@@ -201,12 +239,13 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
   const [row] = await loadTeamRows(userId, teamId);
   if (!row) return null;
 
-  const permissions =
-    row.role === 'member' ? await getTeamPermissions(teamId, userId) : fullPermissions();
+  const permissions = runsTeam(row.role)
+    ? fullPermissions()
+    : await getTeamPermissions(teamId, userId);
   return { ...row, permissions };
 }
 
-// The members of the team, by name.
+// The members of the team, people and agents alike, by name.
 export async function listTeamMembers(teamId: number): Promise<TeamMemberRow[]> {
   const rows = await db
     .select({
@@ -215,10 +254,15 @@ export async function listTeamMembers(teamId: number): Promise<TeamMemberRow[]> 
       email: user.email,
       image: user.image,
       role: teamMember.role,
+      agentId: aiAgent.id,
+      username: aiAgent.username,
+      agentRoleName: teamRole.name,
       joinedAt: teamMember.createdAt,
     })
     .from(teamMember)
     .innerJoin(user, eq(user.id, teamMember.userId))
+    .leftJoin(aiAgent, eq(aiAgent.userId, teamMember.userId))
+    .leftJoin(teamRole, eq(teamRole.id, aiAgent.roleId))
     .where(eq(teamMember.teamId, teamId))
     .orderBy(user.name);
 
@@ -227,7 +271,10 @@ export async function listTeamMembers(teamId: number): Promise<TeamMemberRow[]> 
     name: m.name,
     email: m.email,
     image: m.image,
-    role: m.role as TeamRole,
+    role: m.role as TeamStanding,
+    agentId: m.agentId,
+    username: m.username,
+    agentRoleName: m.agentRoleName,
     joinedAt: iso(m.joinedAt),
   }));
 }
@@ -373,6 +420,7 @@ export async function createTeam(name: string, ownerId: string): Promise<TeamRow
       ownerCount: 1,
       roleCount: 1,
       integrationCount: 0,
+      agentCount: 0,
       skillCount: 0,
       toolCount: 0,
       createdAt: iso(row.createdAt),
@@ -389,7 +437,7 @@ export async function renameTeam(teamId: number, name: string, userId: string): 
 // Drops the caller's membership. The team keeps its projects, so a member who
 // leaves only loses the grouping, not the projects they belong to. The last owner
 // cannot leave: a team without an owner has nobody who can rename it.
-export async function leaveTeam(teamId: number, userId: string, role: TeamRole): Promise<void> {
+export async function leaveTeam(teamId: number, userId: string, role: TeamStanding): Promise<void> {
   if (role === 'owner') {
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)::int` })

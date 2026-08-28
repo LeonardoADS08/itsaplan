@@ -6,6 +6,7 @@ import { createCredential } from '#tests/helpers/integrations';
 import { untaggedRoutes } from '#tests/helpers/mcp';
 import { addProjectMember } from '#tests/helpers/members';
 import { createRole } from '#tests/helpers/roles';
+import { createAgent } from '#tests/helpers/agents';
 
 // Configured tools of a team, shared by every project it owns: a catalog tool bound to
 // an integration credential. The secret lives on the credential, so a configured tool
@@ -20,7 +21,7 @@ async function setup() {
 }
 
 const tools = (api: Api, teamId: number) => api.teams({ teamId })['agent-tools'];
-const agents = (api: Api) => api.projects({ projectKey: 'MKT' })['ai-agents'];
+const agents = (api: Api, teamId: number) => api.teams({ teamId })['ai-agents'];
 
 // Creates a Jina credential on the team that owns MKT and returns its id.
 function jinaCredential(asOwner: Api): Promise<number> {
@@ -102,15 +103,15 @@ describe('agent tools', () => {
     const credentialId = await jinaCredential(asOwner);
     const tool = await tools(asOwner, teamId).post({ toolKey: 'jina_reader', credentialId });
 
-    const agent = await asOwner
-      .projects({ projectKey: 'SUP' })
-      ['ai-agents'].post({ name: 'Bot', username: 'bot', kind: 'internal' });
-    const set = await asOwner
-      .projects({ projectKey: 'SUP' })
-      ['ai-agents']({ agentId: agent.data!.agent.id })
-      ['tool-configs'].put({
-        agentToolIds: [tool.data!.id],
-      });
+    const agent = await createAgent(asOwner, 'SUP', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'internal',
+    });
+    const set = await agents(
+      asOwner,
+      teamId,
+    )({ agentId: agent.data!.agent.id })['tool-configs'].put({ agentToolIds: [tool.data!.id] });
     expect(set.data?.map((t) => t.id)).toEqual([tool.data!.id]);
   });
 
@@ -127,19 +128,29 @@ describe('agent tools', () => {
     const { asOwner, teamId } = await setup();
     const credentialId = await jinaCredential(asOwner);
     const tool = await tools(asOwner, teamId).post({ toolKey: 'jina_reader', credentialId });
-    const agent = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'internal' });
+    const agent = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'internal',
+    });
     const agentId = agent.data!.agent.id;
 
-    const set = await agents(asOwner)({ agentId })['tool-configs'].put({
+    const set = await agents(
+      asOwner,
+      teamId,
+    )({ agentId })['tool-configs'].put({
       agentToolIds: [tool.data!.id],
     });
     expect(set.status).toBe(200);
     expect(set.data).toHaveLength(1);
 
-    const list = await agents(asOwner)({ agentId })['tool-configs'].get();
+    const list = await agents(asOwner, teamId)({ agentId })['tool-configs'].get();
     expect(list.data?.map((t) => t.id)).toEqual([tool.data!.id]);
 
-    const clear = await agents(asOwner)({ agentId })['tool-configs'].put({ agentToolIds: [] });
+    const clear = await agents(
+      asOwner,
+      teamId,
+    )({ agentId })['tool-configs'].put({ agentToolIds: [] });
     expect(clear.data).toHaveLength(0);
   });
 
@@ -160,9 +171,16 @@ describe('agent tools', () => {
         credential: { apiKey: 'jina-other' },
       }),
     });
-    const agent = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'internal' });
+    const agent = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'internal',
+    });
 
-    const set = await agents(asOwner)({ agentId: agent.data!.agent.id })['tool-configs'].put({
+    const set = await agents(
+      asOwner,
+      teamId,
+    )({ agentId: agent.data!.agent.id })['tool-configs'].put({
       agentToolIds: [mine.data!.id, theirs.data!.id],
     });
     expect(set.data?.map((t) => t.id)).toEqual([mine.data!.id]);

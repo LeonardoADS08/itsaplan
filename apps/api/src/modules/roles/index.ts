@@ -42,7 +42,10 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
       response: { 200: PermissionCatalogResponse, ...errors(401) },
       detail: {
         summary: 'List the permission catalog',
-        description: "List the resources and actions a role's permission matrix is built from.",
+        description:
+          "List the resources and actions a role's permission matrix is built from. " +
+          'ai_agents is administrative: it also attaches an agent to any project of the team ' +
+          'and exposes the API key of an agent.',
         ...mcpTool('list_permission_catalog'),
       },
     },

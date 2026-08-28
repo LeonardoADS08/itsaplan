@@ -5,44 +5,22 @@ import { AI_AGENTS_SECTION } from '@/utils/settingsSections';
 import { useSettingsSectionText } from '@/hooks/useSectionLabels';
 import SectionPageView from '@/components/common/page/SectionPageView';
 import RequirePermission from '@/components/common/permissions/RequirePermission';
-import { SettingsResourceProvider } from './context/settingsPermission';
-import { SettingsCreateAction } from './components/crud/SettingsCreateAction';
-import SettingsAiAgents from './components/ai-agents/SettingsAiAgents';
-import { SettingsAiAgentSheet } from './components/ai-agents/SettingsAiAgentSheet';
-import { useTranslations } from 'next-intl';
+import ProjectAiAgents from './components/ai-agents/ProjectAiAgents';
 
 const section = AI_AGENTS_SECTION;
 
-// The AI agents page (/project/:projectKey/ai-agents), a top-level nav item.
+// The AI agents page (/project/:projectKey/ai-agents), a top-level nav item. The team
+// owns its agents, so this page only lists the ones working in the project; managing
+// them is the team's Agents section.
 export default function SettingsAiAgentsPage() {
-  const t = useTranslations('settings.agents');
   const sectionText = useSettingsSectionText()(section.slug);
   const { project } = useShell();
   if (!project) return null;
-  const projectKey = project.project.key;
   return (
-    <SectionPageView
-      title={sectionText.label}
-      description={sectionText.description}
-      actions={
-        <SettingsCreateAction resource={section.resource} label={t('newAgent')}>
-          {({ open, close }) => (
-            <SettingsAiAgentSheet
-              projectKey={projectKey}
-              open={open}
-              agent={null}
-              onClose={close}
-            />
-          )}
-        </SettingsCreateAction>
-      }
-      wide
-    >
-      <SettingsResourceProvider resource={section.resource}>
-        <RequirePermission resource={section.resource} action="read">
-          <SettingsAiAgents project={project} />
-        </RequirePermission>
-      </SettingsResourceProvider>
+    <SectionPageView title={sectionText.label} description={sectionText.description} wide>
+      <RequirePermission resource={section.resource} action="read">
+        <ProjectAiAgents />
+      </RequirePermission>
     </SectionPageView>
   );
 }

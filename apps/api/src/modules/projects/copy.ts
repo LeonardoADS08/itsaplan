@@ -24,9 +24,13 @@ import {
   type ProjectRow,
 } from './service';
 import { GIT_SETTING_KEY } from '#modules/git/service';
-import { listAgents, createAgent, type NewAgentInput } from '#modules/agents/core/service';
-import { setAgentSkills, listAgentSkills } from '#modules/agents/skills/service';
-import { listAgentToolLinks, setAgentTools } from '#modules/agents/tools/service';
+import {
+  listAgents,
+  createAgent,
+  updateAgent,
+  defaultTeamRoleId,
+  type NewAgentInput,
+} from '#modules/agents/core/service';
 import { listAgentSchedules, createAgentSchedule } from '#modules/agents/schedules/service';
 import { nextCronRun } from '#modules/agents/schedules/cron';
 
@@ -34,9 +38,9 @@ import { nextCronRun } from '#modules/agents/schedules/cron';
 // entity. Some sections depend on others (a view's filters reference
 // states/types/labels/fields); those dependencies are force-enabled in
 // normalizeInclude so a partial selection can never leave an id pointing at the
-// source project. `skills` and `tools` carry no entity of their own — both belong to
-// the team — only which of the team's skills and tools the copied agents keep
-// enabled.
+// source project. The skills and the configured tools of an agent are not among them:
+// both belong to the team, so a copy inside it reuses the same agents, and a copy into
+// another team has neither to draw on.
 export interface CopyProjectInclude {
   states: boolean;
   issueTypes: boolean;
@@ -47,8 +51,6 @@ export interface CopyProjectInclude {
   actions: boolean;
   configuration: boolean;
   webhooks: boolean;
-  tools: boolean;
-  skills: boolean;
   agents: boolean;
   schedules: boolean;
 }
@@ -63,8 +65,6 @@ export const COPY_INCLUDE_KEYS: (keyof CopyProjectInclude)[] = [
   'actions',
   'configuration',
   'webhooks',
-  'tools',
-  'skills',
   'agents',
   'schedules',
 ];
@@ -500,16 +500,41 @@ export async function copyProject(
     return proj;
   });
 
-  // Agents: each gets its own bot user and API key through createAgent. An external
-  // agent's key is regenerated and cannot be recovered here — its operator resets it in
-  // the new project.
+  // Agents: the ones working in the source project. A copy inside the same team
+  // attaches those agents to the new project — an agent belongs to the team and one
+  // handle is unique in it, so a second copy of the same agent cannot exist. A copy
+  // into another team has no such agents, so each is created there, with its own bot
+  // user and a fresh API key: an external agent's key cannot be carried over, and its
+  // operator resets it in the new project.
   if (inc.agents) {
-    for (const a of await listAgents(sourceProjectId)) {
+    for (const a of await listAgents(source.teamId, sourceProjectId)) {
+      // The member fields the agent reacts to, remapped onto the copies.
+      const fieldTriggers = a.fieldTriggers.flatMap((trigger) => {
+        const fieldId = maps.field.get(trigger.fieldId);
+        return fieldId == null ? [] : [{ fieldId, delaySec: trigger.delaySec }];
+      });
+
+      if (sameTeam) {
+        await updateAgent(
+          a.id,
+          ownerTeam.id,
+          {
+            projectIds: [...a.projects.map((p) => p.id), newProject.id],
+            fieldTriggers: [...a.fieldTriggers, ...fieldTriggers],
+          },
+          ownerId,
+        );
+        agentMap.set(a.id, a.id);
+        continue;
+      }
+
       const agentInput: NewAgentInput = {
         name: a.name,
         username: a.username,
         kind: a.kind,
-        modelCredentialId: sameTeam ? a.modelCredentialId : null,
+        // The model credential and the role belong to the source team, so the copy
+        // starts on the target team's default role and with no credential.
+        modelCredentialId: null,
         model: a.model,
         instructions: a.instructions,
         tools: a.tools,
@@ -519,33 +544,17 @@ export async function copyProject(
         memoryLastMessages: a.memoryLastMessages,
         triggerOnMention: a.triggerOnMention,
         triggerOnAssign: a.triggerOnAssign,
-        fieldTriggers: a.fieldTriggers.flatMap((trigger) => {
-          const fieldId = maps.field.get(trigger.fieldId);
-          return fieldId == null ? [] : [{ fieldId, delaySec: trigger.delaySec }];
-        }),
+        fieldTriggers,
         delegationDelaySec: a.delegationDelaySec,
-        // Outside the source team an agent starts on the target team's default role.
-        roleId: sameTeam ? a.roleId : null,
+        projectIds: [newProject.id],
+        roleId: await defaultTeamRoleId(ownerTeam.id),
         // An 'owner'-scoped agent keeps its scope, bound to whoever made the copy —
         // the source owner need not be a member of the new project.
         runnerScope: a.runnerScope,
         ownerUserId: ownerId,
       };
-      const { agent } = await createAgent(newProject.id, agentInput);
+      const { agent } = await createAgent(ownerTeam.id, agentInput);
       agentMap.set(a.id, agent.id);
-
-      // The skill library belongs to the team, so the copy enables the same skills on
-      // the agent — only inside the source team, where those skills exist.
-      if (inc.skills && sameTeam) {
-        const skillIds = (await listAgentSkills(a.id)).map((s) => s.id);
-        if (skillIds.length > 0) await setAgentSkills(agent.id, ownerTeam.id, skillIds);
-      }
-      // Configured tools belong to the team too, so the copy enables the same tools on
-      // the agent — only inside the source team, where those tools exist.
-      if (inc.tools && sameTeam) {
-        const toolIds = (await listAgentToolLinks(a.id)).map((tRow) => tRow.id);
-        if (toolIds.length > 0) await setAgentTools(agent.id, ownerTeam.id, toolIds);
-      }
     }
   }
 

@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent';
-import { getAgentById, getInternalAgentApiKey, type AiAgentRow } from '../service';
-import { getProjectById, getProjectTeamId } from '#modules/projects/service';
+import { getAgentInProject, getInternalAgentApiKey, type AiAgentRow } from '../service';
+import { getProjectById } from '#modules/projects/service';
 import { getCredentialSecret } from '../../integrations/service';
 import { listAgentSkills } from '../../skills/service';
 import { listAgentToolsForRun } from '../../tools/service';
@@ -18,10 +18,11 @@ import { HttpError } from '#shared/lib';
 
 // Runtime execution of internal agents via Mastra. An agent is built on demand
 // from its stored configuration (provider/model/instructions) and run against a
-// prompt. It is given the work-item system tools for its project (see tools/route-tools),
-// so it can read and manage that project's issues, comments, labels, custom field
-// values, and attachments — acting as its own bot user, plus a read_skill tool for
-// any skills enabled on it.
+// prompt. It is given the work-item system tools for the project the run works in
+// (see tools/route-tools), so it can read and manage that project's issues, comments,
+// labels, custom field values, and attachments — acting as its own bot user, plus a
+// read_skill tool for any skills enabled on it. An agent works in several projects of
+// its team, so the project comes from the run, never from the agent.
 //
 // The model is addressed through Mastra's model router: the credential the agent's
 // team stores for the provider is decrypted and its key passed to the model config.
@@ -43,10 +44,7 @@ async function resolveModel(row: AiAgentRow): Promise<ModelConfig> {
   if (row.modelCredentialId == null) {
     throw new HttpError(400, 'Agent has no model credential set');
   }
-  const secret = await getCredentialSecret(
-    row.modelCredentialId,
-    await getProjectTeamId(row.projectId),
-  );
+  const secret = await getCredentialSecret(row.modelCredentialId, row.teamId);
   if (!secret) throw new HttpError(400, "Agent's model credential not found");
   const provider = secret.integrationKey;
   const modelId = row.model ?? (provider === 'openai' ? DEFAULT_MODEL : null);
@@ -73,8 +71,12 @@ export type AgentRunEvent =
   | { type: 'done'; threadId: string | null }
   | { type: 'error'; message: string };
 
-async function buildAgent(row: AiAgentRow, contextPreamble: string): Promise<Agent> {
-  const project = await getProjectById(row.projectId);
+async function buildAgent(
+  row: AiAgentRow,
+  projectId: number,
+  contextPreamble: string,
+): Promise<Agent> {
+  const project = await getProjectById(projectId);
   if (!project) throw new HttpError(404, 'Project not found');
   const model = await resolveModel(row);
   const skills = await listAgentSkills(row.id);
@@ -90,14 +92,14 @@ async function buildAgent(row: AiAgentRow, contextPreamble: string): Promise<Age
     name: row.name,
     instructions,
     model,
-    // The agent acts as its own bot user, scoped to its project. Route tools call the
-    // real API with its key, so its role applies; get_current_date is the one
+    // The agent acts as its own bot user, in the project of this run. Route tools call
+    // the real API with its key, so its role applies; get_current_date is the one
     // tool with no route; read_skill loads any enabled skills on demand; custom tools
-    // are the external integrations configured on the project and enabled here.
+    // are the external integrations configured on the team and enabled here.
     tools: {
       ...buildRouteTools(project, apiKey, row.tools),
-      ...buildLocalTools(row.projectId, row.tools),
-      ...(skills.length > 0 ? buildSkillTool(project.teamId, skills) : {}),
+      ...buildLocalTools(projectId, row.tools),
+      ...(skills.length > 0 ? buildSkillTool(row.teamId, skills) : {}),
       ...buildCustomTools(customTools),
     },
     // Conversation memory (last N messages of a thread) when enabled.
@@ -107,10 +109,10 @@ async function buildAgent(row: AiAgentRow, contextPreamble: string): Promise<Age
   });
 }
 
-// Runs the internal agent identified by (agentId, projectId) against the prompt and
-// returns the generated text with the counts of the last model call it took. Throws 404
-// if the agent does not exist in the project and 400 if it is an external agent (which
-// carries no model config).
+// Runs the internal agent identified by agentId in the given project against the
+// prompt and returns the generated text with the counts of the last model call it
+// took. Throws 404 if the agent does not work in that project and 400 if it is an
+// external agent (which carries no model config).
 //
 // When the agent has memory enabled, the run participates in a conversation
 // thread: threadId identifies the conversation (a new one is created when omitted)
@@ -212,12 +214,12 @@ async function prepareRun(
   prompt: string,
   opts: RunOpts,
 ): Promise<{ agent: Agent; row: AiAgentRow; options: RunOptions; threadId: string | null }> {
-  const row = await getAgentById(agentId, projectId);
+  const row = await getAgentInProject(agentId, projectId);
   if (!row) throw new HttpError(404, 'Agent not found');
   if (row.kind !== 'internal') {
     throw new HttpError(400, 'Only internal agents can be run');
   }
-  const agent = await buildAgent(row, opts.contextPreamble ?? '');
+  const agent = await buildAgent(row, projectId, opts.contextPreamble ?? '');
 
   // Mastra's generate/stream have overloaded options; type the shape we use. In
   // Mastra v1 the temperature belongs to the call's model settings — a flat

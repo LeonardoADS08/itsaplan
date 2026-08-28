@@ -6,6 +6,7 @@ import { requireUser } from '#shared/access';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
+import { teamParams } from '#modules/teams/model';
 import {
   listAgents,
   createAgent,
@@ -13,6 +14,7 @@ import {
   deleteAgent,
   regenerateKey,
   getAgentById,
+  getAgentInProject,
   type AgentKind,
 } from './service';
 import {
@@ -25,10 +27,13 @@ import {
   renameThreadBody,
   RegenerateKeyResponse,
   RunAgentResponse,
+  agentListQuery,
   agentParams,
   createAgentBody,
+  projectAgentParams,
   runBody,
   runsQuery,
+  setAgentProjectsBody,
   threadListQuery,
   threadPageQuery,
   threadParams,
@@ -105,29 +110,46 @@ function threadStore(kind: AgentKind) {
       };
 }
 
+// An agent belongs to a team, so managing it — creating, editing, attaching it to a
+// project, reading its key — sits under :teamId, gated by the ai_agents resource on the
+// team: its owner and managers always, an owner of one of its projects always, another
+// member when a project role of theirs grants it. One path carries one guard; a second
+// one under the project would need its own answer for a project member who holds no
+// rights in the team.
+//
+// Running an agent and chatting with it stay under :projectKey. Both act inside one
+// project, which is what the permission check and the agent's tools are bound to.
 export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['AI Agents'] } })
   .use(authContext)
   .use(guards)
-  .get('/projects/:projectKey/ai-agents', ({ project }) => listAgents(project.id), {
-    permission: ['ai_agents', 'read'],
-    response: { 200: AiAgentListResponse, ...accessErrors },
-    detail: {
-      summary: 'List AI agents',
-      description: "List a project's AI agents with their config.",
-      ...mcpTool('list_ai_agents'),
+  .get(
+    '/teams/:teamId/ai-agents',
+    ({ membership, query }) => listAgents(membership.teamId, query.projectId),
+    {
+      params: teamParams,
+      query: agentListQuery,
+      teamPermission: ['ai_agents', 'read'],
+      response: { 200: AiAgentListResponse, ...accessErrors },
+      detail: {
+        summary: 'List AI agents',
+        description:
+          "List the team's AI agents with their config. Pass projectId to list only the agents " +
+          'working in that project.',
+        ...mcpTool('list_ai_agents'),
+      },
     },
-  })
+  )
 
   .get(
-    '/projects/:projectKey/ai-agents/:agentId',
-    async ({ params, project }) => {
-      const agent = await getAgentById(params.agentId, project.id);
+    '/teams/:teamId/ai-agents/:agentId',
+    async ({ params, membership }) => {
+      const agent = await getAgentById(params.agentId, membership.teamId);
       if (!agent) throw new HttpError(404, 'Agent not found');
       return agent;
     },
     {
       params: agentParams,
-      permission: ['ai_agents', 'read'],
+      teamPermission: ['ai_agents', 'read'],
       response: { 200: AiAgentResponse, ...commonErrors },
       detail: {
         summary: 'Get an AI agent',
@@ -141,14 +163,15 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   // here and never available again (regenerate to get a new one); an internal agent
   // runs in-process and has no key, so apiKey comes back null.
   .post(
-    '/projects/:projectKey/ai-agents',
-    async ({ project, body, set, user }) => {
+    '/teams/:teamId/ai-agents',
+    async ({ membership, body, set, user }) => {
       set.status = 201;
-      return createAgent(project.id, { ...body, ownerUserId: requireUser(user).id });
+      return createAgent(membership.teamId, { ...body, ownerUserId: requireUser(user).id });
     },
     {
+      params: teamParams,
       body: createAgentBody,
-      permission: ['ai_agents', 'create'],
+      teamPermission: ['ai_agents', 'create'],
       response: { 201: CreateAgentResponse, ...commonErrors, ...errors(409) },
       detail: {
         summary: 'Create an AI agent',
@@ -161,21 +184,55 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   )
 
   .patch(
-    '/projects/:projectKey/ai-agents/:agentId',
-    async ({ params, project, body, user }) => {
-      const agent = await updateAgent(params.agentId, project.id, body, requireUser(user).id);
+    '/teams/:teamId/ai-agents/:agentId',
+    async ({ params, membership, body, user }) => {
+      const agent = await updateAgent(
+        params.agentId,
+        membership.teamId,
+        body,
+        requireUser(user).id,
+      );
       if (!agent) throw new HttpError(404, 'Agent not found');
       return agent;
     },
     {
       body: updateAgentBody,
       params: agentParams,
-      permission: ['ai_agents', 'edit'],
+      teamPermission: ['ai_agents', 'edit'],
       response: { 200: AiAgentResponse, ...commonErrors, ...errors(409) },
       detail: {
         summary: 'Update an AI agent',
-        description: "Update an AI agent's name, username, or model config.",
+        description: "Update an AI agent's name, username, projects, or model config.",
         ...mcpTool('update_ai_agent'),
+      },
+    },
+  )
+
+  // The projects of the team the agent works in. Membership is what lets its key reach
+  // a project, so this is both the attach and the detach: the set is replaced.
+  .put(
+    '/teams/:teamId/ai-agents/:agentId/projects',
+    async ({ params, membership, body, user }) => {
+      const agent = await updateAgent(
+        params.agentId,
+        membership.teamId,
+        { projectIds: body.projectIds },
+        requireUser(user).id,
+      );
+      if (!agent) throw new HttpError(404, 'Agent not found');
+      return agent;
+    },
+    {
+      body: setAgentProjectsBody,
+      params: agentParams,
+      teamPermission: ['ai_agents', 'edit'],
+      response: { 200: AiAgentResponse, ...commonErrors },
+      detail: {
+        summary: "Set an AI agent's projects",
+        description:
+          'Replace the projects of the team the agent works in. Send the full set: a project ' +
+          'left out is detached. A project of another team is rejected.',
+        ...mcpTool('set_ai_agent_projects'),
       },
     },
   )
@@ -183,19 +240,19 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   // Rotates the agent's API key (delete + create) and returns the new secret once.
   // Only external agents have a key; regenerating on an internal agent is a 400.
   .post(
-    '/projects/:projectKey/ai-agents/:agentId/regenerate-key',
-    async ({ params, project }) => {
-      const agent = await getAgentById(params.agentId, project.id);
+    '/teams/:teamId/ai-agents/:agentId/regenerate-key',
+    async ({ params, membership }) => {
+      const agent = await getAgentById(params.agentId, membership.teamId);
       if (!agent) throw new HttpError(404, 'Agent not found');
       if (agent.kind !== 'external')
         throw new HttpError(400, 'Internal agents do not use an API key');
-      const apiKey = await regenerateKey(params.agentId, project.id);
+      const apiKey = await regenerateKey(params.agentId, membership.teamId);
       if (apiKey == null) throw new HttpError(404, 'Agent not found');
       return { apiKey };
     },
     {
       params: agentParams,
-      permission: ['ai_agents', 'edit'],
+      teamPermission: ['ai_agents', 'edit'],
       response: { 200: RegenerateKeyResponse, ...commonErrors },
       detail: {
         summary: 'Regenerate the API key',
@@ -207,18 +264,19 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   )
 
   // The agent's run history: the triggered runs (a mention or a delegation) queued for
-  // it, newest first, paginated. Test-chat runs are not recorded here.
+  // it across the projects it works in, newest first, paginated. Test-chat runs are not
+  // recorded here.
   .get(
-    '/projects/:projectKey/ai-agents/:agentId/runs',
-    async ({ params, project, query }) => {
-      const agent = await getAgentById(params.agentId, project.id);
+    '/teams/:teamId/ai-agents/:agentId/runs',
+    async ({ params, membership, query }) => {
+      const agent = await getAgentById(params.agentId, membership.teamId);
       if (!agent) throw new HttpError(404, 'Agent not found');
       return listAgentRuns(params.agentId, { before: query.before, limit: query.limit });
     },
     {
       params: agentParams,
       query: runsQuery,
-      permission: ['ai_agents', 'read'],
+      teamPermission: ['ai_agents', 'read'],
       response: { 200: AgentRunPageResponse, ...commonErrors },
       detail: {
         summary: 'List agent runs',
@@ -228,15 +286,15 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   )
 
   .delete(
-    '/projects/:projectKey/ai-agents/:agentId',
-    async ({ params, project }) => {
-      const ok = await deleteAgent(params.agentId, project.id);
+    '/teams/:teamId/ai-agents/:agentId',
+    async ({ params, membership }) => {
+      const ok = await deleteAgent(params.agentId, membership.teamId);
       if (!ok) throw new HttpError(404, 'Agent not found');
       return noContent();
     },
     {
       params: agentParams,
-      permission: ['ai_agents', 'delete'],
+      teamPermission: ['ai_agents', 'delete'],
       response: { 204: t.Void(), ...commonErrors },
       detail: {
         summary: 'Delete an AI agent',
@@ -246,7 +304,8 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
     },
   )
 
-  // The agent is built from its stored model configuration (Mastra).
+  // The agent is built from its stored model configuration (Mastra) and works in the
+  // project of this path, which it has to be a member of.
   .post(
     '/projects/:projectKey/ai-agents/:agentId/run',
     async ({ params, project, body, user }) =>
@@ -258,7 +317,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
       ),
     {
       body: runBody,
-      params: agentParams,
+      params: projectAgentParams,
       permission: ['ai_agents', 'read'],
       response: { 200: RunAgentResponse, ...commonErrors },
       detail: {
@@ -295,7 +354,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
       ),
     {
       body: runBody,
-      params: agentParams,
+      params: projectAgentParams,
       permission: ['ai_agents', 'read'],
       response: {
         // The success body is an SSE stream (text/event-stream), returned as a raw
@@ -317,12 +376,12 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
     '/projects/:projectKey/ai-agents/:agentId/threads',
     async ({ params, project, query, user }) => {
       const caller = requireUser(user);
-      const agent = await getAgentById(params.agentId, project.id);
+      const agent = await getAgentInProject(params.agentId, project.id);
       if (!agent) throw new HttpError(404, 'Agent not found');
       return threadStore(agent.kind).list(caller.id, params.agentId, query);
     },
     {
-      params: agentParams,
+      params: projectAgentParams,
       query: threadListQuery,
       permission: ['ai_agents', 'read'],
       response: { 200: ChatThreadListResponse, ...commonErrors },
@@ -337,7 +396,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
     '/projects/:projectKey/ai-agents/:agentId/threads/:threadId/favorite',
     async ({ params, project, user }) => {
       const caller = requireUser(user);
-      const agent = await getAgentById(params.agentId, project.id);
+      const agent = await getAgentInProject(params.agentId, project.id);
       if (!agent) throw new HttpError(404, 'Agent not found');
       if (!(await threadStore(agent.kind).owns(params.threadId, caller.id, params.agentId)))
         throw new HttpError(404, 'Thread not found');
@@ -356,7 +415,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
     '/projects/:projectKey/ai-agents/:agentId/threads/:threadId/favorite',
     async ({ params, project, user }) => {
       const caller = requireUser(user);
-      const agent = await getAgentById(params.agentId, project.id);
+      const agent = await getAgentInProject(params.agentId, project.id);
       if (!agent) throw new HttpError(404, 'Agent not found');
       if (!(await threadStore(agent.kind).owns(params.threadId, caller.id, params.agentId)))
         throw new HttpError(404, 'Thread not found');
@@ -377,7 +436,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
     '/projects/:projectKey/ai-agents/:agentId/threads/:threadId/messages',
     async ({ params, project, query, user }) => {
       const caller = requireUser(user);
-      const agent = await getAgentById(params.agentId, project.id);
+      const agent = await getAgentInProject(params.agentId, project.id);
       if (!agent) throw new HttpError(404, 'Agent not found');
       const messages = await threadStore(agent.kind).messages(
         params.threadId,
@@ -402,7 +461,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
     '/projects/:projectKey/ai-agents/:agentId/threads/:threadId',
     async ({ params, project, body, user }) => {
       const caller = requireUser(user);
-      const agent = await getAgentById(params.agentId, project.id);
+      const agent = await getAgentInProject(params.agentId, project.id);
       if (!agent) throw new HttpError(404, 'Agent not found');
       const renamed = await threadStore(agent.kind).rename(params.threadId, caller.id, body.title);
       if (!renamed) throw new HttpError(404, 'Thread not found');
@@ -423,7 +482,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
     '/projects/:projectKey/ai-agents/:agentId/threads/:threadId',
     async ({ params, project, user }) => {
       const caller = requireUser(user);
-      const agent = await getAgentById(params.agentId, project.id);
+      const agent = await getAgentInProject(params.agentId, project.id);
       if (!agent) throw new HttpError(404, 'Agent not found');
       const deleted = await threadStore(agent.kind).remove(params.threadId, caller.id);
       if (!deleted) throw new HttpError(404, 'Thread not found');

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
+import { createAgent } from '#tests/helpers/agents';
 
 // Issues live under a project. Create is /projects/:projectKey/issues (permission
 // guard on :projectKey); the other routes address the issue by its own id
@@ -585,9 +586,11 @@ describe('issues', () => {
     }
 
     async function createAgentUserId(client: Api) {
-      const res = await client
-        .projects({ projectKey: 'MKT' })
-        ['ai-agents'].post({ name: 'Bot', username: 'bot', kind: 'external' });
+      const res = await createAgent(client, 'MKT', {
+        name: 'Bot',
+        username: 'bot',
+        kind: 'external',
+      });
       return res.data!.agent.userId;
     }
 

@@ -110,7 +110,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export interface Team {
   id: number;
   name: string;
-  // The caller's rank in the team.
+  // The caller's rank in the team. The API also answers an agent's own key, which reads
+  // 'agent' there; an agent never opens this app, so a person's rank is what arrives.
   role: TeamRole;
   joinedAt: string;
   projectCount: number;
@@ -118,10 +119,11 @@ export interface Team {
   // How many of those members are owners: the last one cannot leave.
   ownerCount: number;
   // The roles the team's projects assign from, the integration credentials they run
-  // on, and the skills and tools their agents use. Counted here so the page shows them
-  // beside the section without opening it.
+  // on, the agents that work in them, and the skills and tools those agents use.
+  // Counted here so the page shows them beside the section without opening it.
   roleCount: number;
   integrationCount: number;
+  agentCount: number;
   skillCount: number;
   toolCount: number;
   createdAt: string;
@@ -129,12 +131,18 @@ export interface Team {
 
 export type TeamRole = 'owner' | 'manager' | 'member';
 
+// One member of a team: a person, or the bot user of one of its agents. An agent's
+// standing in the team is 'agent' and says nothing about what it may do — that is
+// agentRoleName, the team role it acts under.
 export interface TeamMember {
   userId: string;
   name: string;
   email: string;
   image: string | null;
-  role: TeamRole;
+  role: TeamRole | 'agent';
+  agentId: number | null;
+  username: string | null;
+  agentRoleName: string | null;
   joinedAt: string;
 }
 
@@ -229,8 +237,6 @@ export type CopyProjectIncludeKey =
   | 'actions'
   | 'configuration'
   | 'webhooks'
-  | 'tools'
-  | 'skills'
   | 'agents'
   | 'schedules';
 
@@ -301,7 +307,14 @@ export interface AgentFieldTrigger {
   delaySec: number;
 }
 
-// An AI agent on a project: a bot user plus its configuration. `kind` is
+// A project an agent works in, as its settings list them.
+export interface AgentProject {
+  id: number;
+  key: string;
+  name: string;
+}
+
+// An AI agent of a team: a bot user plus its configuration. `kind` is
 // 'external' (driven by an outside caller through the API) or 'internal' (run by
 // the built-in runtime, so it carries provider/model/instructions/tools). Only an
 // external agent has an API key: `apiKeyStart` is the non-secret prefix for display
@@ -309,7 +322,9 @@ export interface AgentFieldTrigger {
 // on regenerate.
 export interface AiAgent {
   id: number;
-  projectId: number;
+  teamId: number;
+  // The projects of the team the agent works in. One key reaches every one of them.
+  projects: AgentProject[];
   userId: string;
   name: string;
   username: string;
@@ -331,8 +346,8 @@ export interface AiAgent {
   fieldTriggers: AgentFieldTrigger[];
   // How long a delegation run waits before the agent may pick it up.
   delegationDelaySec: number;
-  // External-agent authorization role (a team_role id, or null for the default).
-  roleId: number | null;
+  // The team_role the agent acts under, in every project it works in.
+  roleId: number;
   // The member who created the agent, and whose runs an 'owner'-scoped runner is
   // limited to; 'project' scope serves any member's runs.
   ownerUserId: string | null;
@@ -452,7 +467,9 @@ export interface NewAiAgentInput {
   triggerOnAssign?: boolean;
   fieldTriggers?: AgentFieldTrigger[];
   delegationDelaySec?: number;
-  roleId?: number | null;
+  projectIds?: number[];
+  // The team role the agent acts under, in every project it works in.
+  roleId: number;
   runnerScope?: 'owner' | 'project';
 }
 
@@ -471,7 +488,8 @@ export interface AiAgentPatch {
   triggerOnAssign?: boolean;
   fieldTriggers?: AgentFieldTrigger[];
   delegationDelaySec?: number;
-  roleId?: number | null;
+  projectIds?: number[];
+  roleId?: number;
   runnerScope?: 'owner' | 'project';
 }
 
@@ -1938,8 +1956,9 @@ export interface ProjectViewer {
   role: MemberRole;
   // The caller's standing in the team that owns the project, null when they are not
   // a member of it. An owner or manager governs the project's settings alongside the
-  // project's own owner.
-  teamRole: TeamRole | null;
+  // project's own owner; 'agent' is a bot user reading its own board, which governs
+  // nothing.
+  teamRole: TeamRole | 'agent' | null;
 }
 
 // How an issue carries the initiative and the cycle it belongs to: the id plus
@@ -3204,31 +3223,34 @@ export const api = {
       body: JSON.stringify({ description }),
     }),
 
-  // AI agents: a project's bot users and their configuration. The plaintext key
-  // is returned only by create and regenerate-key, so those responses carry it
-  // alongside the agent; it is never part of a list/read.
-  listAiAgents: (projectKey: string) => request<AiAgent[]>(`/projects/${projectKey}/ai-agents`),
-  listAgentTools: (projectKey: string) =>
-    request<AgentTool[]>(`/projects/${projectKey}/ai-agents/tools`),
-  createAiAgent: (projectKey: string, input: NewAiAgentInput) =>
-    request<{ agent: AiAgent; apiKey: string | null }>(`/projects/${projectKey}/ai-agents`, {
+  // AI agents: a team's bot users and their configuration. Pass projectId to list only
+  // the agents working in one project of the team. The plaintext key is returned only
+  // by create and regenerate-key, so those responses carry it alongside the agent; it
+  // is never part of a list/read.
+  listAiAgents: (teamId: number, projectId?: number) =>
+    request<AiAgent[]>(
+      `/teams/${teamId}/ai-agents${projectId != null ? `?projectId=${projectId}` : ''}`,
+    ),
+  listAgentTools: (teamId: number) => request<AgentTool[]>(`/teams/${teamId}/ai-agents/tools`),
+  createAiAgent: (teamId: number, input: NewAiAgentInput) =>
+    request<{ agent: AiAgent; apiKey: string | null }>(`/teams/${teamId}/ai-agents`, {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-  updateAiAgent: (projectKey: string, agentId: number, patch: AiAgentPatch) =>
-    request<AiAgent>(`/projects/${projectKey}/ai-agents/${agentId}`, {
+  updateAiAgent: (teamId: number, agentId: number, patch: AiAgentPatch) =>
+    request<AiAgent>(`/teams/${teamId}/ai-agents/${agentId}`, {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
-  regenerateAiAgentKey: (projectKey: string, agentId: number) =>
-    request<{ apiKey: string }>(`/projects/${projectKey}/ai-agents/${agentId}/regenerate-key`, {
+  regenerateAiAgentKey: (teamId: number, agentId: number) =>
+    request<{ apiKey: string }>(`/teams/${teamId}/ai-agents/${agentId}/regenerate-key`, {
       method: 'POST',
     }),
-  deleteAiAgent: (projectKey: string, agentId: number) =>
-    request<void>(`/projects/${projectKey}/ai-agents/${agentId}`, { method: 'DELETE' }),
-  listAgentRuns: (projectKey: string, agentId: number, before?: number) =>
+  deleteAiAgent: (teamId: number, agentId: number) =>
+    request<void>(`/teams/${teamId}/ai-agents/${agentId}`, { method: 'DELETE' }),
+  listAgentRuns: (teamId: number, agentId: number, before?: number) =>
     request<AgentRunPage>(
-      `/projects/${projectKey}/ai-agents/${agentId}/runs?limit=25${before ? `&before=${before}` : ''}`,
+      `/teams/${teamId}/ai-agents/${agentId}/runs?limit=25${before ? `&before=${before}` : ''}`,
     ),
   listAgentSchedules: (projectKey: string) =>
     request<AgentSchedule[]>(`/projects/${projectKey}/agent-schedules`),
@@ -3376,10 +3398,10 @@ export const api = {
       `/teams/${teamId}/agent-skills/${skillId}/references?path=${encodeURIComponent(path)}`,
       { method: 'DELETE' },
     ),
-  listAgentSkills: (projectKey: string, agentId: number) =>
-    request<AgentSkill[]>(`/projects/${projectKey}/ai-agents/${agentId}/skills`),
-  setAgentSkills: (projectKey: string, agentId: number, skillIds: number[]) =>
-    request<AgentSkill[]>(`/projects/${projectKey}/ai-agents/${agentId}/skills`, {
+  listAgentSkills: (teamId: number, agentId: number) =>
+    request<AgentSkill[]>(`/teams/${teamId}/ai-agents/${agentId}/skills`),
+  setAgentSkills: (teamId: number, agentId: number, skillIds: number[]) =>
+    request<AgentSkill[]>(`/teams/${teamId}/ai-agents/${agentId}/skills`, {
       method: 'PUT',
       body: JSON.stringify({ skillIds }),
     }),
@@ -3395,10 +3417,10 @@ export const api = {
     }),
   deleteConfiguredTool: (teamId: number, agentToolId: number) =>
     request<void>(`/teams/${teamId}/agent-tools/${agentToolId}`, { method: 'DELETE' }),
-  listAgentToolLinks: (projectKey: string, agentId: number) =>
-    request<ConfiguredTool[]>(`/projects/${projectKey}/ai-agents/${agentId}/tool-configs`),
-  setAgentTools: (projectKey: string, agentId: number, agentToolIds: number[]) =>
-    request<ConfiguredTool[]>(`/projects/${projectKey}/ai-agents/${agentId}/tool-configs`, {
+  listAgentToolLinks: (teamId: number, agentId: number) =>
+    request<ConfiguredTool[]>(`/teams/${teamId}/ai-agents/${agentId}/tool-configs`),
+  setAgentTools: (teamId: number, agentId: number, agentToolIds: number[]) =>
+    request<ConfiguredTool[]>(`/teams/${teamId}/ai-agents/${agentId}/tool-configs`, {
       method: 'PUT',
       body: JSON.stringify({ agentToolIds }),
     }),

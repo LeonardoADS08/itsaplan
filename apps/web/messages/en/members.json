@@ -1,6 +1,6 @@
 {
   "title": "Members",
-  "description": "People with access to this project. Add someone from the team or invite them by email; owners can revoke access.",
+  "description": "People with access to this project.",
   "add": {
     "action": "Add member",
     "title": "Add member",

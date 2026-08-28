@@ -90,8 +90,8 @@
       "description": "Close issues when their pull requests merge on GitHub, GitLab, Gitea, Forgejo, or Bitbucket."
     },
     "ai-agents": {
-      "label": "Agents",
-      "description": "Bot users you can delegate issues to."
+      "label": "Teammates",
+      "description": "AI teammates working in this project."
     }
   }
 }

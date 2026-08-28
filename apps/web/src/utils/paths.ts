@@ -40,14 +40,6 @@ export const notificationsPath = (key: string) => `${projectPath(key)}/notificat
 
 export const aiAgentsPath = (key: string) => `${projectPath(key)}/ai-agents`;
 
-// The AI configuration sections (see AI_SECTIONS) keyed by slug. Each is its own
-// top-level route rather than a /settings/:slug page.
-const AI_SECTION_PATH: Record<string, (key: string) => string> = {
-  'ai-agents': aiAgentsPath,
-};
-
-export const aiSectionPath = (key: string, slug: string) => AI_SECTION_PATH[slug](key);
-
 export const mcpServerPath = (key: string) => `${projectPath(key)}/mcp`;
 
 export const apiDocsPath = (key: string) => `${projectPath(key)}/api`;
@@ -134,6 +126,7 @@ export type TeamSection =
   | 'members'
   | 'roles'
   | 'integrations'
+  | 'ai-agents'
   | 'agent-skills'
   | 'agent-tools'
   | 'notifications';

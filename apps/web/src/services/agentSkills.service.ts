@@ -1,6 +1,5 @@
-// The team's skill library, and the skills enabled on one agent of a project. The
-// library belongs to the team, so its hooks are keyed by the team; which of those
-// skills an agent loads belongs to the agent, so those hooks are keyed by the project.
+// The team's skill library, and the skills enabled on one of its agents. Both belong to
+// the team, so every hook here is keyed by it.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type NewSkillInput, type SkillPatch } from '@/lib/api';
@@ -82,22 +81,22 @@ export function useDeleteSkillReference(teamId: number) {
 }
 
 // The skills enabled on one agent (the agent editor's Skills tab).
-export function useAgentSkillsQuery(projectKey: string | null, agentId: number | null) {
+export function useAgentSkillsQuery(teamId: number | null, agentId: number | null) {
   return useQuery({
-    queryKey: qk.agentSkillLinks(projectKey ?? '', agentId ?? 0),
-    queryFn: () => api.listAgentSkills(projectKey!, agentId!),
-    enabled: projectKey != null && agentId != null,
+    queryKey: qk.agentSkillLinks(teamId ?? 0, agentId ?? 0),
+    queryFn: () => api.listAgentSkills(teamId!, agentId!),
+    enabled: teamId != null && agentId != null,
   });
 }
 
-export function useSetAgentSkills(projectKey: string | null) {
+export function useSetAgentSkills(teamId: number | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ agentId, skillIds }: { agentId: number; skillIds: number[] }) =>
-      api.setAgentSkills(projectKey!, agentId, skillIds),
+      api.setAgentSkills(teamId!, agentId, skillIds),
     onSuccess: (_data, { agentId }) => {
-      if (projectKey)
-        void qc.invalidateQueries({ queryKey: qk.agentSkillLinks(projectKey, agentId) });
+      if (teamId != null)
+        void qc.invalidateQueries({ queryKey: qk.agentSkillLinks(teamId, agentId) });
     },
   });
 }

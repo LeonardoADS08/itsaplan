@@ -4,6 +4,7 @@ import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { addProjectMember } from '#tests/helpers/members';
 import { createRole } from '#tests/helpers/roles';
+import { createAgent, projectIdOf, teamOf } from '#tests/helpers/agents';
 
 // Full integration flow: a real session against the real (test) database.
 // Requires the test DB to be up and migrated:
@@ -468,7 +469,7 @@ describe('projects', () => {
     it("keeps an external agent's runner scope, bound to the caller", async () => {
       const { api, user } = await signUpClient();
       await api.projects.post({ key: 'SRC', name: 'Source' });
-      await api.projects({ projectKey: 'SRC' })['ai-agents'].post({
+      await createAgent(api, 'SRC', {
         name: 'Ext',
         username: 'ext',
         kind: 'external',
@@ -480,7 +481,9 @@ describe('projects', () => {
         name: 'Destination',
         include: { agents: true },
       });
-      const copied = await api.projects({ projectKey: 'DST' })['ai-agents'].get();
+      const copied = await api
+        .teams({ teamId: await teamOf(api, 'DST') })
+        ['ai-agents'].get({ query: { projectId: await projectIdOf(api, 'DST') } });
       expect(copied.data?.[0]).toMatchObject({ runnerScope: 'owner', ownerUserId: user.userId });
     });
 

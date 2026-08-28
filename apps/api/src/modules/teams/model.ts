@@ -16,15 +16,17 @@ export const updateTeamBody = t.Partial(createTeamBody);
 export const TeamResponse = t.Object({
   id: t.Number(),
   name: t.String(),
-  role: t.Union([t.Literal('owner'), t.Literal('manager'), t.Literal('member')], {
-    description: 'Your rank in this team.',
-  }),
+  role: t.Union(
+    [t.Literal('owner'), t.Literal('manager'), t.Literal('member'), t.Literal('agent')],
+    { description: 'Your standing in this team.' },
+  ),
   joinedAt: t.String(),
   projectCount: t.Number(),
   memberCount: t.Number(),
   ownerCount: t.Number({ description: 'How many members are owners; the last one cannot leave.' }),
   roleCount: t.Number({ description: "How many roles the team's projects assign from." }),
   integrationCount: t.Number({ description: 'How many integration credentials the team holds.' }),
+  agentCount: t.Number({ description: 'How many AI agents the team owns.' }),
   skillCount: t.Number({ description: 'How many agent skills the team library holds.' }),
   toolCount: t.Number({ description: 'How many configured tools the team holds.' }),
   createdAt: t.String(),
@@ -43,7 +45,17 @@ export const TeamMemberListResponse = t.Array(
     name: t.String(),
     email: t.String(),
     image: t.Nullable(t.String()),
-    role: t.Union([t.Literal('owner'), t.Literal('manager'), t.Literal('member')]),
+    role: t.Union([
+      t.Literal('owner'),
+      t.Literal('manager'),
+      t.Literal('member'),
+      t.Literal('agent'),
+    ]),
+    agentId: t.Nullable(t.Number({ description: 'The AI agent this bot user backs.' })),
+    username: t.Nullable(t.String({ description: "An agent's mention handle." })),
+    agentRoleName: t.Nullable(
+      t.String({ description: 'The team role an agent acts under, which is what it may do.' }),
+    ),
     joinedAt: t.String(),
   }),
 );

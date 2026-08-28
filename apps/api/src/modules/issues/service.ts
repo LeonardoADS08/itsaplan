@@ -1083,10 +1083,11 @@ export async function updateIssue(
 async function enqueueDelegateRun(after: IssueRow, actor?: ActivityActor): Promise<void> {
   const delegate = after.delegateUserId;
   if (!delegate || delegate === actorId(actor)) return;
-  const agent = await getAssignTriggerAgent(delegate, actorId(actor));
+  const agent = await getAssignTriggerAgent(after.projectId, delegate, actorId(actor));
   if (!agent) return;
   await enqueueAgentRun({
     agentId: agent.id,
+    projectId: after.projectId,
     issueId: after.id,
     sourceActivityId: null,
     prompt: `Work item ${after.identifier}: "${after.title}" has been delegated to you. Review it and take the appropriate next step.`,
@@ -1446,18 +1447,20 @@ async function assertFieldMember(
 // queue a run so it can act on the issue. Skipped when the agent set itself. The run
 // is executed later, so the write is never blocked on it.
 async function enqueueFieldRun(
+  projectId: number,
   issueId: number,
   field: CustomFieldRow,
   userId: string,
   actorUserId: string | null | undefined,
 ): Promise<void> {
   if (userId === actorUserId) return;
-  const agent = await getFieldTriggerAgent(userId, field.id, actorUserId ?? null);
+  const agent = await getFieldTriggerAgent(projectId, userId, field.id, actorUserId ?? null);
   if (!agent) return;
   const row = await getIssue(issueId);
   if (!row) return;
   await enqueueAgentRun({
     agentId: agent.id,
+    projectId,
     issueId,
     sourceActivityId: null,
     trigger: 'field',
@@ -1643,7 +1646,7 @@ export async function setIssueFieldValue(
   );
 
   if (memberUserId && memberUserId !== previousMemberUserId) {
-    await enqueueFieldRun(issueId, field, memberUserId, actorUserId);
+    await enqueueFieldRun(projectId, issueId, field, memberUserId, actorUserId);
     await notifyFieldMember(projectId, issueId, memberUserId, entry?.id ?? null, actorUserId);
   }
 

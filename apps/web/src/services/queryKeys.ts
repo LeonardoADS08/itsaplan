@@ -76,17 +76,19 @@ export const qk = {
   roleUsage: (teamId: number, roleId: number) => ['roleUsage', teamId, roleId] as const,
   anyRoleUsage: ['roleUsage'] as const,
   permissionCatalog: ['permissionCatalog'] as const,
-  // A project's AI agents (the AI Agents settings section). The tool catalog is
-  // project-scoped on the API, so it hangs off the same key with an 'tools' tail.
-  aiAgents: (projectKey: string) => ['aiAgents', projectKey] as const,
+  // A team's AI agents (its Agents section), and the ones working in one of its
+  // projects (the project's read-only list). The action catalog is team-scoped on the
+  // API, so it hangs off the same key with a 'tools' tail.
+  aiAgents: (teamId: number, projectId?: number) =>
+    ['aiAgents', teamId, projectId ?? 'all'] as const,
   anyAiAgents: ['aiAgents'] as const,
-  agentTools: (projectKey: string) => ['aiAgents', projectKey, 'tools'] as const,
+  teamAiAgents: (teamId: number) => ['aiAgents', teamId] as const,
+  agentTools: (teamId: number) => ['aiAgents', teamId, 'tools'] as const,
   // The skills enabled on one agent (the agent editor's Skills tab).
-  agentSkillLinks: (projectKey: string, agentId: number) =>
-    ['aiAgents', projectKey, agentId, 'skills'] as const,
+  agentSkillLinks: (teamId: number, agentId: number) =>
+    ['aiAgents', teamId, agentId, 'skills'] as const,
   // An agent's triggered run history (the runs sidebar).
-  agentRuns: (projectKey: string, agentId: number) =>
-    ['aiAgents', projectKey, agentId, 'runs'] as const,
+  agentRuns: (teamId: number, agentId: number) => ['aiAgents', teamId, agentId, 'runs'] as const,
   agentSchedules: (projectKey: string) => ['agentSchedules', projectKey] as const,
   agentScheduleRuns: (projectKey: string, scheduleId: number) =>
     ['agentSchedules', projectKey, scheduleId, 'runs'] as const,
@@ -121,8 +123,8 @@ export const qk = {
   // The team's configured tools (its Tools section) and the tools enabled on one agent
   // (the agent editor's Tools section).
   configuredTools: (teamId: number) => ['configuredTools', teamId] as const,
-  agentToolLinks: (projectKey: string, agentId: number) =>
-    ['aiAgents', projectKey, agentId, 'tool-configs'] as const,
+  agentToolLinks: (teamId: number, agentId: number) =>
+    ['aiAgents', teamId, agentId, 'tool-configs'] as const,
   issue: (id: number) => ['issue', id] as const,
   // Under the issue prefix, so every issue mutation refreshes the cycles with it.
   issueCycles: (id: number) => ['issue', id, 'cycles'] as const,

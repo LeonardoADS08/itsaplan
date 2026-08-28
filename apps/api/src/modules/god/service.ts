@@ -413,7 +413,14 @@ async function loadProjectFacts(projectIds: number[]): Promise<(id: number) => P
     countByProject(initiative, initiative.projectId, projectIds),
     countByProject(projectDashboard, projectDashboard.projectId, projectIds),
     countByProject(projectView, projectView.projectId, projectIds),
-    countByProject(aiAgent, aiAgent.projectId, projectIds),
+    // An agent belongs to a team and works in the projects it is a member of, so the
+    // count per project is its memberships, not its own rows.
+    countByProject(
+      projectMember,
+      projectMember.projectId,
+      projectIds,
+      sql`exists (select 1 from ${aiAgent} where ${aiAgent.userId} = ${projectMember.userId})`,
+    ),
     countByTeamOfProject(agentSkill, agentSkill.teamId, projectIds),
     countByTeamOfProject(agentTool, agentTool.teamId, projectIds),
     // The feed has no project column of its own; it reaches one through its issue.

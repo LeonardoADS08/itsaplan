@@ -1,7 +1,6 @@
-// The team's configured tools, and the tools enabled on one agent of a project. The
-// tools belong to the team, so their hooks are keyed by the team; which of them an
-// agent runs belongs to the agent, so those hooks are keyed by the project. The tool
-// catalog they are built from lives in integrations.service.
+// The team's configured tools, and the tools enabled on one of its agents. Both belong
+// to the team, so every hook here is keyed by it. The tool catalog they are built from
+// lives in integrations.service.
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type NewConfiguredToolInput } from '@/lib/api';
@@ -39,22 +38,22 @@ export function useDeleteConfiguredTool(teamId: number) {
 }
 
 // The configured tools enabled on one agent (the agent editor's Tools section).
-export function useAgentToolLinksQuery(projectKey: string | null, agentId: number | null) {
+export function useAgentToolLinksQuery(teamId: number | null, agentId: number | null) {
   return useQuery({
-    queryKey: qk.agentToolLinks(projectKey ?? '', agentId ?? 0),
-    queryFn: () => api.listAgentToolLinks(projectKey!, agentId!),
-    enabled: projectKey != null && agentId != null,
+    queryKey: qk.agentToolLinks(teamId ?? 0, agentId ?? 0),
+    queryFn: () => api.listAgentToolLinks(teamId!, agentId!),
+    enabled: teamId != null && agentId != null,
   });
 }
 
-export function useSetAgentTools(projectKey: string | null) {
+export function useSetAgentTools(teamId: number | null) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ agentId, agentToolIds }: { agentId: number; agentToolIds: number[] }) =>
-      api.setAgentTools(projectKey!, agentId, agentToolIds),
+      api.setAgentTools(teamId!, agentId, agentToolIds),
     onSuccess: (_data, { agentId }) => {
-      if (projectKey)
-        void qc.invalidateQueries({ queryKey: qk.agentToolLinks(projectKey, agentId) });
+      if (teamId != null)
+        void qc.invalidateQueries({ queryKey: qk.agentToolLinks(teamId, agentId) });
     },
   });
 }

@@ -10,6 +10,8 @@ import {
   useTeamInvitesQuery,
   useTeamMembersQuery,
 } from '@/services/teams.service';
+import { useRouter } from 'next/navigation';
+import { teamSectionPath } from '@/utils/paths';
 import ConfirmDialog from '@/components/common/overlay/ConfirmDialog';
 import SectionPageView from '@/components/common/page/SectionPageView';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
@@ -18,9 +20,12 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components
 import TeamInviteDialog from './TeamInviteDialog';
 import TeamInviteRow from './TeamInviteRow';
 import TeamMemberRow from './TeamMemberRow';
+import TeamMemberGroupRow from './TeamMemberGroupRow';
 
 // The team's members, with the invites that have not been answered yet above them.
-// Owners and managers run the list, so only they invite and see the pending invites.
+// People and agents work on one board, so both are listed, in a group of their own
+// each; selecting an agent opens the section that configures it. Owners and managers
+// run the list, so only they invite and see the pending invites.
 export default function TeamMembersSection({ teamId }: { teamId: number }) {
   const t = useTranslations('teams');
   const tInvite = useTranslations('teams.invite');
@@ -32,8 +37,11 @@ export default function TeamMembersSection({ teamId }: { teamId: number }) {
   const deleteInvite = useDeleteTeamInvite(teamId);
   const [inviting, setInviting] = useState(false);
   const [target, setTarget] = useState<InviteRow | null>(null);
+  const router = useRouter();
 
   const pending = (invitesQuery.data ?? []).filter((invite) => invite.status === 'pending');
+  const people = (members ?? []).filter((member) => member.agentId == null);
+  const agents = (members ?? []).filter((member) => member.agentId != null);
 
   return (
     <SectionPageView
@@ -80,8 +88,24 @@ export default function TeamMembersSection({ teamId }: { teamId: number }) {
               {pending.map((invite) => (
                 <TeamInviteRow key={invite.id} invite={invite} onRevoke={setTarget} />
               ))}
-              {members.map((member) => (
+              {agents.length > 0 && (
+                <TeamMemberGroupRow
+                  label={t('members.peopleGroup', { count: people.length })}
+                  first
+                />
+              )}
+              {people.map((member) => (
                 <TeamMemberRow key={member.userId} member={member} />
+              ))}
+              {agents.length > 0 && (
+                <TeamMemberGroupRow label={t('members.agentGroup', { count: agents.length })} />
+              )}
+              {agents.map((member) => (
+                <TeamMemberRow
+                  key={member.userId}
+                  member={member}
+                  onOpen={() => router.push(teamSectionPath(teamId, 'ai-agents'))}
+                />
               ))}
             </TableBody>
           </Table>

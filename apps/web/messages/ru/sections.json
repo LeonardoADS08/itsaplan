@@ -90,8 +90,8 @@
       "description": "Закрытие задач, когда их pull request смержен в GitHub, GitLab, Gitea, Forgejo или Bitbucket."
     },
     "ai-agents": {
-      "label": "Агенты",
-      "description": "Бот-пользователи, которым можно делегировать задачи."
+      "label": "Тиммейты",
+      "description": "AI-тиммейты, которые работают в этом проекте."
     }
   }
 }

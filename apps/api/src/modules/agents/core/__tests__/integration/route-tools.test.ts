@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
-import { db, aiAgent, apikey, projectMember } from '@repo/db';
+import { db, aiAgent, apikey, teamMember } from '@repo/db';
 import { eq } from 'drizzle-orm';
 import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
@@ -11,6 +11,7 @@ import { AGENT_ACTIONS, ALWAYS_ON_ACTIONS } from '../../runtime/tools/catalog';
 import { routeTools } from '#mcp/generate';
 import { getMcpApp } from '#mcp/app-ref';
 import { createRole } from '#tests/helpers/roles';
+import { createAgent } from '#tests/helpers/agents';
 
 // The tools an internal agent runs with, built from the routes tagged mcpTool() and
 // dispatched in process with the agent's own API key. What is asserted here is the
@@ -19,20 +20,21 @@ import { createRole } from '#tests/helpers/roles';
 // project is bound rather than supplied by the model, and that the agent's project
 // role is enforced.
 
-const agents = (api: Api) => api.projects({ projectKey: 'MKT' })['ai-agents'];
+// The agent routes of the team the project belongs to, which is where agents live.
+const agents = (api: Api, teamId: number) => api.teams({ teamId })['ai-agents'];
 
 async function setup() {
   const owner = await signUpTestUser({ name: 'Owner' });
   const asOwner = authedApi(owner.cookie);
-  await asOwner.projects.post({ key: 'MKT', name: 'Marketing' });
-  return { owner, asOwner };
+  const project = await asOwner.projects.post({ key: 'MKT', name: 'Marketing' });
+  return { owner, asOwner, teamId: project.data!.teamId };
 }
 
 // Builds the tool set of a freshly created internal agent, the way the runtime does.
 // The username only has to be unique, so it is numbered.
 let agentSeq = 0;
 async function toolsFor(asOwner: Api, tools: string[], roleId?: number) {
-  const created = await agents(asOwner).post({
+  const created = await createAgent(asOwner, 'MKT', {
     name: 'Triage Bot',
     username: `triage-${++agentSeq}`,
     kind: 'internal',
@@ -156,8 +158,8 @@ describe('internal agent route tools', () => {
   });
 
   it("provisions a legacy agent's key once, even when two runs start together", async () => {
-    const { asOwner } = await setup();
-    const created = await agents(asOwner).post({
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
       name: 'Legacy Bot',
       username: 'legacy',
       kind: 'internal',
@@ -166,15 +168,16 @@ describe('internal agent route tools', () => {
     const project = await getProjectByKey('MKT');
     if (agentId === undefined || !project) throw new Error('Test agent was not created');
 
-    // An agent from before the key existed: no stored secret, no membership.
+    // An agent from before the key existed: no stored secret, and no place in the
+    // team's member list.
     await db
       .update(aiAgent)
       .set({ apiKeyCiphertext: null, apiKeyIv: null, apiKeyAuthTag: null })
       .where(eq(aiAgent.id, agentId));
     await db.delete(apikey).where(eq(apikey.referenceId, created.data!.agent.userId));
-    await db.delete(projectMember).where(eq(projectMember.userId, created.data!.agent.userId));
+    await db.delete(teamMember).where(eq(teamMember.userId, created.data!.agent.userId));
 
-    const agent = await getAgentById(agentId, project.id);
+    const agent = await getAgentById(agentId, teamId);
     if (!agent) throw new Error('Test agent was not found');
 
     // Two runs of the same agent race to provision it.
@@ -190,7 +193,7 @@ describe('internal agent route tools', () => {
     expect(keys).toHaveLength(1);
 
     // The listing still shows the agent once, and the key works against a real route.
-    const listed = await agents(asOwner).get();
+    const listed = await agents(asOwner, teamId).get();
     expect(listed.data?.filter((a) => a.id === agentId)).toHaveLength(1);
     const tools = buildRouteTools(project, first, agent.tools);
     expect(await run(tools, 'get_project')).toMatchObject({ columns: expect.any(Array) });

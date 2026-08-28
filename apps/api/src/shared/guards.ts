@@ -13,6 +13,7 @@ import {
   type AuthUser,
 } from './access';
 import { getProjectById } from '#modules/projects/service';
+import { runsTeam } from '#modules/teams/service';
 import { isMcpRequest } from './mcp-request';
 import { HttpError } from './lib';
 import type { PermissionResource, PermissionAction } from './permissions';
@@ -176,12 +177,14 @@ export const guards = new Elysia({ name: 'guards' }).use(authContext).macro({
     };
   },
 
-  // Owner or manager. They run the team's projects: create, copy and update one.
+  // Owner or manager. They run the team's projects: create, copy and update one. A
+  // member does not, and neither does an agent, whose standing in the team says only
+  // that it belongs to it.
   teamManager(_enabled: boolean) {
     return {
       async resolve({ params, user }) {
         const membership = await resolveTeam(params, user);
-        if (membership.role === 'member')
+        if (!runsTeam(membership.role))
           throw new HttpError(403, 'Only a team owner or manager can do this');
         return { membership };
       },

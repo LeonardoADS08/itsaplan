@@ -1,7 +1,7 @@
 import { HttpError } from './lib';
 import { getProjectByKey, type ProjectRow } from '#modules/projects/service';
 import { getMembership, getMemberContext, getTeamPermissions } from '#modules/members/service';
-import { getTeamMembership, type TeamRole } from '#modules/teams/service';
+import { getTeamMembership, runsTeam, type TeamStanding } from '#modules/teams/service';
 import { hasPermission, type PermissionAction, type PermissionResource } from './permissions';
 
 // The authenticated user carried on the request context. Populated by the
@@ -83,7 +83,7 @@ export async function requireProjectAdmin(
   const project = await requireProject(projectKey);
   if ((await getMembership(project.id, current.id)) === 'owner') return project;
   const standing = await getTeamMembership(project.teamId, current.id);
-  if (standing === 'owner' || standing === 'manager') return project;
+  if (runsTeam(standing)) return project;
   throw new HttpError(403, 'Only a project owner or a team owner or manager can do this');
 }
 
@@ -100,7 +100,7 @@ export async function requireMemberAdmin(
   const current = requireUser(user);
   const project = await requireProject(projectKey);
   const standing = await getTeamMembership(project.teamId, current.id);
-  if (standing === 'owner' || standing === 'manager') return project;
+  if (runsTeam(standing)) return project;
   await assertPermission(project.id, current, resource, action);
   return project;
 }
@@ -185,7 +185,7 @@ export async function requireProjectPermission(
 // The caller's standing in the team a :teamId route addresses.
 export interface TeamMembership {
   teamId: number;
-  role: TeamRole;
+  role: TeamStanding;
   userId: string;
 }
 
@@ -206,7 +206,8 @@ export async function requireTeamMembership(
 // Asserts the caller may perform the action on a resource the team owns and every
 // project of it shares. Owners and managers always may — they run the team. So does
 // an owner of one of its projects, whose project membership carries the full matrix.
-// Anyone else may when a project role of theirs in the team grants it. Wrapped by the
+// Anyone else — a member, and an agent, whose standing in the team grants nothing on
+// its own — may when a project role of theirs in the team grants it. Wrapped by the
 // teamPermission guard.
 export async function requireTeamPermission(
   teamId: number,
@@ -215,7 +216,7 @@ export async function requireTeamPermission(
   action: PermissionAction,
 ): Promise<TeamMembership> {
   const membership = await requireTeamMembership(teamId, user);
-  if (membership.role !== 'member') return membership;
+  if (runsTeam(membership.role)) return membership;
   const permissions = await getTeamPermissions(teamId, membership.userId);
   if (!hasPermission(permissions, resource, action)) {
     throw new HttpError(403, `You do not have permission to ${action} ${resourceLabel(resource)}`);

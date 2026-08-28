@@ -1,7 +1,7 @@
 import { db, agentRun, agentSchedule, aiAgent, user } from '@repo/db';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { HttpError, iso } from '#shared/lib';
-import { canTriggerAgent, isTriggerableBy } from '../core/service';
+import { agentWorksInProject, canTriggerAgent, isTriggerableBy } from '../core/service';
 import { contextTokensOf } from '../core/run-queue';
 import { deleteThreadsWhere } from '../core/runtime/memory';
 
@@ -85,7 +85,7 @@ export async function listAgentSchedules(
   actorUserId: string,
 ): Promise<AgentScheduleRow[]> {
   const rows = await baseQuery()
-    .where(eq(aiAgent.projectId, projectId))
+    .where(eq(agentSchedule.projectId, projectId))
     .orderBy(desc(agentSchedule.id));
   return rows.map((row) => mapSchedule(row, actorUserId));
 }
@@ -96,7 +96,7 @@ export async function getAgentSchedule(
   actorUserId: string,
 ): Promise<AgentScheduleRow | null> {
   const rows = await baseQuery().where(
-    and(eq(aiAgent.projectId, projectId), eq(agentSchedule.id, scheduleId)),
+    and(eq(agentSchedule.projectId, projectId), eq(agentSchedule.id, scheduleId)),
   );
   return rows[0] ? mapSchedule(rows[0], actorUserId) : null;
 }
@@ -120,16 +120,13 @@ export async function createAgentSchedule(input: {
   status: AgentScheduleStatus;
   nextRunAt: Date;
 }): Promise<AgentScheduleRow | null> {
-  const agent = await db
-    .select({ id: aiAgent.id })
-    .from(aiAgent)
-    .where(and(eq(aiAgent.id, input.agentId), eq(aiAgent.projectId, input.projectId)));
-  if (!agent[0]) return null;
+  if (!(await agentWorksInProject(input.agentId, input.projectId))) return null;
   await assertTriggerable(input.agentId, input.actorUserId);
   const [row] = await db
     .insert(agentSchedule)
     .values({
       agentId: input.agentId,
+      projectId: input.projectId,
       name: input.name,
       prompt: input.prompt,
       cron: input.cron,
@@ -157,11 +154,7 @@ export async function updateAgentSchedule(
   const current = await getAgentSchedule(projectId, scheduleId, actorUserId);
   if (!current) return null;
   if (patch.agentId !== undefined) {
-    const agent = await db
-      .select({ id: aiAgent.id })
-      .from(aiAgent)
-      .where(and(eq(aiAgent.id, patch.agentId), eq(aiAgent.projectId, projectId)));
-    if (!agent[0]) return null;
+    if (!(await agentWorksInProject(patch.agentId, projectId))) return null;
     await assertTriggerable(patch.agentId, actorUserId);
   }
   await db
@@ -197,6 +190,7 @@ export async function enqueueManualScheduleRun(
     .insert(agentRun)
     .values({
       agentId: schedule.agentId,
+      projectId,
       scheduleId,
       trigger: 'manual',
       prompt: schedule.prompt,

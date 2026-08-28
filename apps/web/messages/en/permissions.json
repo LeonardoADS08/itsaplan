@@ -47,5 +47,8 @@
     "role": "Resolved from the \"{role}\" role.",
     "default": "No role assigned: the default member permissions apply."
   },
-  "joined": "joined {date}"
+  "joined": "joined {date}",
+  "hints": {
+    "ai_agents": "Administrative: it also attaches an agent to any project of the team, and shows the API key of an agent."
+  }
 }

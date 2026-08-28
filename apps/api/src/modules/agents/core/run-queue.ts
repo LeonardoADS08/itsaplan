@@ -20,6 +20,9 @@ export const agentRunConfig = {
 
 export async function enqueueAgentRun(input: {
   agentId: number;
+  // The project the run works in, which is the issue's. An agent works in several
+  // projects, so the run carries its own rather than reading the agent's.
+  projectId: number;
   issueId: number;
   sourceActivityId: number | null;
   prompt: string;
@@ -31,6 +34,7 @@ export async function enqueueAgentRun(input: {
   const delay = Math.max(0, Math.trunc(input.delaySeconds ?? 0));
   await db.insert(agentRun).values({
     agentId: input.agentId,
+    projectId: input.projectId,
     issueId: input.issueId,
     sourceActivityId: input.sourceActivityId,
     prompt: input.prompt,
@@ -48,8 +52,8 @@ export interface ClaimedRun {
   // The source comment id when the run was triggered by a mention, null for a
   // delegation. The poller frames the task differently for each.
   sourceActivityId: number | null;
-  // The agent's project and bot user, read inline so the poller can run it without a
-  // second query.
+  // The run's project and the agent's bot user, read inline so the poller can run it
+  // without a second query.
   projectId: number;
   agentUserId: string;
   // The agent's own handle, so the prompt can tell whether the text addressed it.
@@ -75,8 +79,8 @@ export interface ClaimedRun {
 // LOCKED lets more than one API replica run without ever claiming the same row.
 // Claiming bumps attempts and pushes next_attempt_at forward by the lease while
 // keeping status 'pending', so a run whose poller crashes mid-flight becomes
-// claimable again after the lease — no separate recovery pass. The agent's
-// project_id and user_id are read inline. An external agent's runs are left alone:
+// claimable again after the lease — no separate recovery pass. The run's project and
+// the agent's user_id are read inline. An external agent's runs are left alone:
 // they are claimed over HTTP by the operator's runner (modules/agents/runner).
 export async function claimDueRuns(): Promise<ClaimedRun[]> {
   const batchSize = agentRunConfig.batchSize();
@@ -100,7 +104,7 @@ export async function claimDueRuns(): Promise<ClaimedRun[]> {
       r.prompt,
       r.attempts,
       r.source_activity_id AS "sourceActivityId",
-      (SELECT project_id FROM ai_agent a WHERE a.id = r.agent_id) AS "projectId",
+      r.project_id AS "projectId",
       (SELECT user_id FROM ai_agent a WHERE a.id = r.agent_id) AS "agentUserId",
       (SELECT username FROM ai_agent a WHERE a.id = r.agent_id) AS "agentUsername",
       (SELECT p.key || '-' || i.sequence_number

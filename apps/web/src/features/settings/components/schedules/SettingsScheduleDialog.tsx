@@ -35,7 +35,7 @@ export function SettingsScheduleDialog({
 }) {
   const t = useTranslations('settings.schedules');
   const tCommon = useTranslations('common');
-  const tAgents = useTranslations('settings.agents');
+  const tAgents = useTranslations('teams.agents');
   const [agentId, setAgentId] = useState(String(initial?.agentId ?? agents[0]?.id ?? ''));
   const [name, setName] = useState(initial?.name ?? '');
   const [prompt, setPrompt] = useState(initial?.prompt ?? '');

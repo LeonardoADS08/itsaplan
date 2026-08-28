@@ -60,7 +60,10 @@ export const team = pgTable('team', {
 
 // Team membership and the role it carries. The roles are fixed, unlike the
 // per-project ones: 'owner' is the account the team was created for, 'manager' and
-// 'member' are the ranks below it.
+// 'member' are the ranks below it, and 'agent' is the bot user of an ai_agent — it
+// belongs to the team and shows up in its member list, but never manages it, so the
+// owner and manager guards stay closed to it. What an agent may do comes from
+// ai_agent.role_id, not from this column.
 export const teamMember = pgTable(
   'team_member',
   {
@@ -75,7 +78,7 @@ export const teamMember = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.teamId, t.userId] }),
-    check('team_member_role_check', sql`${t.role} IN ('owner', 'manager', 'member')`),
+    check('team_member_role_check', sql`${t.role} IN ('owner', 'manager', 'member', 'agent')`),
     index('team_member_user_idx').on(t.userId),
   ],
 );
@@ -408,21 +411,22 @@ export const label = pgTable(
   (t) => [unique().on(t.projectId, t.name)],
 );
 
-// AI agents attached to a project. Each agent is backed by a hidden bot user
+// AI agents owned by a team. Each agent is backed by a hidden bot user
 // (user_id -> user.id): that user is what a work item is delegated to, what a
 // comment/activity is authored by, and what owns the agent's API key (better-auth
 // apikey.reference_id points at it). An external agent needs only a name (on the
 // bot user) + username and a key; an internal agent additionally carries a model
-// configuration (provider/model/instructions/tools) used to run it. What an agent
-// may do is governed by the tools it is granted, not by a team role — an agent
-// is not a project_member.
+// configuration (provider/model/instructions/tools) used to run it. Which projects
+// of the team an agent works in is its project_member rows, written by the routes
+// that attach it; what it may do there is the intersection of the tools it is
+// granted and its team role, which its team_member and project_member rows carry.
 export const aiAgent = pgTable(
   'ai_agent',
   {
     id: serial('id').primaryKey(),
-    projectId: integer('project_id')
+    teamId: integer('team_id')
       .notNull()
-      .references(() => project.id, { onDelete: 'cascade' }),
+      .references(() => team.id, { onDelete: 'cascade' }),
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
@@ -453,8 +457,13 @@ export const aiAgent = pgTable(
     // Authorization: the team_role the bot user acts under. Every agent request
     // carries its API key and is enforced by this role through the normal permission
     // checks — an external agent's HTTP calls and an internal agent's in-process tool
-    // dispatch alike. NULL means the bot user has no membership yet and cannot act.
-    roleId: integer('role_id').references(() => teamRole.id, { onDelete: 'set null' }),
+    // dispatch alike. Required, so what an agent may do is always a role of its team
+    // that an operator can read and edit rather than a matrix in code. No cascade: the
+    // roles route moves the agents off a role before it deletes it, and deleting the
+    // team takes the agents and the roles together in one statement.
+    roleId: integer('role_id')
+      .notNull()
+      .references(() => teamRole.id),
     // The agent's own API key, encrypted at rest (AES-256-GCM, see shared/crypto).
     // An internal agent replays it on every tool call, so unlike better-auth's
     // hashed apikey row it has to stay recoverable. Set for internal agents only:
@@ -478,7 +487,7 @@ export const aiAgent = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex('ai_agent_project_username_uq').on(t.projectId, sql`lower(${t.username})`),
+    uniqueIndex('ai_agent_team_username_uq').on(t.teamId, sql`lower(${t.username})`),
     unique().on(t.userId),
     check('ai_agent_kind_check', sql`${t.kind} IN ('external', 'internal')`),
     check('ai_agent_runner_scope_check', sql`${t.runnerScope} IN ('owner', 'project')`),
@@ -486,7 +495,7 @@ export const aiAgent = pgTable(
       'ai_agent_delegation_delay_check',
       sql`${t.delegationDelaySec} >= 0 AND ${t.delegationDelaySec} <= 86400`,
     ),
-    index('ai_agent_project_idx').on(t.projectId),
+    index('ai_agent_team_idx').on(t.teamId),
   ],
 );
 
@@ -499,6 +508,12 @@ export const agentSchedule = pgTable(
     agentId: integer('agent_id')
       .notNull()
       .references(() => aiAgent.id, { onDelete: 'cascade' }),
+    // The project the schedule's runs work in. An agent belongs to a team and works
+    // in several of its projects, so the schedule names which one; the operator picks
+    // it when they create the schedule.
+    projectId: integer('project_id')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     prompt: text('prompt').notNull(),
     cron: text('cron').notNull(),
@@ -514,6 +529,7 @@ export const agentSchedule = pgTable(
     unique().on(t.agentId, t.name),
     index('agent_schedule_due_idx').on(t.status, t.nextRunAt),
     index('agent_schedule_agent_idx').on(t.agentId),
+    index('agent_schedule_project_idx').on(t.projectId),
   ],
 );
 
@@ -527,6 +543,13 @@ export const agentRun = pgTable(
     agentId: integer('agent_id')
       .notNull()
       .references(() => aiAgent.id, { onDelete: 'cascade' }),
+    // The project the run works in, taken from what triggered it: the issue for a
+    // mention or a delegation, the schedule for a scheduled run, the call for a manual
+    // one. Stored on the row so the run keeps its project after the agent leaves that
+    // project, and so the worker hands one to the runtime without reading the agent.
+    projectId: integer('project_id')
+      .notNull()
+      .references(() => project.id, { onDelete: 'cascade' }),
     issueId: integer('issue_id').references(() => issue.id, { onDelete: 'cascade' }),
     scheduleId: integer('schedule_id').references(() => agentSchedule.id, { onDelete: 'cascade' }),
     trigger: text('trigger').notNull().default('delegation'),
@@ -567,6 +590,7 @@ export const agentRun = pgTable(
     uniqueIndex('agent_run_schedule_fire_uq').on(t.scheduleId, t.scheduledFor),
     index('agent_run_due_idx').on(t.status, t.nextAttemptAt),
     index('agent_run_schedule_idx').on(t.scheduleId),
+    index('agent_run_project_idx').on(t.projectId),
   ],
 );
 

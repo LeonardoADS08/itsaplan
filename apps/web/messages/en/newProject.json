@@ -37,8 +37,6 @@
     "actions": "Actions",
     "configuration": "Configuration",
     "webhooks": "Webhooks",
-    "tools": "Tools",
-    "skills": "Skills",
     "agents": "Agents",
     "schedules": "Schedules"
   },

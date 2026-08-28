@@ -1,26 +1,28 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { authedApi, type Api } from '#tests/helpers/app';
+import { apiKeyApi, authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
+import { createAgent, projectIdOf } from '#tests/helpers/agents';
 import { createCredential } from '#tests/helpers/integrations';
 import { untaggedRoutes } from '#tests/helpers/mcp';
 
-// AI agents attached to a project. Each agent is backed by a hidden bot user, owns a
-// better-auth API key, and is a project member acting under a team role. An
-// external agent needs only a name + username, and its operator gets the key secret
-// (returned once on create and again on regenerate); an internal agent adds a model
-// configuration and its key stays server-side for its own runtime. Agents show up as
-// assignee candidates on the project aggregate. Access is the ai_agents permission
-// resource.
+// AI agents owned by a team. Each agent is backed by a hidden bot user, owns a
+// better-auth API key, and is a member of the projects it is attached to, acting under
+// a team role. An external agent needs only a name + username, and its operator gets
+// the key secret (returned once on create and again on regenerate); an internal agent
+// adds a model configuration and its key stays server-side for its own runtime. An
+// agent shows up as an assignee candidate in the projects it works in. Access is the
+// ai_agents permission resource on the team.
 
 async function setup() {
   const owner = await signUpTestUser({ name: 'Owner' });
   const asOwner = authedApi(owner.cookie);
-  await asOwner.projects.post({ key: 'MKT', name: 'Marketing' });
-  return { owner, asOwner };
+  const project = await asOwner.projects.post({ key: 'MKT', name: 'Marketing' });
+  return { owner, asOwner, teamId: project.data!.teamId };
 }
 
-const agents = (api: Api) => api.projects({ projectKey: 'MKT' })['ai-agents'];
+// The agent routes of the team the project belongs to, which is where agents live.
+const agents = (api: Api, teamId: number) => api.teams({ teamId })['ai-agents'];
 
 function openAiCredential(api: Api, projectKey = 'MKT'): Promise<number> {
   return createCredential(api, projectKey, {
@@ -36,7 +38,7 @@ describe('ai agents', () => {
 
   it('creates an external agent and returns its key once', async () => {
     const { asOwner } = await setup();
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Webhook Bot',
       username: 'webhook',
       kind: 'external',
@@ -54,8 +56,8 @@ describe('ai agents', () => {
   });
 
   it('lists the tool catalog: grantable actions plus always-on read tools', async () => {
-    const { asOwner } = await setup();
-    const res = await agents(asOwner).tools.get();
+    const { asOwner, teamId } = await setup();
+    const res = await agents(asOwner, teamId).tools.get();
     expect(res.status).toBe(200);
     expect(res.data).toEqual(
       expect.arrayContaining([
@@ -83,7 +85,7 @@ describe('ai agents', () => {
 
   it('stores no model config on an external agent even when config fields are sent', async () => {
     const { asOwner } = await setup();
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Ext',
       username: 'ext',
       kind: 'external',
@@ -103,7 +105,7 @@ describe('ai agents', () => {
 
   it('creates an internal agent and keeps only registered tools', async () => {
     const { asOwner } = await setup();
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Triage Bot',
       username: 'triage',
       kind: 'internal',
@@ -123,7 +125,7 @@ describe('ai agents', () => {
   it('binds a model credential of the project to an internal agent', async () => {
     const { asOwner } = await setup();
     const credentialId = await openAiCredential(asOwner);
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Bot',
       username: 'bot',
       kind: 'internal',
@@ -138,7 +140,7 @@ describe('ai agents', () => {
 
   it('rejects an unknown model credential with 400 on create', async () => {
     const { asOwner } = await setup();
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Bot',
       username: 'bot',
       kind: 'internal',
@@ -155,7 +157,7 @@ describe('ai agents', () => {
       name: 'Engineering',
     });
     const foreignCredentialId = await openAiCredential(asOwner, 'ENG');
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Bot',
       username: 'bot',
       kind: 'internal',
@@ -170,7 +172,7 @@ describe('ai agents', () => {
       integrationKey: 'jina',
       credential: { apiKey: 'jina_secret' },
     });
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Bot',
       username: 'bot',
       kind: 'internal',
@@ -180,35 +182,41 @@ describe('ai agents', () => {
   });
 
   it('rejects an unknown model credential with 400 on update and keeps the stored one', async () => {
-    const { asOwner } = await setup();
+    const { asOwner, teamId } = await setup();
     const credentialId = await openAiCredential(asOwner);
-    const created = await agents(asOwner).post({
+    const created = await createAgent(asOwner, 'MKT', {
       name: 'Bot',
       username: 'bot',
       kind: 'internal',
       modelCredentialId: credentialId,
     });
     const agentId = created.data!.agent.id;
-    const res = await agents(asOwner)({ agentId }).patch({
+    const res = await agents(
+      asOwner,
+      teamId,
+    )({ agentId }).patch({
       name: 'Renamed',
       modelCredentialId: 999999,
     });
     expect(res.status).toBe(400);
-    expect((await agents(asOwner)({ agentId }).get()).data).toMatchObject({
+    expect((await agents(asOwner, teamId)({ agentId }).get()).data).toMatchObject({
       name: 'Bot',
       modelCredentialId: credentialId,
     });
   });
 
   it('clears the model credential with null', async () => {
-    const { asOwner } = await setup();
-    const created = await agents(asOwner).post({
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
       name: 'Bot',
       username: 'bot',
       kind: 'internal',
       modelCredentialId: await openAiCredential(asOwner),
     });
-    const res = await agents(asOwner)({ agentId: created.data!.agent.id }).patch({
+    const res = await agents(
+      asOwner,
+      teamId,
+    )({ agentId: created.data!.agent.id }).patch({
       modelCredentialId: null,
     });
     expect(res.status).toBe(200);
@@ -216,8 +224,8 @@ describe('ai agents', () => {
   });
 
   it('stores conversation memory config on an internal agent', async () => {
-    const { asOwner } = await setup();
-    const res = await agents(asOwner).post({
+    const { asOwner, teamId } = await setup();
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Memo Bot',
       username: 'memo',
       kind: 'internal',
@@ -226,18 +234,21 @@ describe('ai agents', () => {
     });
     expect(res.status).toBe(201);
     expect(res.data?.agent).toMatchObject({ memoryEnabled: true, memoryLastMessages: 15 });
-    const upd = await agents(asOwner)({ agentId: res.data!.agent.id }).patch({
+    const upd = await agents(
+      asOwner,
+      teamId,
+    )({ agentId: res.data!.agent.id }).patch({
       memoryEnabled: false,
     });
     expect(upd.data).toMatchObject({ memoryEnabled: false, memoryLastMessages: 15 });
   });
 
   it("defaults an internal agent's triggers and stores overrides", async () => {
-    const { asOwner } = await setup();
-    const def = await agents(asOwner).post({ name: 'T1', username: 't1', kind: 'internal' });
+    const { asOwner, teamId } = await setup();
+    const def = await createAgent(asOwner, 'MKT', { name: 'T1', username: 't1', kind: 'internal' });
     expect(def.data?.agent).toMatchObject({ triggerOnMention: true, triggerOnAssign: false });
 
-    const custom = await agents(asOwner).post({
+    const custom = await createAgent(asOwner, 'MKT', {
       name: 'T2',
       username: 't2',
       kind: 'internal',
@@ -246,7 +257,10 @@ describe('ai agents', () => {
     });
     expect(custom.data?.agent).toMatchObject({ triggerOnMention: false, triggerOnAssign: true });
 
-    const upd = await agents(asOwner)({ agentId: custom.data!.agent.id }).patch({
+    const upd = await agents(
+      asOwner,
+      teamId,
+    )({ agentId: custom.data!.agent.id }).patch({
       triggerOnMention: true,
     });
     expect(upd.data).toMatchObject({ triggerOnMention: true, triggerOnAssign: true });
@@ -257,7 +271,7 @@ describe('ai agents', () => {
     // The team ships with a default "Member" role; use its id.
     const roles = await asOwner.projects({ projectKey: 'MKT' }).roles.get();
     const roleId = roles.data![0].id;
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Ext',
       username: 'ext',
       kind: 'external',
@@ -267,7 +281,7 @@ describe('ai agents', () => {
     expect(res.data?.agent).toMatchObject({ kind: 'external', roleId });
     // Both kinds act through the same API under a role, so an internal agent takes
     // one too: its tool calls are checked by the same permission matrix.
-    const internal = await agents(asOwner).post({
+    const internal = await createAgent(asOwner, 'MKT', {
       name: 'Int',
       username: 'int',
       kind: 'internal',
@@ -276,20 +290,36 @@ describe('ai agents', () => {
     expect(internal.data?.agent).toMatchObject({ kind: 'internal', roleId });
   });
 
-  it("puts an external agent on the team's default role when none is given", async () => {
-    const { asOwner } = await setup();
-    const roles = await asOwner.projects({ projectKey: 'MKT' }).roles.get();
-    const defaultRole = roles.data!.find((r) => r.isDefault)!;
-
-    const created = await agents(asOwner).post({ name: 'Ext', username: 'ext', kind: 'external' });
-    expect(created.data?.agent).toMatchObject({ roleId: defaultRole.id });
-
-    // Clearing the role falls back to the same default rather than leaving the agent
-    // on the built-in permissions.
-    const cleared = await agents(asOwner)({ agentId: created.data!.agent.id }).patch({
-      roleId: null,
+  it("closes the team's owner and manager guards to an agent key", async () => {
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Ext',
+      username: 'ext',
+      kind: 'external',
     });
-    expect(cleared.data).toMatchObject({ roleId: defaultRole.id });
+    const asAgent = apiKeyApi(created.data!.apiKey!);
+
+    // An agent belongs to the team's member list, so it reads the team; it never runs
+    // it, so renaming the team and creating a project in it are closed to it.
+    expect((await asAgent.teams({ teamId }).get()).status).toBe(200);
+    expect((await asAgent.teams({ teamId }).patch({ name: 'Renamed' })).status).toBe(403);
+    expect(
+      (await asAgent.teams({ teamId }).projects.post({ key: 'ENG', name: 'Engineering' })).status,
+    ).toBe(403);
+  });
+
+  it('refuses an agent with no role (400)', async () => {
+    const { asOwner, teamId } = await setup();
+    // An agent always acts under a role of its team, so the create names one; without
+    // it the body does not validate.
+    const res = await agents(asOwner, teamId).post({
+      name: 'Ext',
+      username: 'ext',
+      kind: 'external',
+      // @ts-expect-error the role is required, which is what this asserts
+      roleId: undefined,
+    });
+    expect(res.status).toBe(400);
   });
 
   it('rejects a role from another team for an external agent', async () => {
@@ -300,7 +330,7 @@ describe('ai agents', () => {
     await stranger.projects.post({ key: 'ENG', name: 'Engineering' });
     const foreign = await stranger.projects({ projectKey: 'ENG' }).roles.get();
 
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Ext',
       username: 'ext',
       kind: 'external',
@@ -310,9 +340,9 @@ describe('ai agents', () => {
   });
 
   it('lists agents without the secret', async () => {
-    const { asOwner } = await setup();
-    await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'external' });
-    const res = await agents(asOwner).get();
+    const { asOwner, teamId } = await setup();
+    await createAgent(asOwner, 'MKT', { name: 'Bot', username: 'bot', kind: 'external' });
+    const res = await agents(asOwner, teamId).get();
     expect(res.status).toBe(200);
     expect(res.data).toHaveLength(1);
     expect(res.data?.[0]).not.toHaveProperty('apiKey');
@@ -320,25 +350,33 @@ describe('ai agents', () => {
   });
 
   it('gets one agent by id, without the secret', async () => {
-    const { asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'external' });
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'external',
+    });
     const agentId = created.data!.agent.id;
 
-    const res = await agents(asOwner)({ agentId }).get();
+    const res = await agents(asOwner, teamId)({ agentId }).get();
     expect(res.status).toBe(200);
     expect(res.data).toMatchObject({ id: agentId, name: 'Bot', username: 'bot' });
     expect(res.data).not.toHaveProperty('apiKey');
   });
 
   it('returns 404 for a missing agent', async () => {
-    const { asOwner } = await setup();
-    const res = await agents(asOwner)({ agentId: 999999 }).get();
+    const { asOwner, teamId } = await setup();
+    const res = await agents(asOwner, teamId)({ agentId: 999999 }).get();
     expect(res.status).toBe(404);
   });
 
   it('exposes the created agent as an assignee candidate', async () => {
     const { asOwner } = await setup();
-    await agents(asOwner).post({ name: 'Assign Me', username: 'assignme', kind: 'external' });
+    await createAgent(asOwner, 'MKT', {
+      name: 'Assign Me',
+      username: 'assignme',
+      kind: 'external',
+    });
     const project = await asOwner.projects({ projectKey: 'MKT' }).get();
     const agent = project.data?.assignees.find((a) => a.kind === 'agent');
     expect(agent).toMatchObject({ name: 'Assign Me', kind: 'agent', agentKind: 'external' });
@@ -346,8 +384,8 @@ describe('ai agents', () => {
   });
 
   it("names the owner of an 'owner'-scoped agent as an assignee candidate", async () => {
-    const { owner, asOwner } = await setup();
-    const created = await agents(asOwner).post({
+    const { owner, asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
       name: 'Mine Only',
       username: 'mine',
       kind: 'external',
@@ -358,7 +396,10 @@ describe('ai agents', () => {
     expect(agent?.restrictedToUserId).toBe(owner.userId);
 
     // Widening the scope drops the restriction: any member's runs reach the runner.
-    await agents(asOwner)({ agentId: created.data!.agent.id }).patch({ runnerScope: 'project' });
+    await agents(
+      asOwner,
+      teamId,
+    )({ agentId: created.data!.agent.id }).patch({ runnerScope: 'project' });
     const widened = await asOwner.projects({ projectKey: 'MKT' }).get();
     expect(
       widened.data?.assignees.find((a) => a.userId === created.data!.agent.userId)
@@ -367,8 +408,12 @@ describe('ai agents', () => {
   });
 
   it("hands an 'owner'-scoped agent to the member who chose the scope", async () => {
-    const { asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Ext', username: 'ext', kind: 'external' });
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Ext',
+      username: 'ext',
+      kind: 'external',
+    });
     const second = await signUpTestUser({ name: 'Second' });
     const invite = await asOwner
       .projects({ projectKey: 'MKT' })
@@ -376,34 +421,55 @@ describe('ai agents', () => {
     const asSecond = authedApi(second.cookie);
     await asSecond.invites({ token: invite.data!.token }).accept.post();
 
-    const res = await agents(asSecond)({ agentId: created.data!.agent.id }).patch({
+    const res = await agents(
+      asSecond,
+      teamId,
+    )({ agentId: created.data!.agent.id }).patch({
       runnerScope: 'owner',
     });
     expect(res.data).toMatchObject({ runnerScope: 'owner', ownerUserId: second.userId });
   });
 
   it('regenerates the key with a new secret', async () => {
-    const { asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'external' });
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'external',
+    });
     const agentId = created.data!.agent.id;
-    const res = await agents(asOwner)({ agentId })['regenerate-key'].post();
+    const res = await agents(asOwner, teamId)({ agentId })['regenerate-key'].post();
     expect(res.status).toBe(200);
     expect(res.data?.apiKey).toBeTruthy();
     expect(res.data?.apiKey).not.toBe(created.data?.apiKey);
   });
 
   it('rejects regenerating the key on an internal agent with 400', async () => {
-    const { asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'internal' });
-    const res = await agents(asOwner)({ agentId: created.data!.agent.id })['regenerate-key'].post();
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'internal',
+    });
+    const res = await agents(
+      asOwner,
+      teamId,
+    )({ agentId: created.data!.agent.id })['regenerate-key'].post();
     expect(res.status).toBe(400);
   });
 
   it('updates name, config, and tools', async () => {
-    const { asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'internal' });
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'internal',
+    });
     const agentId = created.data!.agent.id;
-    const res = await agents(asOwner)({ agentId }).patch({
+    const res = await agents(
+      asOwner,
+      teamId,
+    )({ agentId }).patch({
       name: 'Renamed',
       model: 'gpt-5.4-mini',
       tools: ['add_comment'],
@@ -417,7 +483,7 @@ describe('ai agents', () => {
   });
 
   it('links the member fields the agent reacts to, and drops the ids of other fields', async () => {
-    const { asOwner } = await setup();
+    const { asOwner, teamId } = await setup();
     const fields = asOwner.projects({ projectKey: 'MKT' })['custom-fields'];
     const reviewer = (
       await fields.post({ name: 'Reviewer', fieldType: 'member', memberScope: 'agents' })
@@ -425,11 +491,18 @@ describe('ai agents', () => {
     // A field the agents cannot be set into carries no trigger, so its id is dropped.
     const owner = (await fields.post({ name: 'Owner', fieldType: 'member', memberScope: 'humans' }))
       .data!;
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'internal' });
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'internal',
+    });
     const agentId = created.data!.agent.id;
     expect(created.data!.agent.fieldTriggers).toEqual([]);
 
-    const res = await agents(asOwner)({ agentId }).patch({
+    const res = await agents(
+      asOwner,
+      teamId,
+    )({ agentId }).patch({
       fieldTriggers: [
         { fieldId: reviewer.id, delaySec: 300 },
         { fieldId: owner.id, delaySec: 0 },
@@ -438,17 +511,21 @@ describe('ai agents', () => {
     expect(res.status).toBe(200);
     expect(res.data?.fieldTriggers).toEqual([{ fieldId: reviewer.id, delaySec: 300 }]);
 
-    const cleared = await agents(asOwner)({ agentId }).patch({ fieldTriggers: [] });
+    const cleared = await agents(asOwner, teamId)({ agentId }).patch({ fieldTriggers: [] });
     expect(cleared.data?.fieldTriggers).toEqual([]);
   });
 
   it('deletes an agent and drops it from assignee candidates', async () => {
-    const { asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'external' });
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'external',
+    });
     const agentId = created.data!.agent.id;
-    const del = await agents(asOwner)({ agentId }).delete();
+    const del = await agents(asOwner, teamId)({ agentId }).delete();
     expect(del.status).toBe(204);
-    const list = await agents(asOwner).get();
+    const list = await agents(asOwner, teamId).get();
     expect(list.data).toHaveLength(0);
     const project = await asOwner.projects({ projectKey: 'MKT' }).get();
     expect(project.data?.assignees.some((a) => a.kind === 'agent')).toBe(false);
@@ -456,8 +533,12 @@ describe('ai agents', () => {
 
   it('rejects a duplicate username with 409', async () => {
     const { asOwner } = await setup();
-    await agents(asOwner).post({ name: 'First', username: 'dup', kind: 'external' });
-    const res = await agents(asOwner).post({ name: 'Second', username: 'dup', kind: 'external' });
+    await createAgent(asOwner, 'MKT', { name: 'First', username: 'dup', kind: 'external' });
+    const res = await createAgent(asOwner, 'MKT', {
+      name: 'Second',
+      username: 'dup',
+      kind: 'external',
+    });
     expect(res.status).toBe(409);
   });
 
@@ -465,7 +546,7 @@ describe('ai agents', () => {
   // handle a member already answers to cannot be given to an agent.
   it('rejects a username a member already uses with 409', async () => {
     const { owner, asOwner } = await setup();
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Impostor',
       username: owner.username,
       kind: 'external',
@@ -477,15 +558,26 @@ describe('ai agents', () => {
   // answer to it.
   it('rejects a username another agent uses in another case with 409', async () => {
     const { asOwner } = await setup();
-    await agents(asOwner).post({ name: 'First', username: 'Dup', kind: 'external' });
-    const res = await agents(asOwner).post({ name: 'Second', username: 'dup', kind: 'external' });
+    await createAgent(asOwner, 'MKT', { name: 'First', username: 'Dup', kind: 'external' });
+    const res = await createAgent(asOwner, 'MKT', {
+      name: 'Second',
+      username: 'dup',
+      kind: 'external',
+    });
     expect(res.status).toBe(409);
   });
 
   it('keeps an agent its own username on an unrelated change', async () => {
-    const { asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'external' });
-    const res = await agents(asOwner)({ agentId: created.data!.agent.id }).patch({
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'external',
+    });
+    const res = await agents(
+      asOwner,
+      teamId,
+    )({ agentId: created.data!.agent.id }).patch({
       username: 'bot',
       name: 'Bot renamed',
     });
@@ -493,9 +585,16 @@ describe('ai agents', () => {
   });
 
   it('rejects renaming an agent onto a member username with 409', async () => {
-    const { owner, asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'external' });
-    const res = await agents(asOwner)({ agentId: created.data!.agent.id }).patch({
+    const { owner, asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'external',
+    });
+    const res = await agents(
+      asOwner,
+      teamId,
+    )({ agentId: created.data!.agent.id }).patch({
       username: owner.username,
     });
     expect(res.status).toBe(409);
@@ -503,7 +602,7 @@ describe('ai agents', () => {
 
   it('rejects an invalid username with 400', async () => {
     const { asOwner } = await setup();
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Bad',
       username: 'has spaces',
       kind: 'external',
@@ -513,14 +612,14 @@ describe('ai agents', () => {
 
   it('rejects an empty name with 400', async () => {
     const { asOwner } = await setup();
-    const res = await agents(asOwner).post({ name: '', username: 'bot', kind: 'external' });
+    const res = await createAgent(asOwner, 'MKT', { name: '', username: 'bot', kind: 'external' });
     expect(res.status).toBe(400);
   });
 
   it('rejects an unknown kind with 400', async () => {
     const { asOwner } = await setup();
     // kind must be "external" | "internal".
-    const res = await agents(asOwner).post({
+    const res = await createAgent(asOwner, 'MKT', {
       name: 'Bot',
       username: 'bot',
       kind: 'hybrid' as never,
@@ -529,80 +628,169 @@ describe('ai agents', () => {
   });
 
   it('rejects a non-numeric agent id with 400', async () => {
-    const { asOwner } = await setup();
-    const res = await agents(asOwner)({ agentId: 'abc' as never }).patch({ name: 'x' });
+    const { asOwner, teamId } = await setup();
+    const res = await agents(asOwner, teamId)({ agentId: 'abc' as never }).patch({ name: 'x' });
     expect(res.status).toBe(400);
   });
 
   it('returns 404 when updating a missing agent', async () => {
-    const { asOwner } = await setup();
-    const res = await agents(asOwner)({ agentId: 999999 }).patch({ name: 'x' });
+    const { asOwner, teamId } = await setup();
+    const res = await agents(asOwner, teamId)({ agentId: 999999 }).patch({ name: 'x' });
     expect(res.status).toBe(404);
   });
 
   it('returns 404 when regenerating the key of a missing agent', async () => {
-    const { asOwner } = await setup();
-    const res = await agents(asOwner)({ agentId: 999999 })['regenerate-key'].post();
+    const { asOwner, teamId } = await setup();
+    const res = await agents(asOwner, teamId)({ agentId: 999999 })['regenerate-key'].post();
     expect(res.status).toBe(404);
   });
 
   it('returns 404 when deleting a missing agent', async () => {
-    const { asOwner } = await setup();
-    const res = await agents(asOwner)({ agentId: 999999 }).delete();
+    const { asOwner, teamId } = await setup();
+    const res = await agents(asOwner, teamId)({ agentId: 999999 }).delete();
     expect(res.status).toBe(404);
   });
 
-  it('does not reach an agent through another project (404)', async () => {
+  it('does not reach an agent through another team (404)', async () => {
     const { asOwner } = await setup();
-    await asOwner.projects.post({ key: 'ENG', name: 'Engineering' });
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'external' });
-    const agentId = created.data!.agent.id;
-    // The same owner addresses the agent through a different project it owns; the
-    // store scopes every lookup to (agentId, projectId), so it is not found here.
-    const res = await asOwner.projects({ projectKey: 'ENG' })['ai-agents']({ agentId }).patch({
-      name: 'x',
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'external',
     });
+    const agentId = created.data!.agent.id;
+    // A second account addresses the agent through its own team, where the store finds
+    // nothing: every lookup is scoped to (agentId, teamId).
+    const second = authedApi((await signUpTestUser()).cookie);
+    const otherProject = await second.projects.post({ key: 'ENG', name: 'Engineering' });
+    const res = await agents(second, otherProject.data!.teamId)({ agentId }).patch({ name: 'x' });
     expect(res.status).toBe(404);
+  });
+
+  it('lists only the agents working in the project the filter names', async () => {
+    const { asOwner, teamId } = await setup();
+    await asOwner.projects.post({ key: 'ENG', name: 'Engineering' });
+    await createAgent(asOwner, 'MKT', { name: 'Mkt Bot', username: 'mkt-bot', kind: 'external' });
+    await createAgent(asOwner, 'ENG', { name: 'Eng Bot', username: 'eng-bot', kind: 'external' });
+
+    const all = await agents(asOwner, teamId).get();
+    expect(all.data).toHaveLength(2);
+    const filtered = await agents(asOwner, teamId).get({
+      query: { projectId: await projectIdOf(asOwner, 'ENG') },
+    });
+    expect(filtered.data?.map((a) => a.username)).toEqual(['eng-bot']);
+  });
+
+  it('attaches an agent to a second project and detaches it again', async () => {
+    const { asOwner, teamId } = await setup();
+    await asOwner.projects.post({ key: 'ENG', name: 'Engineering' });
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'external',
+    });
+    const agentId = created.data!.agent.id;
+    const mkt = await projectIdOf(asOwner, 'MKT');
+    const eng = await projectIdOf(asOwner, 'ENG');
+
+    const attached = await agents(
+      asOwner,
+      teamId,
+    )({ agentId }).projects.put({
+      projectIds: [mkt, eng],
+    });
+    expect(attached.data?.projects.map((p) => p.key).sort()).toEqual(['ENG', 'MKT']);
+
+    const detached = await agents(asOwner, teamId)({ agentId }).projects.put({ projectIds: [eng] });
+    expect(detached.data?.projects.map((p) => p.key)).toEqual(['ENG']);
+  });
+
+  it('refuses a project of another team (400)', async () => {
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'external',
+    });
+    const second = authedApi((await signUpTestUser()).cookie);
+    await second.projects.post({ key: 'ENG', name: 'Engineering' });
+
+    const res = await agents(
+      asOwner,
+      teamId,
+    )({ agentId: created.data!.agent.id }).projects.put({
+      projectIds: [await projectIdOf(second, 'ENG')],
+    });
+    expect(res.status).toBe(400);
   });
 
   it('denies a non-member (403) on read and write routes', async () => {
-    const { asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'internal' });
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'internal',
+    });
     const agentId = created.data!.agent.id;
-    const asOutsider = agents(authedApi((await signUpTestUser()).cookie));
+    // A team the caller does not belong to reads as one that does not exist, so the
+    // team routes answer 404; the project run route stays a 403.
+    const outsider = authedApi((await signUpTestUser()).cookie);
+    const asOutsider = agents(outsider, teamId);
 
-    expect((await asOutsider.get()).status).toBe(403);
-    expect((await asOutsider.tools.get()).status).toBe(403);
-    expect((await asOutsider.post({ name: 'X', username: 'x', kind: 'external' })).status).toBe(
-      403,
-    );
-    expect((await asOutsider({ agentId }).patch({ name: 'X' })).status).toBe(403);
-    expect((await asOutsider({ agentId })['regenerate-key'].post()).status).toBe(403);
-    expect((await asOutsider({ agentId }).run.post({ prompt: 'hi' })).status).toBe(403);
-    expect((await asOutsider({ agentId }).delete()).status).toBe(403);
+    expect((await asOutsider.get()).status).toBe(404);
+    expect((await asOutsider.tools.get()).status).toBe(404);
+    expect(
+      (await asOutsider.post({ name: 'X', username: 'x', kind: 'external', roleId: 1 })).status,
+    ).toBe(404);
+    expect((await asOutsider({ agentId }).patch({ name: 'X' })).status).toBe(404);
+    expect((await asOutsider({ agentId })['regenerate-key'].post()).status).toBe(404);
+    expect((await asOutsider({ agentId }).delete()).status).toBe(404);
+    expect(
+      (
+        await outsider
+          .projects({ projectKey: 'MKT' })
+          ['ai-agents']({ agentId })
+          .run.post({ prompt: 'hi' })
+      ).status,
+    ).toBe(403);
   });
 
   // The run happy path calls the model provider, so it is exercised out of band,
   // not in this suite. Here we only assert the guards that run before any model call.
   it('returns 404 when running a missing agent', async () => {
     const { asOwner } = await setup();
-    const res = await agents(asOwner)({ agentId: 999999 }).run.post({ prompt: 'hi' });
+    const res = await asOwner
+      .projects({ projectKey: 'MKT' })
+      ['ai-agents']({ agentId: 999999 })
+      .run.post({ prompt: 'hi' });
     expect(res.status).toBe(404);
   });
 
   it('rejects running an external agent with 400', async () => {
     const { asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Ext', username: 'ext', kind: 'external' });
-    const res = await agents(asOwner)({ agentId: created.data!.agent.id }).run.post({
-      prompt: 'hi',
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Ext',
+      username: 'ext',
+      kind: 'external',
     });
+    const res = await asOwner
+      .projects({ projectKey: 'MKT' })
+      ['ai-agents']({ agentId: created.data!.agent.id })
+      .run.post({ prompt: 'hi' });
     expect(res.status).toBe(400);
   });
 
   it('rejects running with an empty prompt (400) before any model call', async () => {
     const { asOwner } = await setup();
-    const created = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'internal' });
-    const res = await agents(asOwner)({ agentId: created.data!.agent.id }).run.post({ prompt: '' });
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'internal',
+    });
+    const res = await asOwner
+      .projects({ projectKey: 'MKT' })
+      ['ai-agents']({ agentId: created.data!.agent.id })
+      .run.post({ prompt: '' });
     expect(res.status).toBe(400);
   });
 
@@ -612,7 +800,7 @@ describe('ai agents', () => {
   it('exposes agent management and the run to MCP', () => {
     const untagged = untaggedRoutes((route) => route.includes('/ai-agents'));
     expect(untagged).toEqual([
-      'GET /projects/:projectKey/ai-agents/:agentId/runs',
+      'GET /teams/:teamId/ai-agents/:agentId/runs',
       'POST /projects/:projectKey/ai-agents/:agentId/run/stream',
       'GET /projects/:projectKey/ai-agents/:agentId/threads',
       'PUT /projects/:projectKey/ai-agents/:agentId/threads/:threadId/favorite',

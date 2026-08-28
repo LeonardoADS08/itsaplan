@@ -90,8 +90,8 @@
       "description": "قفل المهام لما طلبات السحب بتاعتها تتدمج على GitHub أو GitLab أو Gitea أو Forgejo أو Bitbucket."
     },
     "ai-agents": {
-      "label": "الوكلاء (agents)",
-      "description": "مستخدمين بوت تقدر تفوّض ليهم المهام."
+      "label": "زملاء الفريق",
+      "description": "زملاء فريق الذكاء الاصطناعي العاملون في هذا المشروع."
     }
   }
 }

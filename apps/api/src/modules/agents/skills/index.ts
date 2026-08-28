@@ -38,7 +38,7 @@ import {
   listAgentSkills,
   setAgentSkills,
 } from './service';
-import { agentInProject } from '../core/service';
+import { agentInTeam } from '../core/service';
 
 // Reference-file bytes are capped like the skill markdown.
 const MAX_REF_BYTES = MAX_SKILL_BYTES;
@@ -48,8 +48,8 @@ const MAX_REF_BYTES = MAX_SKILL_BYTES;
 // and managers always, an owner of one of its projects always, another member when a
 // project role of theirs grants it.
 //
-// Which skills an agent has enabled stays under :projectKey — the agent is a project
-// entity, and only the skills of its project's team may be enabled on it.
+// Which skills an agent has enabled sits under :teamId too — the agent belongs to the
+// team, and only that team's skills may be enabled on it.
 export const agentSkillRoutes = new Elysia({
   name: 'agent-skills',
   detail: { tags: ['Agent Skills'] },
@@ -318,16 +318,16 @@ export const agentSkillRoutes = new Elysia({
   )
 
   .get(
-    '/projects/:projectKey/ai-agents/:agentId/skills',
-    async ({ params, project }) => {
-      if (!(await agentInProject(params.agentId, project.id))) {
+    '/teams/:teamId/ai-agents/:agentId/skills',
+    async ({ params, membership }) => {
+      if (!(await agentInTeam(params.agentId, membership.teamId))) {
         throw new HttpError(404, 'Agent not found');
       }
       return listAgentSkills(params.agentId);
     },
     {
       params: agentParams,
-      permission: ['agent_skills', 'read'],
+      teamPermission: ['agent_skills', 'read'],
       response: { 200: SkillListResponse, ...accessErrors },
       detail: {
         summary: "List an agent's enabled skills",
@@ -338,23 +338,23 @@ export const agentSkillRoutes = new Elysia({
   )
 
   .put(
-    '/projects/:projectKey/ai-agents/:agentId/skills',
-    async ({ params, project, body }) => {
-      if (!(await agentInProject(params.agentId, project.id))) {
+    '/teams/:teamId/ai-agents/:agentId/skills',
+    async ({ params, membership, body }) => {
+      if (!(await agentInTeam(params.agentId, membership.teamId))) {
         throw new HttpError(404, 'Agent not found');
       }
-      await setAgentSkills(params.agentId, project.teamId, body.skillIds);
+      await setAgentSkills(params.agentId, membership.teamId, body.skillIds);
       return listAgentSkills(params.agentId);
     },
     {
       body: setAgentSkillsBody,
       params: agentParams,
-      permission: ['agent_skills', 'edit'],
+      teamPermission: ['agent_skills', 'edit'],
       response: { 200: SkillListResponse, ...commonErrors },
       detail: {
         summary: "Set an agent's enabled skills",
         description:
-          "Replace the set of skills enabled on an agent. Ids that are not skills of the project's team are ignored.",
+          "Replace the set of skills enabled on an agent. Ids that are not skills of the agent's team are ignored.",
         ...mcpTool('set_ai_agent_skills'),
       },
     },

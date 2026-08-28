@@ -3,6 +3,7 @@ import { authedApi } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { createRole } from '#tests/helpers/roles';
+import { createAgent } from '#tests/helpers/agents';
 
 type Client = ReturnType<typeof authedApi>;
 
@@ -241,9 +242,11 @@ describe('note boards', () => {
       const member = await addMember(owner.api);
       const role = await createRole(owner.api, 'MKT', { name: 'No notes', permissions: {} });
       const noNotes = await addMember(owner.api, { roleId: role.data!.id });
-      const agent = await owner.api
-        .projects({ projectKey: 'MKT' })
-        ['ai-agents'].post({ name: 'Bot', username: 'bot', kind: 'external' });
+      const agent = await createAgent(owner.api, 'MKT', {
+        name: 'Bot',
+        username: 'bot',
+        kind: 'external',
+      });
 
       const res = await boards(owner.api)['access-candidates'].get();
       expect(res.status).toBe(200);

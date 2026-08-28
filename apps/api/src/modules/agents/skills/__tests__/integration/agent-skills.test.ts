@@ -5,6 +5,7 @@ import { resetDb } from '#tests/helpers/db';
 import { untaggedRoutes } from '#tests/helpers/mcp';
 import { addProjectMember } from '#tests/helpers/members';
 import { createRole } from '#tests/helpers/roles';
+import { createAgent } from '#tests/helpers/agents';
 
 // The team skill library: SKILL.md documents (plus optional reference files) given to
 // the internal agents of every project the team owns. Content lives in the object
@@ -20,7 +21,8 @@ async function setup() {
 }
 
 const skills = (api: Api, teamId: number) => api.teams({ teamId })['agent-skills'];
-const agents = (api: Api) => api.projects({ projectKey: 'MKT' })['ai-agents'];
+// The agent routes of the team the project belongs to, which is where agents live.
+const agents = (api: Api, teamId: number) => api.teams({ teamId })['ai-agents'];
 
 const SKILL_MD = `---
 name: Triage
@@ -178,22 +180,25 @@ describe('agent skills', () => {
   it('enables skills on an internal agent and lists them', async () => {
     const { asOwner, teamId } = await setup();
     const created = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
-    const agent = await agents(asOwner).post({
+    const agent = await createAgent(asOwner, 'MKT', {
       name: 'Bot',
       username: 'bot',
       kind: 'internal',
     });
     const agentId = agent.data!.agent.id;
 
-    const set = await agents(asOwner)({ agentId }).skills.put({ skillIds: [created.data!.id] });
+    const set = await agents(
+      asOwner,
+      teamId,
+    )({ agentId }).skills.put({ skillIds: [created.data!.id] });
     expect(set.status).toBe(200);
     expect(set.data).toHaveLength(1);
 
-    const list = await agents(asOwner)({ agentId }).skills.get();
+    const list = await agents(asOwner, teamId)({ agentId }).skills.get();
     expect(list.data?.map((s) => s.id)).toEqual([created.data!.id]);
 
     // Replacing with an empty set unlinks all skills.
-    const clear = await agents(asOwner)({ agentId }).skills.put({ skillIds: [] });
+    const clear = await agents(asOwner, teamId)({ agentId }).skills.put({ skillIds: [] });
     expect(clear.data).toHaveLength(0);
   });
 
@@ -205,9 +210,16 @@ describe('agent skills', () => {
       source: 'inline',
       markdown: SKILL_MD,
     });
-    const agent = await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'internal' });
+    const agent = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'internal',
+    });
 
-    const set = await agents(asOwner)({ agentId: agent.data!.agent.id }).skills.put({
+    const set = await agents(
+      asOwner,
+      teamId,
+    )({ agentId: agent.data!.agent.id }).skills.put({
       skillIds: [mine.data!.id, theirs.data!.id],
     });
     expect(set.data?.map((skill) => skill.id)).toEqual([mine.data!.id]);

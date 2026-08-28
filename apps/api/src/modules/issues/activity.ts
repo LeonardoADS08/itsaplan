@@ -332,6 +332,7 @@ async function enqueueMentionRuns(
   for (const agent of agents) {
     await enqueueAgentRun({
       agentId: agent.id,
+      projectId,
       issueId: comment.issueId,
       sourceActivityId: comment.id,
       prompt: comment.body ?? '',

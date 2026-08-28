@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useInitiativeOptionsQuery } from '@/services/initiatives.service';
 import { useIssueBySeqQuery } from '@/services/issues.service';
@@ -60,6 +60,8 @@ export default function Shell({
   const { issueOpenMode, showChatByDefault } = useAccountPreferences();
   const overlays = useOverlays();
   const chatPanel = useChatPanel(projectKey, showChatByDefault);
+  // The agent a page asked to chat with, held until the panel has opened its tab.
+  const [chatAgentId, setChatAgentId] = useState<number | null>(null);
   // The Shell renders the context provider, so its own permission check reads the
   // project it loaded rather than the context.
   const { can } = usePermissions(project);
@@ -135,6 +137,10 @@ export default function Shell({
     customFields,
     onOpenIssue: openIssue,
     onAddIssue: addIssue,
+    onChatWithAgent: (agentId: number) => {
+      setChatAgentId(agentId);
+      chatPanel.openPanel();
+    },
   };
 
   return (
@@ -191,6 +197,8 @@ export default function Shell({
                 onToggleMode={chatPanel.toggleMode}
                 onToggleFullscreen={chatPanel.toggleFullscreen}
                 onClose={chatPanel.toggle}
+                newChatAgentId={chatAgentId}
+                onNewChatHandled={() => setChatAgentId(null)}
               />
             )}
           </div>

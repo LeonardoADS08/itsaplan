@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
+import { createAgent } from '#tests/helpers/agents';
 import {
   enqueueAgentRun,
   claimDueRuns,
@@ -26,17 +27,17 @@ async function setup() {
   return { asOwner, columnId };
 }
 
-const agents = (api: Api) => api.projects({ projectKey: 'MKT' })['ai-agents'];
-
 // Creates an internal agent and an issue, then enqueues a pending run for the pair.
 async function enqueueRun(asOwner: Api, columnId: number) {
-  const agent = (await agents(asOwner).post({ name: 'Bot', username: 'bot', kind: 'internal' }))
-    .data!.agent;
+  const agent = (
+    await createAgent(asOwner, 'MKT', { name: 'Bot', username: 'bot', kind: 'internal' })
+  ).data!.agent;
   const issue = (
     await asOwner.projects({ projectKey: 'MKT' }).issues.post({ columnId, title: 'Task' })
   ).data!;
   await enqueueAgentRun({
     agentId: agent.id,
+    projectId: agent.projects[0].id,
     issueId: issue.id,
     sourceActivityId: null,
     prompt: 'do it',
