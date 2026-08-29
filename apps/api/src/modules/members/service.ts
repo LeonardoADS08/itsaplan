@@ -66,6 +66,9 @@ export interface MemberCandidate {
   email: string;
   username: string | null;
   image: string | null;
+  // True when this candidate is an AI agent's bot user. Its email is an internal
+  // address nobody reads, so the picker marks the agent rather than showing it.
+  isAgent: boolean;
 }
 
 // A member's effective access in a project: the owner/member flag plus the
@@ -335,16 +338,19 @@ export async function listMemberCandidates(
   projectId: number,
   teamId: number,
 ): Promise<MemberCandidate[]> {
-  return db
+  const rows = await db
     .select({
       userId: teamMember.userId,
       name: user.name,
       email: user.email,
       username: user.username,
+      agentId: aiAgent.id,
+      agentUsername: aiAgent.username,
       image: user.image,
     })
     .from(teamMember)
     .innerJoin(user, eq(user.id, teamMember.userId))
+    .leftJoin(aiAgent, eq(aiAgent.userId, teamMember.userId))
     .where(
       and(
         eq(teamMember.teamId, teamId),
@@ -362,6 +368,14 @@ export async function listMemberCandidates(
       ),
     )
     .orderBy(user.name);
+  return rows.map((r) => ({
+    userId: r.userId,
+    name: r.name,
+    email: r.email,
+    username: r.username ?? r.agentUsername,
+    image: r.image,
+    isAgent: r.agentId !== null,
+  }));
 }
 
 // Sets a member's owner/member flag and custom role in one update. Promoting to

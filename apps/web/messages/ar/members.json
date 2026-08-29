@@ -4,8 +4,7 @@
   "add": {
     "action": "إضافة عضو",
     "title": "إضافة عضو",
-    "description": "اختار حد من الفريق، أو ادعُ شخص جديد بالبريد.",
-    "personLabel": "الشخص",
+    "personLabel": "عضو الفريق أو الإيميل",
     "pickPlaceholder": "اختر شخصًا",
     "searchPlaceholder": "دوّر في الفريق أو اكتب بريد",
     "searchTeamPlaceholder": "دوّر في الفريق",

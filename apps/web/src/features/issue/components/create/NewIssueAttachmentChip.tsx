@@ -95,7 +95,7 @@ export default function NewIssueAttachmentChip({
         onClick={() => onRemove(item.id)}
         aria-label={t('remove', { name: item.filename })}
         title={t('removeShort')}
-        className="absolute -top-2 -right-2 flex size-4 items-center justify-center rounded-full border bg-popover text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100 hover:text-destructive focus-visible:opacity-100"
+        className="absolute -end-2 -top-2 flex size-4 items-center justify-center rounded-full border bg-popover text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100 hover:text-destructive focus-visible:opacity-100"
       >
         <X className="size-3" />
       </button>

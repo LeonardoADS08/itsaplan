@@ -2597,6 +2597,7 @@ export interface MemberCandidate {
   email: string;
   username: string | null;
   image: string | null;
+  isAgent: boolean;
 }
 
 export type InviteStatus = 'pending' | 'accepted' | 'rejected';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Users } from 'lucide-react';
+import { Mail, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Modal from '@/components/common/overlay/Modal';
 import { Button } from '@/components/ui/button';
@@ -108,46 +108,57 @@ export default function MemberAddDialog({
           {teamName}
         </>
       }
-      description={t('description')}
       onClose={onClose}
+      wide
     >
-      <div className="space-y-4">
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">{t('personLabel')}</p>
-          <MemberPicker
-            candidates={candidates}
-            value={target}
-            onChange={setTarget}
-            query={query}
-            onQueryChange={setQuery}
-            invite={invite}
-            canAdd={canAdd}
-            canInvite={canInvite}
-            disabled={busy}
-          />
-          {target?.kind === 'invite' && (
-            <p className="text-xs text-muted-foreground">{t('willJoinTeam', { teamName })}</p>
-          )}
+      <div className="space-y-6 py-1">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">{t('personLabel')}</p>
+            <MemberPicker
+              candidates={candidates}
+              value={target}
+              onChange={setTarget}
+              query={query}
+              onQueryChange={setQuery}
+              invite={invite}
+              canAdd={canAdd}
+              canInvite={canInvite}
+              disabled={busy}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">{t('roleLabel')}</p>
+            <Select value={role} onValueChange={setRoleValue} disabled={busy}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t('rolePlaceholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((r) => (
+                  <SelectItem key={r.id} value={String(r.id)}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value={OWNER_VALUE}>{tCommon('owner')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">{t('roleLabel')}</p>
-          <Select value={role} onValueChange={setRoleValue} disabled={busy}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={t('rolePlaceholder')} />
-            </SelectTrigger>
-            <SelectContent>
-              {roles.map((r) => (
-                <SelectItem key={r.id} value={String(r.id)}>
-                  {r.name}
-                </SelectItem>
-              ))}
-              <SelectItem value={OWNER_VALUE}>{tCommon('owner')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {target?.kind === 'invite' && (
+          <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Mail className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{target.email}</p>
+              <p className="text-xs text-muted-foreground">{t('willJoinTeam', { teamName })}</p>
+            </div>
+          </div>
+        )}
 
-        <div className="flex justify-end border-t pt-4">
+        <div className="flex justify-end border-t pt-5">
           <Button disabled={!target || !role || busy} onClick={submit}>
             {target?.kind === 'invite' ? t('sendInvite') : t('submit')}
           </Button>

@@ -4,8 +4,7 @@
   "add": {
     "action": "Добавить участника",
     "title": "Добавить участника",
-    "description": "Выберите человека из команды или пригласите нового по почте.",
-    "personLabel": "Человек",
+    "personLabel": "Участник команды или email",
     "pickPlaceholder": "Выберите человека",
     "searchPlaceholder": "Поиск по команде или адрес почты",
     "searchTeamPlaceholder": "Поиск по команде",

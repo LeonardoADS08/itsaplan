@@ -4,8 +4,7 @@
   "add": {
     "action": "Add member",
     "title": "Add member",
-    "description": "Pick someone from the team, or invite a new person by email.",
-    "personLabel": "Person",
+    "personLabel": "Team member or email",
     "pickPlaceholder": "Select someone",
     "searchPlaceholder": "Search the team or type an email",
     "searchTeamPlaceholder": "Search the team",
@@ -15,7 +14,7 @@
     "alreadyInvited": "{email} is already invited",
     "typeEmail": "Nobody found. Type a full email address to invite them.",
     "noCandidates": "Everyone in the team is already in this project.",
-    "willJoinTeam": "Joins {teamName} and this project",
+    "willJoinTeam": "Joins the {teamName} team and this project",
     "roleLabel": "Role in the project",
     "rolePlaceholder": "Role",
     "submit": "Add to project",

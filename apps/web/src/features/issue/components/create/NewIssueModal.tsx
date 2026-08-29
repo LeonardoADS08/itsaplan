@@ -471,7 +471,7 @@ export default function NewIssueModal({
             onAnnotate={annotateAttachment}
             onRemove={removeAttachment}
           />
-          <Button className="ml-auto" disabled={saving || !title.trim()} onClick={submit}>
+          <Button className="ms-auto" disabled={saving || !title.trim()} onClick={submit}>
             {t('submit')}
           </Button>
         </div>

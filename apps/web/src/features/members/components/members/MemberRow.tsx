@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, LogOut, UserMinus, UsersRound } from 'lucide-react';
+import { LogOut, UserMinus, UsersRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { MemberRow as Member, Role } from '@/lib/api';
 import { formatDateTime } from '@/utils/dates';
@@ -11,6 +11,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSession } from '@/lib/auth-client';
+import MemberAgentBadge from './MemberAgentBadge';
 import MemberRoleControl from './MemberRoleControl';
 import MemberDescription from './MemberDescription';
 import MemberDescriptionDialog from './MemberDescriptionDialog';
@@ -72,10 +73,7 @@ export default function MemberRow({
               </span>
               <span className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
                 {member.isAgent ? (
-                  <Badge variant="secondary" className="gap-1 px-1.5 py-0 text-[10px] font-medium">
-                    <Bot className="size-3" />
-                    {t('aiAgent')}
-                  </Badge>
+                  <MemberAgentBadge />
                 ) : (
                   <>
                     {member.username && (

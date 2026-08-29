@@ -32,6 +32,7 @@ const MemberCandidateResponse = t.Object({
   email: t.String(),
   username: t.Nullable(t.String()),
   image: t.Nullable(t.String()),
+  isAgent: t.Boolean(),
 });
 
 export const MemberCandidateListResponse = t.Array(MemberCandidateResponse);

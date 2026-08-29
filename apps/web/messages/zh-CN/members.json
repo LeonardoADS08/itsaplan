@@ -4,8 +4,7 @@
   "add": {
     "action": "添加成员",
     "title": "添加成员",
-    "description": "从团队中选择成员，或通过邮箱邀请新成员。",
-    "personLabel": "成员",
+    "personLabel": "团队成员或邮箱",
     "pickPlaceholder": "选择成员",
     "searchPlaceholder": "搜索团队成员或输入邮箱",
     "searchTeamPlaceholder": "搜索团队成员",

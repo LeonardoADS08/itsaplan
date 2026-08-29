@@ -15,6 +15,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import MemberAgentBadge from './MemberAgentBadge';
 
 // Who the dialog is about to put in the project: someone already in the team, or an
 // address that gets an invite.
@@ -92,19 +93,22 @@ export default function MemberPicker({
                     key={candidate.userId}
                     value={`${candidate.name} ${candidate.email}`}
                     onSelect={() => pick({ kind: 'member', candidate })}
-                    className="gap-2.5"
+                    className="gap-2.5 py-2"
                   >
                     <Avatar
                       name={candidate.name || candidate.email}
                       image={candidate.image}
                       className="size-7 shrink-0 text-[10px]"
                     />
-                    <span className="min-w-0 flex-1 truncate">
-                      {candidate.name || candidate.email}
-                    </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {candidate.email}
-                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate">{candidate.name || candidate.email}</span>
+                      {!candidate.isAgent && (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {candidate.email}
+                        </span>
+                      )}
+                    </div>
+                    {candidate.isAgent && <MemberAgentBadge />}
                     {picked === candidate.userId && <Check className="size-4 shrink-0" />}
                   </CommandItem>
                 ))}
