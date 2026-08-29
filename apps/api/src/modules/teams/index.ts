@@ -24,6 +24,8 @@ import {
   TeamProjectListResponse,
   TeamResponse,
   createTeamBody,
+  setTeamMemberRoleBody,
+  teamMemberParams,
   teamParams,
   teamProjectParams,
   updateTeamBody,
@@ -39,6 +41,7 @@ import {
   listTeams,
   renameTeam,
   setTeamMcp,
+  setTeamMemberRole,
   teamOwnsProject,
 } from './service';
 
@@ -271,6 +274,28 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
         summary: 'Delete a project of the team',
         description:
           'Permanently delete a project the team owns and everything in it. Irreversible.',
+      },
+    },
+  )
+
+  // The rank a member holds in the team. Run by an owner or a manager, who run the
+  // team; an agent's rank is set with the agent, not here.
+  .patch(
+    '/teams/:teamId/members/:userId',
+    async ({ body, membership, params }) => {
+      await setTeamMemberRole(membership.teamId, membership, params.userId, body.role);
+      return noContent();
+    },
+    {
+      teamManager: true,
+      params: teamMemberParams,
+      body: setTeamMemberRoleBody,
+      response: { 204: t.Void(), ...errors(401, 403, 404, 409) },
+      detail: {
+        summary: "Update a member's rank in the team",
+        description:
+          'Set what a member ranks as in the team. Only an owner grants the owner rank or ' +
+          'changes what another owner holds.',
       },
     },
   )

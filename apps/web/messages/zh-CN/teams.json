@@ -100,7 +100,7 @@
     }
   },
   "roles": {
-    "ownerOnly": "只有团队所有者可以管理角色。",
+    "ownerOnly": "只有团队所有者或管理者可以管理角色。",
     "empty": "暂无角色。创建一个角色以授予有限访问权限。",
     "default": "默认",
     "editAction": "编辑角色",
@@ -490,7 +490,8 @@
   },
   "members": {
     "peopleGroup": "{count} 人",
-    "agentGroup": "{count} 个智能体"
+    "agentGroup": "{count} 个智能体",
+    "roleSaved": "{name} 现在是{role}"
   },
   "mcp": {
     "title": "MCP",

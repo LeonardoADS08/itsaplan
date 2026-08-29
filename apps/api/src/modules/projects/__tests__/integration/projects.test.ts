@@ -3,7 +3,7 @@ import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { addProjectMember } from '#tests/helpers/members';
-import { createRole } from '#tests/helpers/roles';
+import { createRole, listProjectRoles } from '#tests/helpers/roles';
 import { createAgent, projectIdOf, teamOf } from '#tests/helpers/agents';
 
 // Full integration flow: a real session against the real (test) database.
@@ -462,7 +462,7 @@ describe('projects', () => {
       // project it owns, so the source project's roles come along with it.
       await api.projects({ projectKey: 'SRC' }).copy.post({ key: 'DST', name: 'Destination' });
 
-      const roles = await api.projects({ projectKey: 'DST' }).roles.get();
+      const roles = await listProjectRoles(api, 'DST');
       expect(roles.data?.map((r) => r.name).sort()).toEqual(['Editor', 'Member']);
     });
 

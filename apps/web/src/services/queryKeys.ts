@@ -68,10 +68,8 @@ export const qk = {
   // The invites of a team, including the ones into its projects.
   teamInvites: (teamId: number) => ['teamInvites', teamId] as const,
   anyTeamInvites: ['teamInvites'] as const,
-  // The roles a project assigns from, and the list its team manages. The permission
-  // catalog is app-static, so it is scoped to neither.
-  projectRoles: (projectKey: string) => ['projectRoles', projectKey] as const,
-  anyProjectRoles: ['projectRoles'] as const,
+  // The roles a team offers, which is what every project of it assigns from. The
+  // permission catalog is app-static, so it is scoped to no team.
   teamRoles: (teamId: number) => ['teamRoles', teamId] as const,
   roleUsage: (teamId: number, roleId: number) => ['roleUsage', teamId, roleId] as const,
   anyRoleUsage: ['roleUsage'] as const,

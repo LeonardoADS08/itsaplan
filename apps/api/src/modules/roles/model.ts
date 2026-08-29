@@ -1,8 +1,6 @@
 import { t } from 'elysia';
 import { PermissionMatrixSchema } from '#shared/permissions';
 
-export const projectKeyParams = t.Object({ projectKey: t.String() });
-
 export const teamParams = t.Object({ teamId: t.Numeric() });
 
 export const roleParams = t.Object({ teamId: t.Numeric(), roleId: t.Numeric() });

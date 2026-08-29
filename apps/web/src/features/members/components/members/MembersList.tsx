@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useMembersQuery, useRemoveMember } from '@/services/members.service';
-import { useProjectRolesQuery } from '@/services/roles.service';
+import { useTeamRolesQuery } from '@/services/roles.service';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSession } from '@/lib/auth-client';
 import MemberRow from './MemberRow';
@@ -23,7 +23,13 @@ import MemberRow from './MemberRow';
 // The project's members, people first and AI agents in their own group below.
 // The last owner is protected — the API rejects removing them and the row's
 // action is disabled too.
-export default function MembersList({ projectKey }: { projectKey: string }) {
+export default function MembersList({
+  projectKey,
+  teamId,
+}: {
+  projectKey: string;
+  teamId: number;
+}) {
   const t = useTranslations('members');
   const membersQuery = useMembersQuery(projectKey);
   const { isOwner } = usePermissions();
@@ -32,7 +38,7 @@ export default function MembersList({ projectKey }: { projectKey: string }) {
   const removeMember = useRemoveMember(projectKey);
   // Roles feed the per-member role select; only an owner can reassign, so only an
   // owner needs the list fetched.
-  const rolesQuery = useProjectRolesQuery(projectKey, isOwner);
+  const rolesQuery = useTeamRolesQuery(isOwner ? teamId : null);
   const router = useRouter();
   const [target, setTarget] = useState<Member | null>(null);
 

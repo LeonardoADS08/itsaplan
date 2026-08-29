@@ -95,11 +95,11 @@ describe('shared access', () => {
       const owner = await setupOwnerProject();
       const member = await addMember(owner);
 
-      const asMember = await member.api.projects({ projectKey: 'MKT' }).roles.get();
+      const asMember = await member.api.projects({ projectKey: 'MKT' }).settings.get();
       expect(asMember.status).toBe(200);
 
       const outsider = authedApi((await signUpTestUser()).cookie);
-      const asOutsider = await outsider.projects({ projectKey: 'MKT' }).roles.get();
+      const asOutsider = await outsider.projects({ projectKey: 'MKT' }).settings.get();
       expect(asOutsider.status).toBe(403);
     });
   });
@@ -119,7 +119,7 @@ describe('shared access', () => {
 
   it('returns 404 for an unknown project before checking access', async () => {
     const owner = await setupOwnerProject();
-    const res = await owner.api.projects({ projectKey: 'NOPE' }).roles.get();
+    const res = await owner.api.projects({ projectKey: 'NOPE' }).settings.get();
     expect(res.status).toBe(404);
   });
 });

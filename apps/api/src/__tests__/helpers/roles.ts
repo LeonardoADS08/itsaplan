@@ -1,13 +1,22 @@
 import type { Api } from './app';
 
-// Creates a role for a project through the team that owns it — roles live on the
-// team, so a test that needs one for a project resolves its team first.
+// The team that owns a project. Roles live on the team, so a test that works with the
+// roles of a project resolves its team first.
+export async function teamIdOf(api: Api, projectKey: string): Promise<number> {
+  const projects = await api.projects.get();
+  return projects.data!.find((p) => p.key === projectKey)!.teamId;
+}
+
+// The roles a project assigns from, through the team that owns it.
+export async function listProjectRoles(api: Api, projectKey: string) {
+  return api.teams({ teamId: await teamIdOf(api, projectKey) }).roles.get();
+}
+
+// Creates a role for a project through the team that owns it.
 export async function createRole(
   api: Api,
   projectKey: string,
   body: { name: string; permissions: unknown },
 ) {
-  const projects = await api.projects.get();
-  const project = projects.data!.find((p) => p.key === projectKey)!;
-  return api.teams({ teamId: project.teamId }).roles.post(body);
+  return api.teams({ teamId: await teamIdOf(api, projectKey) }).roles.post(body);
 }

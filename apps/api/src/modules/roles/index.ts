@@ -20,17 +20,16 @@ import {
   RoleUsageResponse,
   createRoleBody,
   deleteRoleQuery,
-  projectKeyParams,
   roleParams,
   teamParams,
   updateRoleBody,
 } from './model';
 
 // Roles CRUD. A role belongs to a team and every project the team owns assigns from
-// that one list, so the project route only reads them. Creating, editing and
-// deleting a role is team-owner-only: role management is deliberately not delegated
-// through the permission matrix, since a member with members_manage could otherwise
-// grant itself a more powerful role.
+// that one list. Who may write one is the team's own ranks, not the permission
+// matrix: a member with members_manage could otherwise grant itself a more powerful
+// role. An owner or a manager creates and edits; deleting stays with the owner,
+// since a deletion moves every member, agent and invite on the role to another one.
 export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] } })
   .use(guards)
 
@@ -51,20 +50,14 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
     },
   )
 
-  // The roles a project assigns from — its team's. Open to any project member, who
-  // needs the names to read the member list even without access to the team.
-  .get('/projects/:projectKey/roles', ({ project }) => listRoles(project.teamId), {
-    params: projectKeyParams,
-    projectMember: true,
-    response: { 200: t.Array(RoleResponse), ...accessErrors },
-    detail: { summary: "List the roles a project's team offers", ...mcpTool('list_roles') },
-  })
-
+  // The roles of a team, read by any of its members: the projects assign from this
+  // one list, so it is what a member list, an add-member dialog and an agent's role
+  // picker all name their options from.
   .get('/teams/:teamId/roles', ({ membership }) => listRoles(membership.teamId), {
     params: teamParams,
     teamMember: true,
     response: { 200: t.Array(RoleResponse), ...accessErrors },
-    detail: { summary: "List a team's roles" },
+    detail: { summary: "List a team's roles", ...mcpTool('list_roles') },
   })
 
   .post(
@@ -80,7 +73,7 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
     {
       params: teamParams,
       body: createRoleBody,
-      teamOwner: true,
+      teamManager: true,
       response: { 201: RoleResponse, ...commonErrors, ...errors(409) },
       detail: { summary: 'Create a role', ...mcpTool('create_role') },
     },
@@ -101,7 +94,7 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
     {
       params: roleParams,
       body: updateRoleBody,
-      teamOwner: true,
+      teamManager: true,
       response: { 200: RoleResponse, ...commonErrors, ...errors(409) },
       detail: {
         summary: 'Update a role',

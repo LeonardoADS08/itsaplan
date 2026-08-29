@@ -502,6 +502,31 @@ export async function renameTeam(teamId: number, name: string, userId: string): 
   return row;
 }
 
+// Changes what a member ranks as in the team. An agent's standing comes from its
+// agent settings, and nobody sets their own rank. Only an owner grants the owner rank
+// or changes what another owner holds, which is also what keeps the last owner in
+// place: demoting an owner takes a second one.
+export async function setTeamMemberRole(
+  teamId: number,
+  actor: { userId: string; role: TeamStanding },
+  userId: string,
+  role: TeamRole,
+): Promise<void> {
+  if (userId === actor.userId) throw new HttpError(409, 'You cannot change your own rank');
+
+  const current = await getTeamMembership(teamId, userId);
+  if (!current) throw new HttpError(404, 'Member not found');
+  if (current === 'agent')
+    throw new HttpError(409, "An agent's rank comes from its agent settings");
+  if (actor.role !== 'owner' && (role === 'owner' || current === 'owner'))
+    throw new HttpError(403, 'Only a team owner can grant or take the owner rank');
+
+  await db
+    .update(teamMember)
+    .set({ role })
+    .where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)));
+}
+
 // Drops the caller's membership. The team keeps its projects, so a member who
 // leaves only loses the grouping, not the projects they belong to. The last owner
 // cannot leave: a team without an owner has nobody who can rename it.

@@ -6,6 +6,12 @@ export const teamParams = t.Object({ teamId: t.Numeric() });
 
 export const teamProjectParams = t.Object({ teamId: t.Numeric(), projectId: t.Numeric() });
 
+export const teamMemberParams = t.Object({ teamId: t.Numeric(), userId: t.String() });
+
+export const setTeamMemberRoleBody = t.Object({
+  role: t.Union([t.Literal('owner'), t.Literal('manager'), t.Literal('member')]),
+});
+
 export const createTeamBody = t.Object({
   name: t.String({ minLength: 1, maxLength: 60 }),
 });

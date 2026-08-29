@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { authedApi } from '#tests/helpers/app';
 import { signUpTestUser, type TestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
-import { createRole } from '#tests/helpers/roles';
+import { createRole, listProjectRoles } from '#tests/helpers/roles';
 
 // Integration coverage for the members feature: listing a project's members, adding
 // one from the team that owns it, assigning a custom role to a member (owner only),
@@ -106,7 +106,7 @@ describe('members', () => {
     it("puts them on the team's default role when no roleId is given", async () => {
       const owner = await setupOwner();
       const joiner = await addTeamMember(owner);
-      const roles = await owner.api.projects({ projectKey: 'MKT' }).roles.get();
+      const roles = await listProjectRoles(owner.api, 'MKT');
       const fallback = roles.data!.find((r) => r.isDefault)!;
 
       await owner.api

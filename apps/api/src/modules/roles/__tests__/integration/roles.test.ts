@@ -41,6 +41,17 @@ async function addMember(owner: Actor): Promise<Actor> {
   return { user, api: client, teamId: teams.data![0].id };
 }
 
+// Invites a fresh user into the owner's team as a manager and accepts for them.
+async function addManager(owner: Actor): Promise<Actor> {
+  const user = await signUpTestUser();
+  const created = await owner.api
+    .teams({ teamId: owner.teamId })
+    .invites.post({ email: user.email, role: 'manager' });
+  const client = authedApi(user.cookie);
+  await client.invites({ token: created.data!.token }).accept.post();
+  return { user, api: client, teamId: owner.teamId };
+}
+
 describe('roles', () => {
   beforeEach(async () => {
     await resetDb();
@@ -100,44 +111,19 @@ describe('roles', () => {
       expect(res.data?.map((r) => r.name)).toEqual(['Member']);
     });
 
+    it('denies someone outside the team with 404', async () => {
+      const owner = await setupOwner();
+      const outsider = authedApi((await signUpTestUser()).cookie);
+
+      const res = await outsider.teams({ teamId: owner.teamId }).roles.get();
+      expect(res.status).toBe(404);
+    });
+
     it('denies an anonymous request with 401', async () => {
       const owner = await setupOwner();
 
       const res = await api.teams({ teamId: owner.teamId }).roles.get();
       expect(res.status).toBe(401);
-    });
-  });
-
-  describe('list — GET /projects/:projectKey/roles', () => {
-    it("returns the roles of the project's team", async () => {
-      const owner = await setupOwner();
-      await owner.api.teams({ teamId: owner.teamId }).roles.post({
-        name: 'Editor',
-        permissions: {},
-      });
-
-      const res = await owner.api.projects({ projectKey: 'MKT' }).roles.get();
-
-      expect(res.status).toBe(200);
-      expect(res.data?.map((r) => r.name)).toEqual(['Member', 'Editor']);
-    });
-
-    it('is readable by a plain member of the project', async () => {
-      const owner = await setupOwner();
-      const member = await addMember(owner);
-
-      const res = await member.api.projects({ projectKey: 'MKT' }).roles.get();
-
-      expect(res.status).toBe(200);
-      expect(res.data?.map((r) => r.name)).toEqual(['Member']);
-    });
-
-    it('denies a non-member with 403', async () => {
-      await setupOwner();
-      const outsider = authedApi((await signUpTestUser()).cookie);
-
-      const res = await outsider.projects({ projectKey: 'MKT' }).roles.get();
-      expect(res.status).toBe(403);
     });
   });
 
@@ -202,7 +188,7 @@ describe('roles', () => {
       expect(res.status).toBe(400);
     });
 
-    it('denies a member who does not own the team with 403', async () => {
+    it('denies a member who neither owns nor manages the team with 403', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
 
@@ -211,6 +197,17 @@ describe('roles', () => {
         permissions: {},
       });
       expect(res.status).toBe(403);
+    });
+
+    it('allows a manager of the team', async () => {
+      const owner = await setupOwner();
+      const manager = await addManager(owner);
+
+      const res = await manager.api.teams({ teamId: owner.teamId }).roles.post({
+        name: 'Editor',
+        permissions: {},
+      });
+      expect(res.status).toBe(201);
     });
   });
 
@@ -319,7 +316,7 @@ describe('roles', () => {
       expect(res.status).toBe(400);
     });
 
-    it('denies a member who does not own the team with 403', async () => {
+    it('denies a member who neither owns nor manages the team with 403', async () => {
       const owner = await setupOwner();
       const roleId = await makeRole(owner);
       const member = await addMember(owner);
@@ -329,6 +326,18 @@ describe('roles', () => {
         .roles({ roleId })
         .patch({ name: 'Reviewer' });
       expect(res.status).toBe(403);
+    });
+
+    it('allows a manager of the team', async () => {
+      const owner = await setupOwner();
+      const roleId = await makeRole(owner);
+      const manager = await addManager(owner);
+
+      const res = await manager.api
+        .teams({ teamId: owner.teamId })
+        .roles({ roleId })
+        .patch({ name: 'Reviewer' });
+      expect(res.status).toBe(200);
     });
   });
 
@@ -516,6 +525,15 @@ describe('roles', () => {
       const member = await addMember(owner);
 
       const res = await member.api.teams({ teamId: owner.teamId }).roles({ roleId }).delete();
+      expect(res.status).toBe(403);
+    });
+
+    it('denies a manager, who creates and edits roles but does not delete them', async () => {
+      const owner = await setupOwner();
+      const roleId = await makeRole(owner);
+      const manager = await addManager(owner);
+
+      const res = await manager.api.teams({ teamId: owner.teamId }).roles({ roleId }).delete();
       expect(res.status).toBe(403);
     });
   });

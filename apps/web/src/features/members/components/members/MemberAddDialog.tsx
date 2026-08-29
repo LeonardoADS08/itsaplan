@@ -18,7 +18,7 @@ import {
   useInvitesQuery,
   useMemberCandidatesQuery,
 } from '@/services/members.service';
-import { useProjectRolesQuery } from '@/services/roles.service';
+import { useTeamRolesQuery } from '@/services/roles.service';
 import { usePermissions } from '@/hooks/usePermissions';
 import MemberPicker, { type MemberOption } from './MemberPicker';
 
@@ -33,6 +33,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function MemberAddDialog({
   projectKey,
   projectName,
+  teamId,
   teamName,
   canAdd,
   canInvite,
@@ -40,6 +41,7 @@ export default function MemberAddDialog({
 }: {
   projectKey: string;
   projectName: string;
+  teamId: number;
   teamName: string;
   canAdd: boolean;
   canInvite: boolean;
@@ -52,7 +54,7 @@ export default function MemberAddDialog({
   const [target, setTarget] = useState<MemberOption | null>(null);
   const [roleValue, setRoleValue] = useState('');
   const candidatesQuery = useMemberCandidatesQuery(projectKey, canAdd);
-  const rolesQuery = useProjectRolesQuery(projectKey);
+  const rolesQuery = useTeamRolesQuery(teamId);
   const addMember = useAddMember(projectKey);
   const createInvite = useCreateInvite(projectKey);
   // The pending invites only mark an address as already invited, and reading them is

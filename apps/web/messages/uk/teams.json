@@ -100,7 +100,7 @@
     }
   },
   "roles": {
-    "ownerOnly": "Керувати ролями може лише власник команди.",
+    "ownerOnly": "Ролями керують лише власник або менеджер команди.",
     "empty": "Ролей поки немає. Створіть роль, щоб надати обмежений доступ.",
     "default": "За замовчуванням",
     "editAction": "Редагувати роль",
@@ -490,7 +490,8 @@
   },
   "members": {
     "peopleGroup": "{count, plural, one {# людина} few {# людини} many {# людей} other {# людини}}",
-    "agentGroup": "{count, plural, one {# агент} few {# агенти} many {# агентів} other {# агента}}"
+    "agentGroup": "{count, plural, one {# агент} few {# агенти} many {# агентів} other {# агента}}",
+    "roleSaved": "{name} тепер {role}"
   },
   "mcp": {
     "title": "MCP",

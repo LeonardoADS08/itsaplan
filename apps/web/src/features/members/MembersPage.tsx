@@ -41,12 +41,13 @@ export default function MembersPage() {
       }
     >
       <InvitesManager projectKey={project.project.key} />
-      <MembersList projectKey={project.project.key} />
+      <MembersList projectKey={project.project.key} teamId={project.project.teamId} />
 
       {adding && (
         <MemberAddDialog
           projectKey={project.project.key}
           projectName={project.project.name}
+          teamId={project.project.teamId}
           teamName={project.project.teamName}
           canAdd={canAdd}
           canInvite={canInvite}

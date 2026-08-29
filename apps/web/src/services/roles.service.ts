@@ -12,18 +12,9 @@ export function usePermissionCatalogQuery() {
   });
 }
 
-// The roles a project assigns from — the ones its team offers. Listable by any
-// member, but only owners have a use for them; pass enabled=false for a non-owner
-// to skip the request.
-export function useProjectRolesQuery(projectKey: string | null, enabled = true) {
-  return useQuery({
-    queryKey: qk.projectRoles(projectKey ?? ''),
-    queryFn: () => api.listProjectRoles(projectKey!),
-    enabled: projectKey != null && enabled,
-  });
-}
-
-// A team's own roles, for the panel that manages them.
+// The roles a team offers, which is what every project of it assigns from. Readable
+// by any member of the team; pass null where the caller has no use for the list, to
+// skip the request.
 export function useTeamRolesQuery(teamId: number | null) {
   return useQuery({
     queryKey: qk.teamRoles(teamId ?? 0),
@@ -42,9 +33,7 @@ export function useRoleUsageQuery(teamId: number, roleId: number) {
 }
 
 // A role belongs to the team, so a write to it changes what every project of that
-// team offers and what its members, agents and pending invites resolve to. The
-// project-scoped lists are keyed by project, so they are dropped wholesale rather
-// than by key.
+// team offers and what its members, agents and pending invites resolve to.
 function useRoleMutation<TInput, TResult>(
   teamId: number,
   mutationFn: (input: TInput) => Promise<TResult>,
@@ -56,7 +45,6 @@ function useRoleMutation<TInput, TResult>(
       qc.invalidateQueries({ queryKey: qk.teamRoles(teamId) });
       // The team list carries how many roles the team has.
       qc.invalidateQueries({ queryKey: qk.teams });
-      qc.invalidateQueries({ queryKey: qk.anyProjectRoles });
       qc.invalidateQueries({ queryKey: qk.anyRoleUsage });
       qc.invalidateQueries({ queryKey: qk.anyMembers });
       qc.invalidateQueries({ queryKey: qk.anyAiAgents });

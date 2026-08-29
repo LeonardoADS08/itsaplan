@@ -13,6 +13,24 @@ async function signUpClient() {
   return { user, api: authedApi(user.cookie) };
 }
 
+// Signs up a user, invites them into the team on the given rank and accepts for them.
+async function addTeamMember(
+  owner: { api: Api },
+  teamId: number,
+  role: 'manager' | 'member' = 'member',
+) {
+  const user = await signUpTestUser();
+  const created = await owner.api.teams({ teamId }).invites.post({ email: user.email, role });
+  const api = authedApi(user.cookie);
+  await api.invites({ token: created.data!.token }).accept.post();
+  return { user, api };
+}
+
+async function memberRole(api: Api, teamId: number, userId: string) {
+  const list = await api.teams({ teamId }).members.get();
+  return list.data?.find((one) => one.userId === userId)?.role;
+}
+
 describe('teams', () => {
   beforeEach(async () => {
     await resetDb();
@@ -531,6 +549,83 @@ describe('teams', () => {
 
       const renamed = await api.teams({ teamId: otherTeamId }).patch({ name: 'Growth' });
       expect(renamed.status).toBe(404);
+    });
+  });
+
+  describe('member rank', () => {
+    it('promotes a member to manager', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      const member = await addTeamMember(owner, teamId);
+
+      const patched = await owner.api
+        .teams({ teamId })
+        .members({ userId: member.user.userId })
+        .patch({ role: 'manager' });
+      expect(patched.status).toBe(204);
+      expect(await memberRole(owner.api, teamId, member.user.userId)).toBe('manager');
+    });
+
+    it('lets a manager change a plain member, but not grant the owner rank', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      const manager = await addTeamMember(owner, teamId, 'manager');
+      const member = await addTeamMember(owner, teamId);
+
+      const promoted = await manager.api
+        .teams({ teamId })
+        .members({ userId: member.user.userId })
+        .patch({ role: 'owner' });
+      expect(promoted.status).toBe(403);
+
+      const demoted = await manager.api
+        .teams({ teamId })
+        .members({ userId: owner.user.userId })
+        .patch({ role: 'member' });
+      expect(demoted.status).toBe(403);
+
+      const changed = await manager.api
+        .teams({ teamId })
+        .members({ userId: member.user.userId })
+        .patch({ role: 'manager' });
+      expect(changed.status).toBe(204);
+    });
+
+    it('rejects changing your own rank, and keeps an owner in place', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      const second = await addTeamMember(owner, teamId);
+      await owner.api
+        .teams({ teamId })
+        .members({ userId: second.user.userId })
+        .patch({ role: 'owner' });
+
+      const self = await owner.api
+        .teams({ teamId })
+        .members({ userId: owner.user.userId })
+        .patch({ role: 'member' });
+      expect(self.status).toBe(409);
+
+      // Demoting an owner takes a second owner, which is what leaves the team one.
+      const demoted = await second.api
+        .teams({ teamId })
+        .members({ userId: owner.user.userId })
+        .patch({ role: 'member' });
+      expect(demoted.status).toBe(204);
+      expect(await memberRole(owner.api, teamId, owner.user.userId)).toBe('member');
+    });
+
+    it('403s for a plain member', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      const member = await addTeamMember(owner, teamId);
+      const other = await addTeamMember(owner, teamId);
+
+      const patched = await member.api
+        .teams({ teamId })
+        .members({ userId: other.user.userId })
+        .patch({ role: 'manager' });
+      expect(patched.status).toBe(403);
     });
   });
 

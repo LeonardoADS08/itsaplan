@@ -12,12 +12,13 @@ import TeamRolesList from './TeamRolesList';
 import TeamRolesToolbar from './TeamRolesToolbar';
 
 // The roles section of a team: the roles every project of the team assigns from,
-// with the editor they are created and changed in. Only the team owner manages them,
-// so anyone else reads a notice instead of the list.
+// with the editor they are created and changed in. The team's owner and managers
+// manage them, and deleting one is the owner's alone; a plain member reads a notice
+// instead of the list.
 export default function TeamRolesSection({ teamId }: { teamId: number }) {
   const t = useTranslations('teams');
   const team = useTeam(teamId);
-  const canManage = team?.role === 'owner';
+  const canManage = team?.role === 'owner' || team?.role === 'manager';
   const rolesQuery = useTeamRolesQuery(canManage ? teamId : null);
   const catalogQuery = usePermissionCatalogQuery();
   const [creating, setCreating] = useState(false);
@@ -53,6 +54,7 @@ export default function TeamRolesSection({ teamId }: { teamId: number }) {
           roles={roles}
           pending={rolesQuery.isPending}
           canEdit={catalog !== null}
+          canDelete={team.role === 'owner'}
           onEdit={setEditing}
         />
       )}

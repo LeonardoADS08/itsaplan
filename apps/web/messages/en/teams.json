@@ -100,7 +100,7 @@
     }
   },
   "roles": {
-    "ownerOnly": "Only the team owner can manage roles.",
+    "ownerOnly": "Only a team owner or manager can manage roles.",
     "empty": "No roles yet. Create one to grant scoped access.",
     "default": "Default",
     "editAction": "Edit role",
@@ -490,7 +490,8 @@
   },
   "members": {
     "peopleGroup": "{count, plural, one {# person} other {# people}}",
-    "agentGroup": "{count, plural, one {# agent} other {# agents}}"
+    "agentGroup": "{count, plural, one {# agent} other {# agents}}",
+    "roleSaved": "{name} is now {role}"
   },
   "mcp": {
     "title": "MCP",

@@ -94,6 +94,13 @@ next-intl, language from the `NEXT_LOCALE` cookie — no `[locale]` route segmen
   streams them from the api), not from an absolute api url. That keeps them local images
   for `next/image`: `images.remotePatterns` is frozen into the standalone build, so an
   api origin listed there would only be valid for the instance that built the image.
+- **Every write to the API tells the user how it went.** A failed mutation is toasted by the
+  `MutationCache` in `components/providers.tsx`, so a call site adds nothing for the failure;
+  it adds the `toast.success(...)` for the success, from the mutation's `onSuccess`, with a
+  translated message naming what was saved. A write whose result the screen already shows —
+  a row that appears, a field that fills in, a dialog that closes on the created entity — needs
+  no success toast; one whose effect is invisible does. A mutation that renders its own error
+  instead opts out with `meta: { suppressErrorToast: true }`.
 - Add shadcn components with `bunx shadcn@latest add <name>` (config in `components.json`).
 - **Don't edit `src/components/ui/`** — those files are generated and re-adding a component
   overwrites them. Style them from the outside instead: every primitive carries a `data-slot`

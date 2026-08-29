@@ -58,7 +58,10 @@ export default function TeamSectionNav({ team }: { team: Team }) {
     section('info', t('info.title'), Info),
     section('projects', t('projects.title'), FolderKanban, team.projectCount),
     section('members', t('members.title'), Users, team.memberCount),
-    section('roles', t('roles.title'), ShieldCheck, team.roleCount),
+    // The roles are managed by the team's owner and managers, so the section is theirs.
+    ...(team.role === 'owner' || team.role === 'manager'
+      ? [section('roles', t('roles.title'), ShieldCheck, team.roleCount)]
+      : []),
     section('mcp', t('mcp.title'), Radio),
   ];
   const ai = [

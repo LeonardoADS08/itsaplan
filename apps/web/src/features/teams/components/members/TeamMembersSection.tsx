@@ -11,6 +11,7 @@ import {
   useTeamMembersQuery,
 } from '@/services/teams.service';
 import { useRouter } from 'next/navigation';
+import { useSession } from '@/lib/auth-client';
 import { teamSectionPath } from '@/utils/paths';
 import ConfirmDialog from '@/components/common/overlay/ConfirmDialog';
 import SectionPageView from '@/components/common/page/SectionPageView';
@@ -38,6 +39,7 @@ export default function TeamMembersSection({ teamId }: { teamId: number }) {
   const [inviting, setInviting] = useState(false);
   const [target, setTarget] = useState<InviteRow | null>(null);
   const router = useRouter();
+  const { data: session } = useSession();
 
   const pending = (invitesQuery.data ?? []).filter((invite) => invite.status === 'pending');
   const people = (members ?? []).filter((member) => member.agentId == null);
@@ -95,7 +97,13 @@ export default function TeamMembersSection({ teamId }: { teamId: number }) {
                 />
               )}
               {people.map((member) => (
-                <TeamMemberRow key={member.userId} member={member} />
+                <TeamMemberRow
+                  key={member.userId}
+                  member={member}
+                  teamId={teamId}
+                  viewerRole={team?.role ?? 'member'}
+                  self={member.userId === session?.user.id}
+                />
               ))}
               {agents.length > 0 && (
                 <TeamMemberGroupRow label={t('members.agentGroup', { count: agents.length })} />
@@ -104,6 +112,9 @@ export default function TeamMembersSection({ teamId }: { teamId: number }) {
                 <TeamMemberRow
                   key={member.userId}
                   member={member}
+                  teamId={teamId}
+                  viewerRole={team?.role ?? 'member'}
+                  self={false}
                   onOpen={() => router.push(teamSectionPath(teamId, 'ai-agents'))}
                 />
               ))}

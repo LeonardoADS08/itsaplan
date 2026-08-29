@@ -100,7 +100,7 @@
     }
   },
   "roles": {
-    "ownerOnly": "مالك الفريق بس هو اللي يقدر يدير الأدوار.",
+    "ownerOnly": "يمكن لمالك الفريق أو مديره فقط إدارة الأدوار.",
     "empty": "مفيش أدوار لسه. اعمل دور عشان تدّي صلاحيات محدودة.",
     "default": "افتراضي",
     "editAction": "تعديل الدور",
@@ -490,7 +490,8 @@
   },
   "members": {
     "peopleGroup": "{count, plural, zero {# أشخاص} one {شخص واحد} two {شخصان} few {# أشخاص} many {# شخصًا} other {# شخص}}",
-    "agentGroup": "{count, plural, zero {# وكلاء} one {وكيل واحد} two {وكيلان} few {# وكلاء} many {# وكيلًا} other {# وكيل}}"
+    "agentGroup": "{count, plural, zero {# وكلاء} one {وكيل واحد} two {وكيلان} few {# وكلاء} many {# وكيلًا} other {# وكيل}}",
+    "roleSaved": "{name} الآن {role}"
   },
   "mcp": {
     "title": "MCP",

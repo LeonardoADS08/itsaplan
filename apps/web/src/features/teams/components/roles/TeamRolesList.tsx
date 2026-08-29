@@ -20,19 +20,22 @@ import { PermissionsPopover } from '@/components/common/permissions/PermissionsP
 import DeleteRoleDialog from './DeleteRoleDialog';
 
 // The team's roles, one row each: what it grants, and the actions to edit or delete
-// it. The default role cannot be deleted; deleting any other one moves what is on it
-// to a role the dialog asks for.
+// it. Deleting is the owner's, so a manager gets the row without that action. The
+// default role cannot be deleted; deleting any other one moves what is on it to a
+// role the dialog asks for.
 export default function TeamRolesList({
   teamId,
   roles,
   pending,
   canEdit,
+  canDelete,
   onEdit,
 }: {
   teamId: number;
   roles: Role[];
   pending: boolean;
   canEdit: boolean;
+  canDelete: boolean;
   onEdit: (role: Role) => void;
 }) {
   const t = useTranslations('teams');
@@ -102,25 +105,27 @@ export default function TeamRolesList({
                   >
                     <Pencil className="size-4" />
                   </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-8 text-muted-foreground hover:text-destructive"
-                          disabled={role.isDefault}
-                          aria-label={t('roles.deleteAction')}
-                          onClick={() => setDeleting(role)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {role.isDefault ? t('roles.defaultUndeletable') : t('roles.deleteAction')}
-                    </TooltipContent>
-                  </Tooltip>
+                  {canDelete && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-muted-foreground hover:text-destructive"
+                            disabled={role.isDefault}
+                            aria-label={t('roles.deleteAction')}
+                            onClick={() => setDeleting(role)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {role.isDefault ? t('roles.defaultUndeletable') : t('roles.deleteAction')}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               </TableCell>
             </TableRow>

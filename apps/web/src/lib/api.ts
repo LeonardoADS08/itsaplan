@@ -2741,6 +2741,11 @@ export const api = {
   renameTeam: (teamId: number, input: { name: string }) =>
     request<Team>(`/teams/${teamId}`, { method: 'PATCH', body: JSON.stringify(input) }),
   leaveTeam: (teamId: number) => request<void>(`/teams/${teamId}/leave`, { method: 'POST' }),
+  setTeamMemberRole: (teamId: number, userId: string, role: TeamRole) =>
+    request<void>(`/teams/${teamId}/members/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
   updateTeamMcp: (
     teamId: number,
     patch: { enabled?: boolean; projects?: { projectId: number; enabled: boolean }[] },
@@ -3523,10 +3528,9 @@ export const api = {
     }),
 
   // Roles: a team's roles and the permission catalog behind the role editor. Roles
-  // belong to the team, so a project only lists the ones it assigns from; managing
-  // them is team-owner-only on the API.
+  // belong to the team, so one list serves every project it owns; an owner or a
+  // manager of the team writes them, and only its owner deletes one.
   getPermissionCatalog: () => request<PermissionCatalog>('/permission-catalog'),
-  listProjectRoles: (projectKey: string) => request<Role[]>(`/projects/${projectKey}/roles`),
   listTeamRoles: (teamId: number) => request<Role[]>(`/teams/${teamId}/roles`),
   createRole: (teamId: number, input: { name: string; permissions: Permissions }) =>
     request<Role>(`/teams/${teamId}/roles`, { method: 'POST', body: JSON.stringify(input) }),

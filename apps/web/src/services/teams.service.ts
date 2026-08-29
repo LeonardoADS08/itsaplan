@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type InviteTeamRole, type NotificationSettingsPatch, type Team } from '@/lib/api';
+import {
+  api,
+  type InviteTeamRole,
+  type NotificationSettingsPatch,
+  type Team,
+  type TeamRole,
+} from '@/lib/api';
 import { qk } from '@/services/queryKeys';
 
 export function useTeamsQuery() {
@@ -82,6 +88,20 @@ export function useRenameTeam() {
       void qc.invalidateQueries({ queryKey: qk.team(team.id) });
       // The switcher groups projects by team name, so the project list carries it too.
       void qc.invalidateQueries({ queryKey: qk.projects });
+    },
+  });
+}
+
+// The rank a member holds in the team, written by an owner or a manager. The team
+// list carries how many owners it has, so it is invalidated with the member list.
+export function useSetTeamMemberRole(teamId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { userId: string; role: TeamRole }) =>
+      api.setTeamMemberRole(teamId, input.userId, input.role),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.teamMembers(teamId) });
+      void qc.invalidateQueries({ queryKey: qk.teams });
     },
   });
 }

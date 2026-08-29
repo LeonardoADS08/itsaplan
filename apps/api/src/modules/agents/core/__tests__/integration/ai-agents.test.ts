@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { apiKeyApi, authedApi, type Api } from '#tests/helpers/app';
+import { listProjectRoles } from '#tests/helpers/roles';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { createAgent, projectIdOf } from '#tests/helpers/agents';
@@ -271,7 +272,7 @@ describe('ai agents', () => {
   it('assigns an authorization role to either kind of agent', async () => {
     const { asOwner } = await setup();
     // The team ships with a default "Member" role; use its id.
-    const roles = await asOwner.projects({ projectKey: 'MKT' }).roles.get();
+    const roles = await listProjectRoles(asOwner, 'MKT');
     const roleId = roles.data![0].id;
     const res = await createAgent(asOwner, 'MKT', {
       name: 'Ext',
@@ -330,7 +331,7 @@ describe('ai agents', () => {
     // of reach here.
     const stranger = authedApi((await signUpTestUser({ name: 'Stranger' })).cookie);
     await stranger.projects.post({ key: 'ENG', name: 'Engineering' });
-    const foreign = await stranger.projects({ projectKey: 'ENG' }).roles.get();
+    const foreign = await listProjectRoles(stranger, 'ENG');
 
     const res = await createAgent(asOwner, 'MKT', {
       name: 'Ext',
