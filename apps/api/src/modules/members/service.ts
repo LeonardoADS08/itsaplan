@@ -28,6 +28,10 @@ import {
 
 export type MemberRole = 'owner' | 'member';
 
+// How a membership came about. 'scim' rows are owned by the group reconciliation,
+// which rewrites them on every sync, so they are not editable by hand.
+export type MemberSource = 'invite' | 'scim';
+
 export interface MemberRow {
   userId: string;
   name: string;
@@ -50,6 +54,7 @@ export interface MemberRow {
   // join by agent creation, not an invite, so their role and access are managed on
   // the AI Agents screen, not here.
   isAgent: boolean;
+  source: MemberSource;
   createdAt: string;
 }
 
@@ -70,6 +75,19 @@ export interface MemberCandidate {
 export interface MemberContext {
   role: MemberRole;
   permissions: Permissions;
+}
+
+// Where a membership came from, or null when the user is not a member. Read by the
+// routes that edit a membership, which refuse to touch a row SCIM owns.
+export async function getMembershipSource(
+  projectId: number,
+  userId: string,
+): Promise<MemberSource | null> {
+  const rows = await db
+    .select({ source: projectMember.source })
+    .from(projectMember)
+    .where(and(eq(projectMember.projectId, projectId), eq(projectMember.userId, userId)));
+  return rows[0] ? (rows[0].source as MemberSource) : null;
 }
 
 // The current user's role in a project, or null when they are not a member.
@@ -250,6 +268,7 @@ export async function listMembers(projectId: number): Promise<MemberRow[]> {
       roleId: projectMember.roleId,
       roleName: teamRole.name,
       description: projectMember.description,
+      source: projectMember.source,
       agentId: aiAgent.id,
       agentUsername: aiAgent.username,
       createdAt: projectMember.createdAt,
@@ -273,6 +292,7 @@ export async function listMembers(projectId: number): Promise<MemberRow[]> {
     roleName: r.roleName,
     description: r.description,
     isAgent: r.agentId !== null,
+    source: r.source as MemberSource,
     createdAt: iso(r.createdAt),
   }));
 }

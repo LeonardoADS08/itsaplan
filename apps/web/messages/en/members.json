@@ -67,5 +67,6 @@
   "promoted": "Member promoted to owner",
   "roleUpdated": "Member role updated",
   "descriptionUpdated": "Member description updated",
-  "added": "Member added"
+  "added": "Member added",
+  "provisioned": "Managed by SCIM"
 }

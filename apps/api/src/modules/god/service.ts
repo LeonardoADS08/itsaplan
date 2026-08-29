@@ -14,6 +14,9 @@ import {
   projectMember,
   teamRole,
   projectView,
+  scimGroup,
+  scimGroupMapping,
+  scimGroupMember,
 } from '@repo/db';
 import {
   and,
@@ -30,7 +33,8 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { AnyPgColumn, PgTable } from 'drizzle-orm/pg-core';
-import { iso } from '#shared/lib';
+import { HttpError, iso } from '#shared/lib';
+import { mappedProjectIds, reconcileProjects } from '#modules/scim/reconcile';
 import {
   defaultMemberPermissions,
   fullPermissions,
@@ -38,6 +42,7 @@ import {
   type Permissions,
 } from '#shared/permissions';
 import { listMemberContexts, listMembers } from '#modules/members/service';
+import { listRoles } from '#modules/roles/service';
 
 // Data access for the instance directories (god mode): every account and every
 // project on this instance. It reads across the better-auth tables (user, session,
@@ -334,6 +339,9 @@ export interface InstanceProjectMember {
 
 export interface InstanceProjectDetail extends InstanceProjectRow {
   members: InstanceProjectMember[];
+  // The custom roles a member of this project can be put on. Read by the SCIM group
+  // mapping form, which names one when a group grants membership.
+  roles: { id: number; name: string; isDefault: boolean }[];
 }
 
 export interface InstanceProjectPage {
@@ -508,10 +516,11 @@ export async function getInstanceProject(projectId: number): Promise<InstancePro
   const row = rows[0];
   if (!row) return null;
 
-  const [facts, memberships, contexts] = await Promise.all([
+  const [facts, memberships, contexts, roles] = await Promise.all([
     loadProjectFacts([row.id]),
     listMembers(projectId),
     listMemberContexts(projectId),
+    listRoles(row.teamId),
   ]);
 
   const members: InstanceProjectMember[] = memberships.flatMap((m) => {
@@ -535,7 +544,11 @@ export async function getInstanceProject(projectId: number): Promise<InstancePro
   });
   members.sort((a, b) => a.name.localeCompare(b.name));
 
-  return { ...toProjectRow(row, facts(row.id)), members };
+  return {
+    ...toProjectRow(row, facts(row.id)),
+    members,
+    roles: roles.map((r) => ({ id: r.id, name: r.name, isDefault: r.isDefault })),
+  };
 }
 
 // Marks the account's email address as confirmed and returns the updated user.
@@ -548,4 +561,127 @@ export async function verifyInstanceUserEmail(userId: string): Promise<InstanceU
     .returning({ id: user.id });
   if (updated.length === 0) return null;
   return getInstanceUser(userId);
+}
+
+// ── Provisioned groups ───────────────────────────────────────────────────────
+
+// A group an identity provider pushed over SCIM, with what it grants. The group
+// and its members belong to the provider and are read-only here; the mappings are
+// the instance owner's, and are what turns group membership into project access.
+export interface InstanceScimGroupMapping {
+  projectId: number;
+  projectKey: string;
+  projectName: string;
+  role: 'owner' | 'member';
+  roleId: number | null;
+}
+
+export interface InstanceScimGroup {
+  id: string;
+  displayName: string;
+  externalId: string | null;
+  memberCount: number;
+  mappings: InstanceScimGroupMapping[];
+}
+
+export async function listScimGroups(): Promise<InstanceScimGroup[]> {
+  const [groups, counts, mappings] = await Promise.all([
+    db.select().from(scimGroup).orderBy(scimGroup.displayName),
+    db
+      .select({ groupId: scimGroupMember.groupId, count: sql<number>`count(*)::int` })
+      .from(scimGroupMember)
+      .groupBy(scimGroupMember.groupId),
+    db
+      .select({
+        groupId: scimGroupMapping.groupId,
+        projectId: scimGroupMapping.projectId,
+        projectKey: project.key,
+        projectName: project.name,
+        role: scimGroupMapping.role,
+        roleId: scimGroupMapping.roleId,
+      })
+      .from(scimGroupMapping)
+      .innerJoin(project, eq(project.id, scimGroupMapping.projectId))
+      .orderBy(project.name),
+  ]);
+
+  const countByGroup = new Map(counts.map((row) => [row.groupId, row.count]));
+  return groups.map((group) => ({
+    id: group.id,
+    displayName: group.displayName,
+    externalId: group.externalId,
+    memberCount: countByGroup.get(group.id) ?? 0,
+    mappings: mappings
+      .filter((m) => m.groupId === group.id)
+      .map((m) => ({
+        projectId: m.projectId,
+        projectKey: m.projectKey,
+        projectName: m.projectName,
+        role: m.role === 'owner' ? ('owner' as const) : ('member' as const),
+        roleId: m.roleId,
+      })),
+  }));
+}
+
+// Replaces what a group grants, then reconciles every project the change touched —
+// the ones it granted before as well as the ones it grants now, so a project it was
+// unmapped from loses the memberships that came from it.
+export async function setScimGroupMappings(
+  groupId: string,
+  mappings: { projectId: number; role: 'owner' | 'member'; roleId: number | null }[],
+): Promise<InstanceScimGroup> {
+  const found = await db
+    .select({ id: scimGroup.id })
+    .from(scimGroup)
+    .where(eq(scimGroup.id, groupId));
+  if (!found[0]) throw new HttpError(404, 'Group not found');
+
+  const projectIds = mappings.map((m) => m.projectId);
+  if (new Set(projectIds).size !== projectIds.length) {
+    throw new HttpError(400, 'A group can be mapped to a project only once');
+  }
+  if (projectIds.length > 0) {
+    const known = await db
+      .select({ id: project.id, teamId: project.teamId })
+      .from(project)
+      .where(inArray(project.id, projectIds));
+    if (known.length !== new Set(projectIds).size) throw new HttpError(400, 'Unknown project');
+    // A role belongs to one team, so a mapping that names another team's role would
+    // silently grant the wrong permissions.
+    const roleIds = mappings.map((m) => m.roleId).filter((id): id is number => id !== null);
+    if (roleIds.length > 0) {
+      const roles = await db
+        .select({ id: teamRole.id, teamId: teamRole.teamId })
+        .from(teamRole)
+        .where(inArray(teamRole.id, roleIds));
+      for (const mapping of mappings) {
+        if (mapping.roleId === null) continue;
+        const role = roles.find((r) => r.id === mapping.roleId);
+        const teamId = known.find((p) => p.id === mapping.projectId)?.teamId;
+        if (!role || role.teamId !== teamId) {
+          throw new HttpError(400, 'The role does not belong to that project');
+        }
+      }
+    }
+  }
+
+  const before = await mappedProjectIds(groupId);
+  await db.transaction(async (tx) => {
+    await tx.delete(scimGroupMapping).where(eq(scimGroupMapping.groupId, groupId));
+    if (mappings.length > 0) {
+      await tx.insert(scimGroupMapping).values(
+        mappings.map((m) => ({
+          groupId,
+          projectId: m.projectId,
+          role: m.role,
+          // Owners bypass the permission matrix, so they carry no custom role.
+          roleId: m.role === 'owner' ? null : m.roleId,
+        })),
+      );
+    }
+  });
+  await reconcileProjects([...before, ...projectIds]);
+
+  const groups = await listScimGroups();
+  return groups.find((g) => g.id === groupId)!;
 }
