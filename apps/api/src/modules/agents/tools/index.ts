@@ -7,7 +7,7 @@ import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
 import { teamParams } from '#modules/teams/model';
 import { agentInTeam } from '../core/service';
-import { AGENT_ACTIONS, ALWAYS_ON_ACTIONS } from '../core/runtime/tools/catalog';
+import { actionCatalog } from '../core/runtime/tools/route-tools';
 import {
   AgentToolListResponse,
   AgentToolResponse,
@@ -42,7 +42,7 @@ export const agentToolRoutes = new Elysia({
   .use(authContext)
   .use(guards)
 
-  .get('/teams/:teamId/ai-agents/tools', () => [...AGENT_ACTIONS, ...ALWAYS_ON_ACTIONS], {
+  .get('/teams/:teamId/ai-agents/tools', () => actionCatalog(), {
     params: teamParams,
     teamPermission: ['ai_agents', 'read'],
     response: { 200: ToolMetaListResponse, ...accessErrors },
@@ -50,7 +50,8 @@ export const agentToolRoutes = new Elysia({
       summary: 'List built-in agent actions',
       description:
         'List the built-in actions an internal agent can be granted (the valid keys for the ' +
-        'tools field on create_ai_agent / update_ai_agent).',
+        'tools field on create_ai_agent / update_ai_agent), each with the permission its ' +
+        "route asserts — an action the agent's role refuses returns 403 when it runs.",
       ...mcpTool('list_ai_agent_tools'),
     },
   })

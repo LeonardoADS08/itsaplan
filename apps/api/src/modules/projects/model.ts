@@ -65,6 +65,7 @@ export const ProjectResponse = t.Object({
   name: t.String(),
   description: t.String(),
   mcpEnabled: t.Boolean(),
+  teamMcpEnabled: t.Boolean(),
   // The optional sections, toggled in Settings -> General. All on by default; a
   // disabled section is hidden in the web app and its rows are kept.
   initiativesEnabled: t.Boolean(),
@@ -147,14 +148,15 @@ const FeaturesResponse = t.Object({
   issueStats: t.Boolean(),
 });
 
-// The project's settings: MCP reachability and the enabled sections.
+// The project's settings: MCP reachability and the enabled sections. Reachability is
+// read-only here — both flags behind it are set from the team's MCP settings.
 export const ProjectSettingsResponse = t.Object({
-  mcpEnabled: t.Boolean(),
+  mcpEnabled: t.Boolean({ description: "Whether the team's MCP reach covers this project." }),
+  teamMcpEnabled: t.Boolean({ description: 'Whether the team is reachable over MCP at all.' }),
   features: FeaturesResponse,
 });
 
 export const updateProjectSettingsBody = t.Object({
-  mcpEnabled: t.Optional(t.Boolean()),
   features: t.Optional(t.Partial(FeaturesResponse)),
 });
 

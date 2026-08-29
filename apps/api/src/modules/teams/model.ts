@@ -16,6 +16,11 @@ export const updateTeamBody = t.Partial(createTeamBody);
 export const TeamResponse = t.Object({
   id: t.Number(),
   name: t.String(),
+  mcpEnabled: t.Boolean({
+    description:
+      'Whether the team is reachable over MCP. Off closes its own resources and every ' +
+      'project it owns.',
+  }),
   role: t.Union(
     [t.Literal('owner'), t.Literal('manager'), t.Literal('member'), t.Literal('agent')],
     { description: 'Your standing in this team.' },
@@ -66,6 +71,7 @@ export const TeamProjectListResponse = t.Array(
     key: t.String(),
     name: t.String(),
     description: t.String(),
+    mcpEnabled: t.Boolean({ description: "Whether the team's MCP reach covers this project." }),
     memberCount: t.Number(),
     owners: t.Array(
       t.Object({
@@ -98,4 +104,15 @@ export const TeamProjectDetailResponse = t.Object({
       permissions: PermissionMatrixSchema,
     }),
   ),
+});
+
+// The team's MCP settings: the switch, and the projects its reach covers.
+export const TeamMcpResponse = t.Object({
+  enabled: t.Boolean(),
+  projects: t.Array(t.Object({ projectId: t.Number(), enabled: t.Boolean() })),
+});
+
+export const updateTeamMcpBody = t.Object({
+  enabled: t.Optional(t.Boolean()),
+  projects: t.Optional(t.Array(t.Object({ projectId: t.Number(), enabled: t.Boolean() }))),
 });

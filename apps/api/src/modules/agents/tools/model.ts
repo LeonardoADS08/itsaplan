@@ -16,6 +16,9 @@ const ToolMetaResponse = t.Object({
   label: t.String(),
   description: t.String(),
   always: t.Boolean(),
+  // [resource, action] on the role matrix, from the route behind the action. Absent
+  // when no route backs it, or when its route asks only for project membership.
+  permission: t.Optional(t.Tuple([t.String(), t.String()])),
 });
 
 export const ToolMetaListResponse = t.Array(ToolMetaResponse);

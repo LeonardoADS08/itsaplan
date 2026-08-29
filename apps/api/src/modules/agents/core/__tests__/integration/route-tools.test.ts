@@ -6,7 +6,7 @@ import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { getProjectByKey } from '#modules/projects/service';
 import { getAgentById, getInternalAgentApiKey } from '../../service';
-import { buildRouteTools } from '../../runtime/tools/route-tools';
+import { actionCatalog, buildRouteTools } from '../../runtime/tools/route-tools';
 import { AGENT_ACTIONS, ALWAYS_ON_ACTIONS } from '../../runtime/tools/catalog';
 import { routeTools } from '#mcp/generate';
 import { getMcpApp } from '#mcp/app-ref';
@@ -155,6 +155,28 @@ describe('internal agent route tools', () => {
     for (const { key, name } of hidden) {
       expect(Object.keys(table.get(key)?.inputSchema.properties ?? {})).toContain(name);
     }
+  });
+
+  // The action picker marks an action the agent's role refuses, which it can only do
+  // when the catalog carries the permission the route behind the action asserts.
+  it('reports the permission of the route behind each action', () => {
+    const catalog = new Map(actionCatalog().map((action) => [action.key, action.permission]));
+
+    // A route guarded by the permission macro, and one guarded by an entity guard,
+    // which names the action alone.
+    expect(catalog.get('create_issue')).toEqual(['work_items', 'create']);
+    expect(catalog.get('update_issue')).toEqual(['work_items', 'edit']);
+    // Asserts its permission in the handler and states the same pair in its detail.
+    expect(catalog.get('get_issue')).toEqual(['work_items', 'read']);
+
+    // Everything else has one. prepare_issue_import and get_current_date have no
+    // route; charts and the project itself are open to any member of the project.
+    expect([...catalog].filter(([, permission]) => !permission).map(([key]) => key)).toEqual([
+      'prepare_issue_import',
+      'create_chart',
+      'get_current_date',
+      'get_project',
+    ]);
   });
 
   it("provisions a legacy agent's key once, even when two runs start together", async () => {

@@ -55,6 +55,10 @@ export const appSecret = pgTable('app_secret', {
 export const team = pgTable('team', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
+  // Whether the team is reachable through the MCP server at all. Off closes both the
+  // team's own resources (agents, skills, tools, roles, integrations) and every
+  // project it owns, whatever each project's own flag says.
+  mcpEnabled: boolean('mcp_enabled').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -96,8 +100,9 @@ export const project = pgTable('project', {
   name: text('name').notNull(),
   description: text('description').notNull().default(''),
   nextSequence: integer('next_sequence').notNull().default(1),
-  // Whether this project is reachable through the MCP server. Off by default: an
-  // owner opts a project in before agents can work with it over MCP.
+  // Whether this project is in the team's MCP reach. Managed from the team's MCP
+  // settings, not from the project, and only counts while team.mcp_enabled is on.
+  // The starting value is the instance-wide project default set in god mode.
   mcpEnabled: boolean('mcp_enabled').notNull().default(false),
   // Optional sections of the app, toggled per project in Settings -> Features. All
   // on by default. Turning one off only hides its UI; the rows it owns stay and
@@ -484,9 +489,9 @@ export const aiAgent = pgTable(
     memoryLastMessages: integer('memory_last_messages'),
     // The member who created the agent. An external agent's runner authenticates
     // with the agent's key, so `owner` scope means the runner only receives runs
-    // this member triggered; `project` scope, the default, means any member's.
+    // this member triggered; `team` scope, the default, means any member's.
     ownerUserId: text('owner_user_id').references(() => user.id, { onDelete: 'set null' }),
-    runnerScope: text('runner_scope').notNull().default('project'),
+    runnerScope: text('runner_scope').notNull().default('team'),
     // Last time a runner claimed work or sent a heartbeat for this agent, which is
     // what the UI shows as its presence. NULL for an agent no runner ever polled.
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
@@ -496,7 +501,7 @@ export const aiAgent = pgTable(
     uniqueIndex('ai_agent_team_username_uq').on(t.teamId, sql`lower(${t.username})`),
     unique().on(t.userId),
     check('ai_agent_kind_check', sql`${t.kind} IN ('external', 'internal')`),
-    check('ai_agent_runner_scope_check', sql`${t.runnerScope} IN ('owner', 'project')`),
+    check('ai_agent_runner_scope_check', sql`${t.runnerScope} IN ('owner', 'team')`),
     check(
       'ai_agent_delegation_delay_check',
       sql`${t.delegationDelaySec} >= 0 AND ${t.delegationDelaySec} <= 86400`,

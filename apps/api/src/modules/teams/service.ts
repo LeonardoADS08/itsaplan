@@ -41,6 +41,9 @@ export function runsTeam(standing: TeamStanding | null): boolean {
 export interface TeamRow {
   id: number;
   name: string;
+  // Whether the team is reachable over MCP at all. Off closes its own resources and
+  // every project it owns, whichever projects it covers.
+  mcpEnabled: boolean;
   // The caller's standing in the team, not a property of the team itself. An agent
   // reading its own team is 'agent', which runs nothing.
   role: TeamStanding;
@@ -83,6 +86,9 @@ export interface TeamProjectRow {
   key: string;
   name: string;
   description: string;
+  // Whether the team's MCP reach covers this project. Only counts while the team's
+  // own switch is on.
+  mcpEnabled: boolean;
   memberCount: number;
   owners: { userId: string; name: string; image: string | null }[];
   isMember: boolean;
@@ -128,6 +134,7 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
     .select({
       id: team.id,
       name: team.name,
+      mcpEnabled: team.mcpEnabled,
       role: teamMember.role,
       joinedAt: teamMember.createdAt,
       createdAt: team.createdAt,
@@ -203,6 +210,7 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    mcpEnabled: row.mcpEnabled,
     role: row.role as TeamStanding,
     joinedAt: iso(row.joinedAt),
     projectCount: projects.get(row.id) ?? 0,
@@ -217,8 +225,65 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
   }));
 }
 
-export async function listTeams(userId: string): Promise<TeamRow[]> {
-  return loadTeamRows(userId);
+// The teams the user belongs to. mcpOnly drops the ones with MCP switched off, so an
+// MCP caller only sees the teams it can act in.
+export async function listTeams(
+  userId: string,
+  opts: { mcpOnly?: boolean } = {},
+): Promise<TeamRow[]> {
+  const rows = await loadTeamRows(userId);
+  return opts.mcpOnly ? rows.filter((row) => row.mcpEnabled) : rows;
+}
+
+// The team's MCP switch alone, for the guard that runs on every team-scoped MCP call.
+export async function teamMcpEnabled(teamId: number): Promise<boolean> {
+  const [row] = await db
+    .select({ mcpEnabled: team.mcpEnabled })
+    .from(team)
+    .where(eq(team.id, teamId));
+  return row?.mcpEnabled ?? false;
+}
+
+// The team's MCP settings: the switch, and which of its projects it covers. Both are
+// written from the team's MCP section — a project does not open itself.
+export interface TeamMcpSettings {
+  enabled: boolean;
+  projects: { projectId: number; enabled: boolean }[];
+}
+
+async function getTeamMcp(teamId: number): Promise<TeamMcpSettings> {
+  const [rows, projects] = await Promise.all([
+    db.select({ mcpEnabled: team.mcpEnabled }).from(team).where(eq(team.id, teamId)),
+    db
+      .select({ projectId: project.id, enabled: project.mcpEnabled })
+      .from(project)
+      .where(eq(project.teamId, teamId))
+      .orderBy(project.key),
+  ]);
+  return { enabled: rows[0]?.mcpEnabled ?? false, projects };
+}
+
+// Applies a patch to the team's MCP settings and returns the result. A project of
+// another team is ignored rather than written, so an id from elsewhere changes
+// nothing.
+export async function setTeamMcp(
+  teamId: number,
+  patch: { enabled?: boolean; projects?: { projectId: number; enabled: boolean }[] },
+): Promise<TeamMcpSettings> {
+  if (patch.enabled !== undefined) {
+    await db.update(team).set({ mcpEnabled: patch.enabled }).where(eq(team.id, teamId));
+  }
+  // Written as one statement per value rather than one per project, so a whole set
+  // of checkboxes costs two.
+  for (const enabled of [true, false]) {
+    const ids = (patch.projects ?? []).filter((p) => p.enabled === enabled).map((p) => p.projectId);
+    if (ids.length === 0) continue;
+    await db
+      .update(project)
+      .set({ mcpEnabled: enabled })
+      .where(and(eq(project.teamId, teamId), inArray(project.id, ids)));
+  }
+  return getTeamMcp(teamId);
 }
 
 export async function getTeamMembership(
@@ -288,6 +353,7 @@ export async function listTeamProjects(teamId: number, userId: string): Promise<
         key: project.key,
         name: project.name,
         description: project.description,
+        mcpEnabled: project.mcpEnabled,
         createdAt: project.createdAt,
         memberCount: sql<number>`count(${projectMember.userId})::int`,
         isMember: sql<boolean>`bool_or(${projectMember.userId} = ${userId})`,
@@ -323,6 +389,7 @@ export async function listTeamProjects(teamId: number, userId: string): Promise<
     key: p.key,
     name: p.name,
     description: p.description,
+    mcpEnabled: p.mcpEnabled,
     memberCount: p.memberCount,
     owners: ownersByProject.get(p.id) ?? [],
     isMember: p.isMember ?? false,
@@ -413,6 +480,7 @@ export async function createTeam(name: string, ownerId: string): Promise<TeamRow
     return {
       id: row.id,
       name: row.name,
+      mcpEnabled: row.mcpEnabled,
       role: 'owner',
       joinedAt: iso(membership.createdAt),
       projectCount: 0,

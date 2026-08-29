@@ -78,9 +78,7 @@ export default function AgentAccessSection({
           <div className="min-w-0">
             <span className="block text-sm font-medium">{t('runnerScope')}</span>
             <span className="block text-xs text-muted-foreground">
-              {value.runnerScope === 'owner'
-                ? t('runnerScopeOwnerHint')
-                : t('runnerScopeProjectHint')}
+              {value.runnerScope === 'owner' ? t('runnerScopeOwnerHint') : t('runnerScopeTeamHint')}
             </span>
           </div>
           <Select
@@ -92,7 +90,7 @@ export default function AgentAccessSection({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="owner">{t('runnerScopeOwner')}</SelectItem>
-              <SelectItem value="project">{t('runnerScopeProject')}</SelectItem>
+              <SelectItem value="team">{t('runnerScopeTeam')}</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -117,7 +117,7 @@
     "saved": "项目默认设置已保存",
     "projectDefaults": "项目默认设置",
     "mcpEnabled": "新项目默认启用 MCP",
-    "mcpEnabledHint": "新项目创建后即可通过 MCP 访问。"
+    "mcpEnabledHint": "新项目创建时即纳入所属团队的 MCP 覆盖范围。"
   },
   "authentication": {
     "saved": "身份验证设置已保存",

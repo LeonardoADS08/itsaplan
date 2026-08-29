@@ -30,6 +30,10 @@
       "title": "التكاملات",
       "description": "مفاتيح مزودي الذكاء الاصطناعي وبيانات اعتماد الأدوات التي تعمل بها مشاريع الفريق."
     },
+    "mcp": {
+      "title": "MCP",
+      "description": "مشاريع الفريق اللي عملاء الذكاء الاصطناعي بيوصلوا لها عبر Model Context Protocol."
+    },
     "agentSkills": {
       "title": "المهارات (skills)",
       "description": "تعليمات تتعاد استخدامها، الوكلاء الداخليون بيحمّلوها لما يحتاجوها."
@@ -366,9 +370,9 @@
     "runnerWayApiHint": "استلم المهام وابعت النتايج عبر واجهة البرمجة (API) بمفتاح الوكيل، من أي سكربت.",
     "runnerScope": "مصدر المهام",
     "runnerScopeOwner": "بتاعتي بس",
-    "runnerScopeProject": "بتاعة الكل",
+    "runnerScopeTeam": "بتاعة الكل",
     "runnerScopeOwnerHint": "المهام اللي إنت بتشغّلها بس.",
-    "runnerScopeProjectHint": "مهام كل الأعضاء.",
+    "runnerScopeTeamHint": "مهام كل الأعضاء.",
     "runnerCopyCommand": "نسخ الأمر",
     "runnerHelpOpen": "إزاي تظبط المنفّذ",
     "runnerHelpTitle": "إزاي تشغّل منفّذ",
@@ -464,6 +468,8 @@
     "triggerFieldCount": "{count, plural, zero {# حقل} one {# حقل} two {# حقلين} few {# حقول} many {# حقلاً} other {# حقل}}",
     "noMatch": "لا نتائج لـ “{query}”.",
     "useCustomModel": "استخدام \"{query}\"",
+    "roleRule": "يُقيَّم وفق الدور {role}: لا يعمل الإجراء إلا إذا سمح به الدور أيضًا.",
+    "roleRefusesAction": "الدور لا يسمح بهذا الإجراء.",
     "readOnlyAlwaysOn": "الوصول للقراءة بس مفعّل على طول ومش هينفع توقفه.",
     "instructionsLabel": "التعليمات",
     "done": "تم",
@@ -485,5 +491,17 @@
   "members": {
     "peopleGroup": "{count, plural, zero {# أشخاص} one {شخص واحد} two {شخصان} few {# أشخاص} many {# شخصًا} other {# شخص}}",
     "agentGroup": "{count, plural, zero {# وكلاء} one {وكيل واحد} two {وكيلان} few {# وكلاء} many {# وكيلًا} other {# وكيل}}"
+  },
+  "mcp": {
+    "title": "MCP",
+    "description": "افتح الفريق لعملاء MCP واختار المشاريع اللي داخلة في النطاق. العميل بياخد نفس صلاحيات مفتاح واجهة البرمجة (API key) اللي بيستخدمه.",
+    "access": "الوصول عبر MCP",
+    "accessHint": "الإيقاف بيقفل الفريق وكل مشاريعه قدام MCP.",
+    "managerOnly": "مالك الفريق أو مديره بس هما اللي يقدروا يغيّروا الإعدادات دي.",
+    "toggleAria": "تبديل الوصول عبر MCP للفريق",
+    "projects": "المشاريع داخل النطاق",
+    "projectsHint": "أي مشروع جديد بيدخل النطاق أول ما يتعمل، حسب الإعداد الافتراضي للنسخة.",
+    "noProjects": "الفريق لسه مالوش مشاريع.",
+    "projectToggleAria": "تبديل الوصول عبر MCP لـ {project}"
   }
 }

@@ -30,6 +30,10 @@
       "title": "集成",
       "description": "团队项目使用的 AI 提供商密钥和工具凭据。"
     },
+    "mcp": {
+      "title": "MCP",
+      "description": "AI 客户端可通过模型上下文协议访问团队的哪些项目。"
+    },
     "agentSkills": {
       "title": "技能",
       "description": "内置代理可按需加载的可复用指令。"
@@ -366,9 +370,9 @@
     "runnerWayApiHint": "用智能体密钥通过 API 领取任务并提交结果，任何脚本都可以。",
     "runnerScope": "任务来源",
     "runnerScopeOwner": "仅我的",
-    "runnerScopeProject": "所有成员的",
+    "runnerScopeTeam": "所有成员的",
     "runnerScopeOwnerHint": "只接收你触发的任务。",
-    "runnerScopeProjectHint": "所有成员的任务。",
+    "runnerScopeTeamHint": "所有成员的任务。",
     "runnerCopyCommand": "复制命令",
     "runnerHelpOpen": "如何配置运行器",
     "runnerHelpTitle": "如何启动运行器",
@@ -464,6 +468,8 @@
     "triggerFieldCount": "{count, plural, other {# 个字段}}",
     "noMatch": "没有与“{query}”匹配的结果。",
     "useCustomModel": "使用“{query}”",
+    "roleRule": "按角色 {role} 判定：只有该角色也允许时，操作才会生效。",
+    "roleRefusesAction": "该角色不允许此操作。",
     "readOnlyAlwaysOn": "只读权限始终启用，无法关闭。",
     "instructionsLabel": "说明",
     "done": "完成",
@@ -485,5 +491,17 @@
   "members": {
     "peopleGroup": "{count} 人",
     "agentGroup": "{count} 个智能体"
+  },
+  "mcp": {
+    "title": "MCP",
+    "description": "向 MCP 客户端开放团队，并选择覆盖范围内的项目。客户端获得其所用 API 密钥对应的访问权限。",
+    "access": "MCP 访问",
+    "accessHint": "关闭后，团队及其所有项目均无法通过 MCP 访问。",
+    "managerOnly": "只有团队所有者或管理者可以修改这些设置。",
+    "toggleAria": "切换团队的 MCP 访问",
+    "projects": "覆盖的项目",
+    "projectsHint": "新项目在创建时即按实例默认设置纳入覆盖范围。",
+    "noProjects": "该团队还没有项目。",
+    "projectToggleAria": "切换 {project} 的 MCP 访问"
   }
 }

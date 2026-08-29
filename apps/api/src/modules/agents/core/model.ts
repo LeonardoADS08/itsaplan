@@ -94,10 +94,10 @@ const configFields = {
     }),
   ),
   runnerScope: t.Optional(
-    t.Union([t.Literal('owner'), t.Literal('project')], {
+    t.Union([t.Literal('owner'), t.Literal('team')], {
       description:
         "Which runs an external agent's runner receives: 'owner' only the creator's, " +
-        "'project' any member's.",
+        "'team' any member's.",
     }),
   ),
 };
@@ -127,7 +127,7 @@ export const AiAgentResponse = t.Object({
   delegationDelaySec: t.Number(),
   roleId: t.Number(),
   ownerUserId: t.Nullable(t.String()),
-  runnerScope: t.Union([t.Literal('owner'), t.Literal('project')]),
+  runnerScope: t.Union([t.Literal('owner'), t.Literal('team')]),
   lastSeenAt: t.Nullable(t.String()),
   createdAt: t.String(),
   apiKeyStart: t.Nullable(t.String()),

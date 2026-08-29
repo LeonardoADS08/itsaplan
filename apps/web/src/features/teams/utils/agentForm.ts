@@ -1,4 +1,4 @@
-import type { AgentTool, AiAgent, NewAiAgentInput, AiAgentPatch } from '@/lib/api';
+import type { AgentTool, AiAgent, NewAiAgentInput, AiAgentPatch, Role } from '@/lib/api';
 import { transliterate } from '@/utils/projectKey';
 
 // The editable shape of an agent form. temperature/maxSteps are kept as strings so
@@ -29,7 +29,7 @@ export interface AgentFormValue {
   // The team role the agent acts under. Null only while the roles are still loading:
   // the form seeds the team's default one and the submit waits for it.
   roleId: number | null;
-  runnerScope: 'owner' | 'project';
+  runnerScope: 'owner' | 'team';
 }
 
 export interface FormFieldTrigger {
@@ -87,7 +87,7 @@ export function initialAgentValue(agent?: AiAgent): AgentFormValue {
     delegationDelayMin: String(Math.round((agent?.delegationDelaySec ?? 120) / 60)),
     projectIds: (agent?.projects ?? []).map((project) => project.id),
     roleId: agent?.roleId ?? null,
-    runnerScope: agent?.runnerScope ?? 'project',
+    runnerScope: agent?.runnerScope ?? 'team',
   };
 }
 
@@ -155,6 +155,16 @@ export function toUpdatePatch(v: AgentFormValue): AiAgentPatch {
 // that are always on.
 export function grantedToolCount(tools: AgentTool[], selected: string[]): number {
   return selected.length + tools.filter((t) => t.always).length;
+}
+
+// Whether the agent's role refuses an action. The rights of an internal agent are the
+// intersection of the actions it holds and its role, so an action granted here still
+// answers 403 at run time when the role does not permit it. An action whose route asks
+// only for project membership carries no permission and is never refused.
+export function refusedByRole(tool: AgentTool, role: Role | undefined): boolean {
+  if (!tool.permission || !role) return false;
+  const [resource, action] = tool.permission;
+  return !role.permissions[resource]?.[action];
 }
 
 // Buckets a list by a key, keeping the order the keys first appear in, so a grouped

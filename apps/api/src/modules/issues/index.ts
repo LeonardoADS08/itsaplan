@@ -1,7 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { mcpTool } from '#mcp/generate';
 import { noContent } from '#shared/http';
-import { guards, entityGuard, assertMcpAllowed } from '#shared/guards';
+import { guards, entityGuard, assertMcpAllowed, requiresPermission } from '#shared/guards';
 import { authContext } from '#shared/auth-context';
 import { assertPermission, assertProjectOwner, requireUser } from '#shared/access';
 import { HttpError } from '#shared/lib';
@@ -459,6 +459,7 @@ export const issueRoutes = new Elysia({ name: 'issues', detail: { tags: ['Issues
       detail: {
         summary: 'Get an issue',
         description: 'Get an issue by its numeric id.',
+        ...requiresPermission(['work_items', 'read']),
         ...mcpTool('get_issue'),
       },
     },

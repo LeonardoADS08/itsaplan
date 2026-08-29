@@ -466,7 +466,9 @@ describe('projects', () => {
       expect(roles.data?.map((r) => r.name).sort()).toEqual(['Editor', 'Member']);
     });
 
-    it("keeps an external agent's runner scope, bound to the caller", async () => {
+    // The team owns its agents, so a copy inside it puts the same agent in the new
+    // project — no second agent, no second bot user, no new key.
+    it("puts the source project's agents in a copy inside the team", async () => {
       const { api, user } = await signUpClient();
       await api.projects.post({ key: 'SRC', name: 'Source' });
       await createAgent(api, 'SRC', {
@@ -481,10 +483,32 @@ describe('projects', () => {
         name: 'Destination',
         include: { agents: true },
       });
+
+      const teamId = await teamOf(api, 'DST');
       const copied = await api
-        .teams({ teamId: await teamOf(api, 'DST') })
+        .teams({ teamId })
         ['ai-agents'].get({ query: { projectId: await projectIdOf(api, 'DST') } });
       expect(copied.data?.[0]).toMatchObject({ runnerScope: 'owner', ownerUserId: user.userId });
+      expect((await api.teams({ teamId })['ai-agents'].get()).data).toHaveLength(1);
+    });
+
+    it('carries no agent into another team', async () => {
+      const { api } = await signUpClient();
+      await api.projects.post({ key: 'SRC', name: 'Source' });
+      await createAgent(api, 'SRC', { name: 'Ext', username: 'ext', kind: 'external' });
+      const target = (await api.teams.post({ name: 'Other Team' })).data!;
+      const sourceId = await projectIdOf(api, 'SRC');
+
+      await api
+        .teams({ teamId: target.id })
+        .projects({ projectId: sourceId })
+        .copy.post({
+          key: 'DST',
+          name: 'Destination',
+          include: { agents: true, schedules: true },
+        });
+
+      expect((await api.teams({ teamId: target.id })['ai-agents'].get()).data).toEqual([]);
     });
 
     it('returns 400 with an error body on a duplicate key', async () => {
@@ -564,71 +588,76 @@ describe('projects', () => {
     });
   });
 
-  describe('mcp toggle', () => {
+  describe('mcp reach', () => {
     // Marks a request as an MCP tool dispatch. The MCP endpoint sets this header on
-    // its in-process loopback requests; the guards read it to gate the per-project
-    // MCP toggle. A test forges it to exercise that path without going through /mcp.
+    // its in-process loopback requests; the guards read it to gate MCP access. A test
+    // forges it to exercise that path without going through /mcp.
     const asMcp = { headers: { 'x-mcp-loopback': '1' } };
+
+    // The team a project belongs to, whose MCP settings decide its reach.
+    async function teamOf(client: Api, projectKey: string): Promise<number> {
+      const view = await client.projects({ projectKey }).get();
+      return view.data!.project.teamId;
+    }
 
     it('defaults a new project to the instance project default (MCP on)', async () => {
       const { api } = await signUpClient();
       await api.projects.post({ key: 'MKT', name: 'Marketing' });
 
       const view = await viewOf(api, 'MKT');
-      expect(view.data?.project.mcpEnabled).toBe(true);
+      expect(view.data?.project).toMatchObject({ mcpEnabled: true, teamMcpEnabled: true });
     });
 
-    it('lets an owner enable then disable MCP for the project', async () => {
+    it('no longer takes the toggle on the project settings route', async () => {
       const { api } = await signUpClient();
       await api.projects.post({ key: 'MKT', name: 'Marketing' });
 
-      const on = await api.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: true });
-      expect(on.status).toBe(200);
-      expect(on.data).toMatchObject({ mcpEnabled: true });
+      // The field is gone from the body schema, so an old client sending it changes
+      // nothing rather than reopening the project from outside the team's settings.
+      const res = await api.projects({ projectKey: 'MKT' }).settings.patch({
+        mcpEnabled: false,
+      } as never);
+      expect(res.status).toBe(200);
+      expect(res.data).toMatchObject({ mcpEnabled: true });
       expect((await viewOf(api, 'MKT')).data?.project.mcpEnabled).toBe(true);
-
-      const off = await api.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: false });
-      expect(off.status).toBe(200);
-      expect(off.data).toMatchObject({ mcpEnabled: false });
-      expect((await viewOf(api, 'MKT')).data?.project.mcpEnabled).toBe(false);
     });
 
-    it('denies the toggle to a non-owner (owner-only)', async () => {
-      const owner = await signUpClient();
-      await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
-
-      const outsider = await signUpClient();
-      const res = await outsider.api
-        .projects({ projectKey: 'MKT' })
-        .settings.patch({ mcpEnabled: true });
-      expect(res.status).toBe(403);
-    });
-
-    it('blocks an MCP call to a project with MCP disabled, but not a web call', async () => {
+    it('blocks an MCP call to a project the team no longer covers, but not a web call', async () => {
       const { api } = await signUpClient();
       await api.projects.post({ key: 'MKT', name: 'Marketing' });
-      await api.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: false });
+      const teamId = await teamOf(api, 'MKT');
+      const projectId = (await viewOf(api, 'MKT')).data!.project.id;
+      await api.teams({ teamId }).mcp.patch({ projects: [{ projectId, enabled: false }] });
 
-      // Web request (no MCP marker) reaches the disabled project fine.
+      // Web request (no MCP marker) reaches the project fine.
       expect((await api.projects({ projectKey: 'MKT' }).get()).status).toBe(200);
-      // The same request marked as MCP is denied while MCP is off.
       const blocked = await api.projects({ projectKey: 'MKT' }).get(asMcp);
       expect(blocked.status).toBe(403);
+      expect((blocked.error?.value as { error: string }).error).toBe(
+        'MCP is disabled for this project',
+      );
     });
 
-    it('allows an MCP call once the project has MCP enabled', async () => {
+    it("blocks an MCP call to every project once the team's switch is off", async () => {
       const { api } = await signUpClient();
       await api.projects.post({ key: 'MKT', name: 'Marketing' });
-      await api.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: true });
+      const teamId = await teamOf(api, 'MKT');
+      await api.teams({ teamId }).mcp.patch({ enabled: false });
 
-      const res = await api.projects({ projectKey: 'MKT' }).get(asMcp);
-      expect(res.status).toBe(200);
+      expect((await api.projects({ projectKey: 'MKT' }).get()).status).toBe(200);
+      const blocked = await api.projects({ projectKey: 'MKT' }).get(asMcp);
+      expect(blocked.status).toBe(403);
+      expect((blocked.error?.value as { error: string }).error).toBe(
+        'MCP is disabled for this team',
+      );
     });
 
-    it('blocks an MCP call on an entity-by-id route of a disabled project', async () => {
+    it('blocks an MCP call on an entity-by-id route of a project out of reach', async () => {
       const { api } = await signUpClient();
       await api.projects.post({ key: 'MKT', name: 'Marketing' });
-      await api.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: false });
+      const teamId = await teamOf(api, 'MKT');
+      const projectId = (await viewOf(api, 'MKT')).data!.project.id;
+      await api.teams({ teamId }).mcp.patch({ projects: [{ projectId, enabled: false }] });
       const backlog = (await viewOf(api, 'MKT')).data!.columns.find((c) => c.name === 'Backlog')!;
       const issue = (
         await api
@@ -636,18 +665,18 @@ describe('projects', () => {
           .issues.post({ columnId: backlog.id, title: 'Task' })
       ).data!;
 
-      // Web read works; the MCP-marked read is denied while the project has MCP off.
       expect((await api.issues({ issueId: issue.id }).get()).status).toBe(200);
       expect((await api.issues({ issueId: issue.id }).get(asMcp)).status).toBe(403);
     });
 
-    it('hides MCP-disabled projects from an MCP list_projects call', async () => {
+    it('hides projects out of reach from an MCP list_projects call', async () => {
       const { api } = await signUpClient();
       await api.projects.post({ key: 'ON', name: 'Enabled' });
       await api.projects.post({ key: 'OFF', name: 'Disabled' });
-      await api.projects({ projectKey: 'OFF' }).settings.patch({ mcpEnabled: false });
+      const teamId = await teamOf(api, 'OFF');
+      const projectId = (await viewOf(api, 'OFF')).data!.project.id;
+      await api.teams({ teamId }).mcp.patch({ projects: [{ projectId, enabled: false }] });
 
-      // A web list shows both; an MCP list shows only the enabled project.
       expect((await api.projects.get()).data?.map((p) => p.key).sort()).toEqual(['OFF', 'ON']);
       expect((await api.projects.get(asMcp)).data?.map((p) => p.key)).toEqual(['ON']);
     });
@@ -660,7 +689,7 @@ describe('projects', () => {
 
       const res = await api.projects({ projectKey: 'MKT' }).settings.get();
       expect(res.status).toBe(200);
-      expect(res.data).toMatchObject({ mcpEnabled: true });
+      expect(res.data).toMatchObject({ mcpEnabled: true, teamMcpEnabled: true });
     });
 
     it('starts a new project with every optional section enabled', async () => {
@@ -744,8 +773,10 @@ describe('projects', () => {
       await api.projects.post({ key: 'MKT', name: 'Marketing' });
       await api.projects({ projectKey: 'MKT' }).settings.patch({ features: { notes: false } });
 
-      const res = await api.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: true });
-      expect(res.data).toMatchObject({ mcpEnabled: true, features: { notes: false } });
+      const res = await api
+        .projects({ projectKey: 'MKT' })
+        .settings.patch({ features: { checklists: false } });
+      expect(res.data?.features).toMatchObject({ notes: false, checklists: false });
     });
 
     it('denies writing settings to someone outside the project and its team', async () => {
@@ -755,7 +786,7 @@ describe('projects', () => {
       const outsider = await signUpClient();
       const res = await outsider.api
         .projects({ projectKey: 'MKT' })
-        .settings.patch({ mcpEnabled: true });
+        .settings.patch({ features: { notes: false } });
       expect(res.status).toBe(403);
     });
 
@@ -764,7 +795,9 @@ describe('projects', () => {
       await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
       const member = await addProjectMember(owner.api, 'MKT');
 
-      const res = await member.projects({ projectKey: 'MKT' }).settings.patch({ mcpEnabled: true });
+      const res = await member
+        .projects({ projectKey: 'MKT' })
+        .settings.patch({ features: { notes: false } });
       expect(res.status).toBe(403);
     });
 
@@ -786,9 +819,9 @@ describe('projects', () => {
 
       const res = await owner.api
         .projects({ projectKey: 'MKT' })
-        .settings.patch({ mcpEnabled: true });
+        .settings.patch({ features: { notes: false } });
       expect(res.status).toBe(200);
-      expect(res.data).toMatchObject({ mcpEnabled: true });
+      expect(res.data?.features).toMatchObject({ notes: false });
     });
   });
 

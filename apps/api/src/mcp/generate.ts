@@ -1,3 +1,4 @@
+import type { Permission } from '#shared/guards';
 import type { McpApp } from './types';
 
 // Turns the assembled app's routes into MCP tool descriptors. A route opts in by
@@ -34,6 +35,10 @@ export interface McpRouteTool {
   pathParams: string[];
   inputSchema: McpInputSchema;
   annotations: McpToolAnnotations;
+  // The cell of the role matrix the route's guard asserts, published by the guard as
+  // `x-permission` on the route's detail. Absent on a route that asks only for
+  // project membership.
+  permission?: Permission;
 }
 
 // Marks a route as an MCP tool. Spread into a route's `detail`:
@@ -72,6 +77,16 @@ function methodAnnotations(method: string): McpToolAnnotations {
     default:
       return { readOnlyHint: false, destructiveHint: false, idempotentHint: false };
   }
+}
+
+export function withoutFields(schema: McpInputSchema, names: string[]): McpInputSchema {
+  const properties = { ...schema.properties };
+  for (const name of names) delete properties[name];
+  return {
+    type: 'object',
+    properties,
+    required: schema.required.filter((name) => !names.includes(name)),
+  };
 }
 
 function extractPathParams(path: string): string[] {
@@ -126,6 +141,7 @@ function generateRouteTools(app: McpApp): McpRouteTool[] {
           summary?: string;
           description?: string;
           'x-mcp'?: { tool?: string; annotations?: McpToolAnnotations };
+          'x-permission'?: Permission;
         }
       | undefined;
     const tool = detail?.['x-mcp']?.tool;
@@ -141,6 +157,7 @@ function generateRouteTools(app: McpApp): McpRouteTool[] {
       path: route.path,
       pathParams,
       inputSchema: mergeInputSchema(hooks, pathParams),
+      permission: detail?.['x-permission'],
       // Every tool acts on this tracker's own data and reaches nothing outside it,
       // so openWorldHint is false throughout; the route may still override it.
       annotations: {

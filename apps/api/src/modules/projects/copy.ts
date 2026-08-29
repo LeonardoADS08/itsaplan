@@ -24,13 +24,8 @@ import {
   type ProjectRow,
 } from './service';
 import { GIT_SETTING_KEY } from '#modules/git/service';
-import {
-  listAgents,
-  createAgent,
-  updateAgent,
-  defaultTeamRoleId,
-  type NewAgentInput,
-} from '#modules/agents/core/service';
+import { getProjectDefaults } from '#modules/settings/service';
+import { listAgents, updateAgent } from '#modules/agents/core/service';
 import { listAgentSchedules, createAgentSchedule } from '#modules/agents/schedules/service';
 import { nextCronRun } from '#modules/agents/schedules/cron';
 
@@ -38,9 +33,9 @@ import { nextCronRun } from '#modules/agents/schedules/cron';
 // entity. Some sections depend on others (a view's filters reference
 // states/types/labels/fields); those dependencies are force-enabled in
 // normalizeInclude so a partial selection can never leave an id pointing at the
-// source project. The skills and the configured tools of an agent are not among them:
-// both belong to the team, so a copy inside it reuses the same agents, and a copy into
-// another team has neither to draw on.
+// source project. Agents, their skills and their configured tools are not among them:
+// all three belong to the team, so a copy inside it reuses the same agents, and a copy
+// into another team carries none.
 export interface CopyProjectInclude {
   states: boolean;
   issueTypes: boolean;
@@ -209,11 +204,10 @@ function remapActionEffect(effect: unknown, maps: CopyIdMaps): unknown {
 // configuration, but none of its issues. The creator becomes the new project's owner.
 //
 // Pure-database entities (states, types, labels, custom fields, views, dashboards,
-// actions, settings, webhooks, configured tools) are copied in one transaction,
-// recording old id → new id so the ids that views/actions and tools/agents reference
-// are remapped to the copied entities. Agents are created after that transaction
-// commits, because each gets its own bot user and API key, through the same service
-// function the UI uses.
+// actions, settings, webhooks) are copied in one transaction, recording old id → new
+// id so the ids that views and actions reference are remapped to the copied entities.
+// The team's agents are attached to the new project after that transaction commits,
+// through the same service function the UI uses.
 export async function copyProject(
   sourceProjectId: number,
   input: { key: string; name: string; description?: string },
@@ -231,18 +225,19 @@ export async function copyProject(
     field: new Map(),
     option: new Map(),
   };
-  const agentMap = new Map<number, number>();
 
   const source = await getProjectById(sourceProjectId);
   if (!source) throw new HttpError(404, 'Project not found');
   const ownerTeam = await targetTeam(ownerId, teamId);
-  // Integration credentials and roles belong to the team, so what references them
-  // survives the copy only when it stays in the same team.
+  const defaults = await getProjectDefaults();
+  // Agents, integration credentials and roles belong to the team, so what references
+  // them survives the copy only when it stays in the same team.
   const sameTeam = ownerTeam.id === source.teamId;
   const newProject = await db.transaction(async (tx) => {
     // The optional sections the source project shows and the estimate kinds it
     // carries are part of its configuration, so the copy starts with the same ones.
-    // mcpEnabled is not carried: a copy opts into MCP on its own.
+    // mcpEnabled is not carried: a new project enters its team's MCP reach on the
+    // instance default, the same way a created one does.
     const [sourceFeatures] = await tx
       .select({
         initiativesEnabled: project.initiativesEnabled,
@@ -266,10 +261,15 @@ export async function copyProject(
         key: input.key,
         name: input.name,
         description: input.description ?? '',
+        mcpEnabled: defaults.mcpEnabled,
         ...sourceFeatures,
       })
       .returning();
-    const proj = mapProject({ ...row, teamName: ownerTeam.name });
+    const proj = mapProject({
+      ...row,
+      teamName: ownerTeam.name,
+      teamMcpEnabled: ownerTeam.mcpEnabled,
+    });
     await tx.insert(projectMember).values({ projectId: proj.id, userId: ownerId, role: 'owner' });
 
     // States (columns). When copied, every source column is carried over so views,
@@ -500,73 +500,38 @@ export async function copyProject(
     return proj;
   });
 
-  // Agents: the ones working in the source project. A copy inside the same team
-  // attaches those agents to the new project — an agent belongs to the team and one
-  // handle is unique in it, so a second copy of the same agent cannot exist. A copy
-  // into another team has no such agents, so each is created there, with its own bot
-  // user and a fresh API key: an external agent's key cannot be carried over, and its
-  // operator resets it in the new project.
-  if (inc.agents) {
+  // Agents: the ones working in the source project, attached to the new one as well.
+  // The team owns them and one handle is unique in it, so a second copy of the same
+  // agent cannot exist. A copy into another team carries no agent: creating one there
+  // would mean a new bot user and a new API key for something the operator did not ask
+  // for, and its skills and configured tools would be missing anyway.
+  if (inc.agents && sameTeam) {
     for (const a of await listAgents(source.teamId, sourceProjectId)) {
       // The member fields the agent reacts to, remapped onto the copies.
       const fieldTriggers = a.fieldTriggers.flatMap((trigger) => {
         const fieldId = maps.field.get(trigger.fieldId);
         return fieldId == null ? [] : [{ fieldId, delaySec: trigger.delaySec }];
       });
-
-      if (sameTeam) {
-        await updateAgent(
-          a.id,
-          ownerTeam.id,
-          {
-            projectIds: [...a.projects.map((p) => p.id), newProject.id],
-            fieldTriggers: [...a.fieldTriggers, ...fieldTriggers],
-          },
-          ownerId,
-        );
-        agentMap.set(a.id, a.id);
-        continue;
-      }
-
-      const agentInput: NewAgentInput = {
-        name: a.name,
-        username: a.username,
-        kind: a.kind,
-        // The model credential and the role belong to the source team, so the copy
-        // starts on the target team's default role and with no credential.
-        modelCredentialId: null,
-        model: a.model,
-        instructions: a.instructions,
-        tools: a.tools,
-        temperature: a.temperature,
-        maxSteps: a.maxSteps,
-        memoryEnabled: a.memoryEnabled,
-        memoryLastMessages: a.memoryLastMessages,
-        triggerOnMention: a.triggerOnMention,
-        triggerOnAssign: a.triggerOnAssign,
-        fieldTriggers,
-        delegationDelaySec: a.delegationDelaySec,
-        projectIds: [newProject.id],
-        roleId: await defaultTeamRoleId(ownerTeam.id),
-        // An 'owner'-scoped agent keeps its scope, bound to whoever made the copy —
-        // the source owner need not be a member of the new project.
-        runnerScope: a.runnerScope,
-        ownerUserId: ownerId,
-      };
-      const { agent } = await createAgent(ownerTeam.id, agentInput);
-      agentMap.set(a.id, agent.id);
+      await updateAgent(
+        a.id,
+        ownerTeam.id,
+        {
+          projectIds: [...a.projects.map((p) => p.id), newProject.id],
+          fieldTriggers: [...a.fieldTriggers, ...fieldTriggers],
+        },
+        ownerId,
+      );
     }
   }
 
-  // Schedules: re-created for the copied agents. next_run_at is recomputed from the
-  // cron so the copy starts on its own cadence rather than inheriting a past due time.
-  if (inc.schedules) {
+  // Schedules: re-created against the same agents, which only work in the copy when it
+  // stayed in the team. next_run_at is recomputed from the cron so the copy starts on
+  // its own cadence rather than inheriting a past due time.
+  if (inc.schedules && sameTeam) {
     for (const s of await listAgentSchedules(sourceProjectId, ownerId)) {
-      const newAgentId = agentMap.get(s.agentId);
-      if (newAgentId == null) continue;
       await createAgentSchedule({
         projectId: newProject.id,
-        agentId: newAgentId,
+        agentId: s.agentId,
         actorUserId: ownerId,
         name: s.name,
         prompt: s.prompt,

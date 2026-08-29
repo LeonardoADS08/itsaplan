@@ -126,6 +126,7 @@ export type TeamSection =
   | 'members'
   | 'roles'
   | 'integrations'
+  | 'mcp'
   | 'ai-agents'
   | 'agent-skills'
   | 'agent-tools'

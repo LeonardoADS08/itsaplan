@@ -45,7 +45,7 @@ export type AgentKind = 'external' | 'internal';
 // member's runs, so an agent added to a project works for the whole team. 'owner':
 // only runs triggered by the member who created it, for a runner whose machine and
 // credentials should serve nobody else.
-export type RunnerScope = 'owner' | 'project';
+export type RunnerScope = 'owner' | 'team';
 
 // One member custom field an agent reacts to, with the seconds its run waits before
 // the agent may pick it up.
@@ -93,7 +93,7 @@ export interface AiAgentRow {
   // The team_role the bot user acts under, in every project it is a member of.
   roleId: number;
   // The member who created the agent, and whose runs an 'owner'-scoped runner is
-  // limited to. 'project' scope lets the runner take any member's runs.
+  // limited to. 'team' scope lets the runner take any member's runs.
   ownerUserId: string | null;
   runnerScope: RunnerScope;
   // When a runner last polled for this agent, which is what presence is derived
@@ -262,7 +262,7 @@ export async function getAgentInProject(id: number, projectId: number): Promise<
 }
 
 // An agent may run for whoever triggered it: always an internal agent, which runs on
-// our side, and an external one only when its runner is project-scoped or the trigger
+// our side, and an external one only when its runner is team-scoped or the trigger
 // came from the agent's owner, whose machine that runner is. An 'owner'-scoped agent
 // without an owner names nobody to restrict it to — the account was deleted — so it
 // takes any member's runs rather than silently stopping.
@@ -400,15 +400,21 @@ export async function isProjectAgent(projectId: number, userId: string): Promise
   return rows.length > 0;
 }
 
-// True if the user id is an agent's bot user (in any project). A comment authored by
-// such a user never triggers agent runs, which stops agent-to-agent mention loops.
-export async function isAgentUser(userId: string): Promise<boolean> {
+// The team of the agent a bot user belongs to, or null when the user is a person.
+// An agent belongs to exactly one team, so this is the team its API key acts in.
+export async function agentTeam(userId: string): Promise<number | null> {
   const rows = await db
-    .select({ id: aiAgent.id })
+    .select({ teamId: aiAgent.teamId })
     .from(aiAgent)
     .where(eq(aiAgent.userId, userId))
     .limit(1);
-  return rows.length > 0;
+  return rows[0]?.teamId ?? null;
+}
+
+// True if the user id is an agent's bot user. A comment authored by such a user
+// never triggers agent runs, which stops agent-to-agent mention loops.
+export async function isAgentUser(userId: string): Promise<boolean> {
+  return (await agentTeam(userId)) !== null;
 }
 
 // An unknown, foreign, or non-LLM credential id would otherwise be stored and only
@@ -439,18 +445,6 @@ async function assertTeamRole(teamId: number, roleId: number): Promise<number> {
     .where(and(eq(teamRole.teamId, teamId), eq(teamRole.id, roleId)))
     .limit(1);
   if (!rows[0]) throw new HttpError(400, 'Role not found in this team');
-  return rows[0].id;
-}
-
-// The team's default role ("Member"), for a caller with no role of its own to name — a
-// project copied into another team, whose roles the source agent's role is not among.
-export async function defaultTeamRoleId(teamId: number): Promise<number> {
-  const rows = await db
-    .select({ id: teamRole.id })
-    .from(teamRole)
-    .where(and(eq(teamRole.teamId, teamId), eq(teamRole.isDefault, true)))
-    .limit(1);
-  if (!rows[0]) throw new HttpError(400, 'This team has no default role');
   return rows[0].id;
 }
 
@@ -579,7 +573,7 @@ export async function createAgent(
           delegationDelaySec: input.delegationDelaySec,
           roleId,
           ownerUserId: input.ownerUserId ?? null,
-          runnerScope: input.runnerScope ?? 'project',
+          runnerScope: input.runnerScope ?? 'team',
         })
         .returning({ id: aiAgent.id });
       // The agent belongs to the team's member list like a person does, on a standing

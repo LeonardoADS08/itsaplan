@@ -34,6 +34,9 @@ export interface ProjectRow {
   name: string;
   description: string;
   mcpEnabled: boolean;
+  // The team's own MCP switch, carried here because every MCP gate is a project
+  // gate: a project is reachable only while both flags are on.
+  teamMcpEnabled: boolean;
   initiativesEnabled: boolean;
   dashboardsEnabled: boolean;
   notesEnabled: boolean;
@@ -69,9 +72,13 @@ export interface ProjectListItem extends ProjectRow {
   permissions?: Permissions;
 }
 
-type ProjectWithTeam = typeof project.$inferSelect & { teamName: string };
+type ProjectWithTeam = typeof project.$inferSelect & { teamName: string; teamMcpEnabled: boolean };
 
-const projectWithTeam = { ...getTableColumns(project), teamName: team.name };
+const projectWithTeam = {
+  ...getTableColumns(project),
+  teamName: team.name,
+  teamMcpEnabled: team.mcpEnabled,
+};
 
 export function mapProject(row: ProjectWithTeam): ProjectRow {
   return {
@@ -82,6 +89,7 @@ export function mapProject(row: ProjectWithTeam): ProjectRow {
     name: row.name,
     description: row.description,
     mcpEnabled: row.mcpEnabled,
+    teamMcpEnabled: row.teamMcpEnabled,
     initiativesEnabled: row.initiativesEnabled,
     dashboardsEnabled: row.dashboardsEnabled,
     notesEnabled: row.notesEnabled,
@@ -97,15 +105,15 @@ export function mapProject(row: ProjectWithTeam): ProjectRow {
 }
 
 // Only the projects the user is a member of, ordered by key. Each carries the
-// caller's role in that project (owner | member). When mcpOnly is set, projects
-// with MCP disabled are excluded, so an MCP caller only sees projects it can work
-// with.
+// caller's role in that project (owner | member). When mcpOnly is set, projects out
+// of their team's MCP reach are excluded, so an MCP caller only sees projects it can
+// work with.
 export async function listProjects(
   userId: string,
   opts: { mcpOnly?: boolean; withPermissions?: boolean } = {},
 ): Promise<ProjectListItem[]> {
   const where = opts.mcpOnly
-    ? and(eq(projectMember.userId, userId), eq(project.mcpEnabled, true))
+    ? and(eq(projectMember.userId, userId), eq(project.mcpEnabled, true), eq(team.mcpEnabled, true))
     : eq(projectMember.userId, userId);
   const rows = await db
     .select({
@@ -166,24 +174,28 @@ export async function getProjectTeamId(projectId: number): Promise<number> {
 
 // The team a new project belongs to. `teamId` names it explicitly (the caller's
 // rank in it is checked by the route); without one it is the team the caller owns.
-export async function targetTeam(
-  userId: string,
-  teamId?: number,
-): Promise<{ id: number; name: string }> {
+export async function targetTeam(userId: string, teamId?: number): Promise<TargetTeam> {
   if (teamId == null) return ownedTeam(userId);
   const [row] = await db
-    .select({ id: team.id, name: team.name })
+    .select({ id: team.id, name: team.name, mcpEnabled: team.mcpEnabled })
     .from(team)
     .where(eq(team.id, teamId));
   if (!row) throw new HttpError(404, 'Team not found');
   return row;
 }
 
+// The team a project is created in, with what mapProject needs from it.
+export interface TargetTeam {
+  id: number;
+  name: string;
+  mcpEnabled: boolean;
+}
+
 // The team the caller owns. Every account is given one when it is created, so a
 // caller without one is a broken account rather than a state the UI can reach.
-async function ownedTeam(userId: string): Promise<{ id: number; name: string }> {
+async function ownedTeam(userId: string): Promise<TargetTeam> {
   const [row] = await db
-    .select({ id: team.id, name: team.name })
+    .select({ id: team.id, name: team.name, mcpEnabled: team.mcpEnabled })
     .from(teamMember)
     .innerJoin(team, eq(team.id, teamMember.teamId))
     .where(and(eq(teamMember.userId, userId), eq(teamMember.role, 'owner')))
@@ -320,7 +332,7 @@ export async function createProject(
     await tx
       .insert(projectSetting)
       .values({ projectId: row.id, key: AUTO_ARCHIVE_KEY, value: DEFAULT_AUTO_ARCHIVE });
-    return mapProject({ ...row, teamName: ownerTeam.name });
+    return mapProject({ ...row, teamName: ownerTeam.name, teamMcpEnabled: ownerTeam.mcpEnabled });
   });
 }
 
@@ -336,16 +348,6 @@ export async function updateProject(
   if (patch.description !== undefined) values.description = patch.description;
   if (Object.keys(values).length === 0) return getProjectById(projectId);
   await db.update(project).set(values).where(eq(project.id, projectId));
-  return getProjectById(projectId);
-}
-
-// Toggles whether the project is reachable through the MCP server. Owner-only at
-// the route; the flag gates every MCP tool call scoped to this project.
-export async function setProjectMcpEnabled(
-  projectId: number,
-  enabled: boolean,
-): Promise<ProjectRow | null> {
-  await db.update(project).set({ mcpEnabled: enabled }).where(eq(project.id, projectId));
   return getProjectById(projectId);
 }
 

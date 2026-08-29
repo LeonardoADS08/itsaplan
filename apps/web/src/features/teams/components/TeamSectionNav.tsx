@@ -10,6 +10,7 @@ import {
   FolderKanban,
   Info,
   Plug,
+  Radio,
   ShieldCheck,
   Users,
   Wrench,
@@ -28,11 +29,11 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // The sections of the open team, as the page's second rail: the team itself, its
-// projects and members, and what it configures for every project it owns — the roles
-// they assign from, the integration credentials their agents run on, the agents
-// themselves, the skills those agents load, the tools they can call, and the providers
-// they deliver notifications through. The counts come with the team list, so each is
-// shown before its section is opened.
+// projects and members, the roles they assign from, what MCP clients reach, and the
+// AI group — the integration credentials the agents run on, the agents themselves,
+// the skills they load and the tools they can call — with the notification providers
+// last. The counts come with the team list, so each is shown before its section is
+// opened.
 export default function TeamSectionNav({ team }: { team: Team }) {
   const t = useTranslations('teams.sections');
   const tNav = useTranslations('nav');
@@ -58,9 +59,10 @@ export default function TeamSectionNav({ team }: { team: Team }) {
     section('projects', t('projects.title'), FolderKanban, team.projectCount),
     section('members', t('members.title'), Users, team.memberCount),
     section('roles', t('roles.title'), ShieldCheck, team.roleCount),
-    section('integrations', t('integrations.title'), Plug, team.integrationCount),
+    section('mcp', t('mcp.title'), Radio),
   ];
   const ai = [
+    section('integrations', t('integrations.title'), Plug, team.integrationCount),
     section('ai-agents', t('agents.title'), Bot, team.agentCount),
     section('agent-skills', t('agentSkills.title'), BookText, team.skillCount),
     section('agent-tools', t('agentTools.title'), Wrench, team.toolCount),

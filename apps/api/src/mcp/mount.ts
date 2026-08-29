@@ -46,7 +46,7 @@ export function mountMcp(app: any): void {
         // refuses it for every planner route. Deactivation arrives over SCIM, after
         // the key was issued.
         if (session && session.user.active !== false) {
-          const server = buildMcpServer(mcpApp, apiKey);
+          const server = await buildMcpServer(mcpApp, apiKey, session.user.id);
           const transport = new WebStandardStreamableHTTPServerTransport({
             sessionIdGenerator: undefined,
           });

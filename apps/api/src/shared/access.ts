@@ -105,13 +105,14 @@ export async function requireMemberAdmin(
   return project;
 }
 
-// Denies an MCP tool call against a project that has MCP disabled. A no-op for
-// normal web/API requests (isMcp false), so the per-project toggle only gates the
-// MCP surface, not the UI. Called by the guards after the project is resolved.
+// Denies an MCP tool call against a project out of its team's MCP reach: the team
+// switched MCP off, or the project is not among the ones it covers. A no-op for
+// normal web/API requests (isMcp false), so the toggles only gate the MCP surface,
+// not the UI. Called by the guards after the project is resolved.
 export function assertMcpEnabled(project: ProjectRow, isMcp: boolean): void {
-  if (isMcp && !project.mcpEnabled) {
-    throw new HttpError(403, 'MCP is disabled for this project');
-  }
+  if (!isMcp) return;
+  if (!project.teamMcpEnabled) throw new HttpError(403, 'MCP is disabled for this team');
+  if (!project.mcpEnabled) throw new HttpError(403, 'MCP is disabled for this project');
 }
 
 // Formats a resource key for an error message: "custom_fields" -> "custom fields".

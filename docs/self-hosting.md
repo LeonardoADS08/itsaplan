@@ -84,6 +84,10 @@ docker compose up -d
 `git pull` is for the compose file itself; the services come from the registry. Changing
 `API_URL` or `APP_URL` afterwards only needs `docker compose up -d`.
 
+The api applies its migrations on startup, so an upgrade needs no database step. If you
+call the API from your own scripts or from an MCP client, read
+[breaking changes](breaking-changes.md) for the paths a release removed.
+
 ## Building from source instead
 
 ```bash

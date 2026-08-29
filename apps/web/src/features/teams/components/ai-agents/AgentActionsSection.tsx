@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from 'react';
 import { ListChecks } from 'lucide-react';
-import type { AgentTool } from '@/lib/api';
-import { grantedToolCount, groupInOrder } from '../../utils/agentForm';
+import type { AgentTool, Role } from '@/lib/api';
+import { grantedToolCount, groupInOrder, refusedByRole } from '../../utils/agentForm';
 import { AgentFormSection } from './AgentFormSection';
 import { AgentActionRow } from './AgentActionRow';
 import { AgentListSearch, SEARCH_THRESHOLD } from './AgentListSearch';
@@ -13,6 +13,10 @@ import { useTranslations } from 'next-intl';
 // and filterable by label and description. Read-only actions are always granted; the
 // rest are opt-in. The counter shows the tools the agent actually has (the granted ones
 // plus the always-on read tools) over the full catalog.
+//
+// An action only works when the agent's role permits it too, so the role being
+// evaluated is named here and the actions it refuses are marked. `role` is the one
+// selected in the form, so the marks follow a change of role without a reload.
 export default function AgentActionsSection({
   open,
   onOpenChange,
@@ -20,6 +24,7 @@ export default function AgentActionsSection({
   toolsLoading,
   selected,
   onChange,
+  role,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,6 +32,7 @@ export default function AgentActionsSection({
   toolsLoading: boolean;
   selected: string[];
   onChange: (keys: string[]) => void;
+  role: Role | undefined;
 }) {
   const t = useTranslations('teams.agents');
   const [query, setQuery] = useState('');
@@ -77,6 +83,9 @@ export default function AgentActionsSection({
       )}
       {!toolsLoading && tools.length > 0 && (
         <>
+          {role && (
+            <p className="text-xs text-muted-foreground">{t('roleRule', { role: role.name })}</p>
+          )}
           <div className="flex items-center justify-end gap-3">
             {tools.length > SEARCH_THRESHOLD && (
               <div className="min-w-0 flex-1">
@@ -114,6 +123,7 @@ export default function AgentActionsSection({
                       key={tool.key}
                       tool={tool}
                       checked={selected.includes(tool.key)}
+                      refused={refusedByRole(tool, role)}
                       onToggle={(on) => toggleTool(tool.key, on)}
                     />
                   ))}

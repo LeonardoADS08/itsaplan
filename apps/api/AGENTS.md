@@ -92,7 +92,11 @@ Enforced declaratively through macros, never imperative calls in handlers.
 - **Entity-by-id routes** (`/issues/:issueId`, `/views/:viewId`, …): define a local
   macro via `entityGuard(resource, notFound, resolveProjectId)` and set it in route
   options (e.g. `workItem: "edit"`). `GET /issues/:issueId` instead asserts
-  `assertPermission` on the fetched row.
+  `assertPermission` on the fetched row, and spreads `requiresPermission([...])` into its
+  `detail` so the MCP tool table still reports what it requires.
+- Every guard publishes the pair it asserts as `x-permission` on the route's OpenAPI
+  detail, which is where `mcp/generate.ts` reads it — Elysia deletes a macro's own key
+  from the route once it expands the macro, so there is nothing else to read it from.
 - Guards/macros wrap the `shared/access.ts` primitives. Handlers that still need
   `user` (project create, invite accept/reject, self-removal) call `requireUser(user)`.
 - **A member of the team joins a project directly** (`POST /projects/:key/members`,
@@ -108,6 +112,33 @@ Enforced declaratively through macros, never imperative calls in handlers.
   edit or remove one (409) because the next sync would undo the change. A project
   membership it grants comes with a `team_member` row in the owning team, added as a
   plain member and never removed again — the same order an accepted invite follows.
+
+## Team-owned agents
+
+Agents, the skill library, the configured tools and the integration credentials belong
+to the team; the routes are under `:teamId` and use the `teamPermission` guard. What
+stays under `:projectKey` is what happens in one project: an agent's chat, its runs and
+its schedules. `packages/db/AGENTS.md` has the schema side.
+
+Two decisions a reader would otherwise propose again:
+
+- **The team is the boundary.** There is no instance-level agent and no non-human-identity
+  flag on the user. An agent is reachable through its team or not at all.
+- **The `ai_agents` permissions are administrative.** A role granting `create` or `edit`
+  can make an agent, give it any role of the team, and read its key — so granting either
+  is granting everything the team's roles can reach.
+
+Over MCP the team is resolved from the API key rather than asked for (`mcp/server.ts`):
+an agent's key acts in its own team, a person with one team in theirs, and a person in
+several passes `teamId` after reading `list_teams`.
+
+MCP reach is the team's too. `team.mcp_enabled` opens the team to MCP clients, and
+`project.mcp_enabled` says which of its projects that reach covers; both are written
+from `PATCH /teams/:teamId/mcp`, never from the project. The project guards check both
+through `assertMcpEnabled`, which reads them off the resolved project row — `ProjectRow`
+carries `teamMcpEnabled` from the join it already makes. The team guards check the team
+switch through `assertTeamMcpAllowed`, which is what covers the resources no project
+flag reaches: the agents, the skills, the tools, the roles and the credentials.
 
 ## SCIM
 

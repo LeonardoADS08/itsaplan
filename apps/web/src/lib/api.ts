@@ -110,6 +110,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export interface Team {
   id: number;
   name: string;
+  // Whether the team is reachable over MCP at all, set in its MCP section. Off closes
+  // its own resources and every project it owns.
+  mcpEnabled: boolean;
   // The caller's rank in the team. The API also answers an agent's own key, which reads
   // 'agent' there; an agent never opens this app, so a person's rank is what arrives.
   role: TeamRole;
@@ -153,6 +156,9 @@ export interface TeamProject {
   key: string;
   name: string;
   description: string;
+  // Whether the team's MCP reach covers this project. Only counts while the team's
+  // own switch is on.
+  mcpEnabled: boolean;
   memberCount: number;
   owners: { userId: string; name: string; image: string | null }[];
   isMember: boolean;
@@ -197,9 +203,11 @@ export interface Project {
   key: string;
   name: string;
   description: string;
-  // Whether this project is reachable through the MCP server. Toggled by an owner
-  // on the MCP page; gates every MCP tool call scoped to the project.
+  // Whether the team's MCP reach covers this project, and whether the team is
+  // reachable over MCP at all. Both are set in the team's MCP section; a tool call
+  // scoped to this project needs both.
   mcpEnabled: boolean;
+  teamMcpEnabled: boolean;
   // The optional sections, toggled by an owner in Settings -> General. Read through
   // useProjectFeatures, which hides the navigation and the section itself.
   initiativesEnabled: boolean;
@@ -297,7 +305,7 @@ export interface Assignee {
   kind: 'member' | 'agent';
   agentKind: 'external' | 'internal' | null;
   // The user an 'owner'-scoped agent works for: delegating it to anyone else queues a
-  // run its runner never receives. Null for members and project-scoped agents.
+  // run its runner never receives. Null for members and team-scoped agents.
   restrictedToUserId: string | null;
 }
 
@@ -349,9 +357,9 @@ export interface AiAgent {
   // The team_role the agent acts under, in every project it works in.
   roleId: number;
   // The member who created the agent, and whose runs an 'owner'-scoped runner is
-  // limited to; 'project' scope serves any member's runs.
+  // limited to; 'team' scope serves any member's runs.
   ownerUserId: string | null;
-  runnerScope: 'owner' | 'project';
+  runnerScope: 'owner' | 'team';
   // When the agent's runner last polled, or null while none ever has.
   lastSeenAt: string | null;
   createdAt: string;
@@ -442,13 +450,16 @@ export interface AgentScheduleRun {
 
 // One work-item tool from the server-side catalog. `key` is stored on the agent
 // (grantable actions only); label/description are for the picker. `always` marks the
-// read-only tools that are always granted and shown non-editable.
+// read-only tools that are always granted and shown non-editable. `permission` is the
+// cell of the role matrix the action's route asserts, so the picker can mark an action
+// the agent's role refuses; absent when the route asks only for project membership.
 export interface AgentTool {
   key: string;
   group: 'issues' | 'initiatives' | 'cycles' | 'notes' | 'project';
   label: string;
   description: string;
   always: boolean;
+  permission?: [PermissionResource, PermissionAction];
 }
 
 export interface NewAiAgentInput {
@@ -470,7 +481,7 @@ export interface NewAiAgentInput {
   projectIds?: number[];
   // The team role the agent acts under, in every project it works in.
   roleId: number;
-  runnerScope?: 'owner' | 'project';
+  runnerScope?: 'owner' | 'team';
 }
 
 export interface AiAgentPatch {
@@ -490,7 +501,7 @@ export interface AiAgentPatch {
   delegationDelaySec?: number;
   projectIds?: number[];
   roleId?: number;
-  runnerScope?: 'owner' | 'project';
+  runnerScope?: 'owner' | 'team';
 }
 
 // A field of an integration's credential form (from the catalog). `type` "secret"
@@ -1093,10 +1104,18 @@ export interface ProjectFeatures {
   issueStats: boolean;
 }
 
-// A project's settings: MCP reachability and the enabled sections.
+// A project's settings: MCP reachability, which is read-only here, and the enabled
+// sections.
 export interface ProjectSettings {
   mcpEnabled: boolean;
+  teamMcpEnabled: boolean;
   features: ProjectFeatures;
+}
+
+// A team's MCP settings: the switch, and which of its projects the reach covers.
+export interface TeamMcpSettings {
+  enabled: boolean;
+  projects: { projectId: number; enabled: boolean }[];
 }
 
 // Per-team notification provider credentials (owner-managed) plus a member's own
@@ -2721,6 +2740,14 @@ export const api = {
   renameTeam: (teamId: number, input: { name: string }) =>
     request<Team>(`/teams/${teamId}`, { method: 'PATCH', body: JSON.stringify(input) }),
   leaveTeam: (teamId: number) => request<void>(`/teams/${teamId}/leave`, { method: 'POST' }),
+  updateTeamMcp: (
+    teamId: number,
+    patch: { enabled?: boolean; projects?: { projectId: number; enabled: boolean }[] },
+  ) =>
+    request<TeamMcpSettings>(`/teams/${teamId}/mcp`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
   // The projects a team owns: created, copied, and deleted by the team's own ranks
   // (owner/manager create and copy, owner deletes) rather than by project membership.
   createTeamProject: (
@@ -3585,10 +3612,7 @@ export const api = {
   // Project settings: MCP reachability and the enabled sections. Owner-only; the
   // current state comes with the project payload (getProject), so there is no read
   // here.
-  updateProjectSettings: (
-    projectKey: string,
-    patch: { mcpEnabled?: boolean; features?: Partial<ProjectFeatures> },
-  ) =>
+  updateProjectSettings: (projectKey: string, patch: { features?: Partial<ProjectFeatures> }) =>
     request<ProjectSettings>(`/projects/${projectKey}/settings`, {
       method: 'PATCH',
       body: JSON.stringify(patch),

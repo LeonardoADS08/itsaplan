@@ -223,6 +223,7 @@ export default function TeamAiAgentFields({
       toolsLoading={toolsLoading}
       selected={value.tools}
       onChange={(keys) => onChange({ tools: keys })}
+      role={roles.find((r) => r.id === value.roleId)}
     />
   );
 

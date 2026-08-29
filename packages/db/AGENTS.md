@@ -25,6 +25,25 @@ See root `AGENTS.md` for monorepo-wide rules.
 Migrations only — never `drizzle-kit push`. Every schema change goes through a
 committed migration in `drizzle/`.
 
+## Team-owned agents
+
+An AI agent is a row in `ai_agent` with a `team_id` and a `user_id`: the team that owns
+it, and the bot user it acts as. The team is the boundary — there is no instance-level
+agent and no flag on `user` marking a non-human identity, so anything that has to
+enumerate agents does it through `ai_agent`.
+
+What the team owns with it: `agent_skill`, `agent_tool` and `integration_credential`
+all carry a `team_id` and are shared by every project of the team. `agent_schedule` and
+`agent_run` carry a `project_id` — a run happens in one project.
+
+`ai_agent.role_id` is NOT NULL and references `team_role`: an agent always acts under a
+role of its team, and its rights are the intersection of that role and the actions in
+`ai_agent.tools`. `team_member.role` takes a fourth value, `'agent'`, so an agent stands
+in the team without being a person in it. The projects an agent works in are its bot
+user's `project_member` rows, the same as for a person.
+
+`ai_agent_team_username_uq` makes the mention handle unique per team, not per project.
+
 ## Revision engine
 
 `revision` holds one counter per scope — the change markers the clients poll through

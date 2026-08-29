@@ -403,6 +403,107 @@ describe('teams', () => {
     });
   });
 
+  describe('mcp settings', () => {
+    // Marks a request as an MCP tool dispatch, the way the MCP endpoint marks its own
+    // in-process requests. Forged here to reach the team-scoped gate without /mcp.
+    const asMcp = { headers: { 'x-mcp-loopback': '1' } };
+
+    it('starts with MCP on and every project covered', async () => {
+      const { api } = await signUpClient();
+      const teamId = (await api.teams.get()).data![0].id;
+      const project = (await api.projects.post({ key: 'MKT', name: 'Marketing' })).data!;
+
+      expect((await api.teams.get()).data?.[0]).toMatchObject({ mcpEnabled: true });
+      expect((await api.teams({ teamId }).projects.get()).data).toMatchObject([
+        { id: project.id, mcpEnabled: true },
+      ]);
+    });
+
+    it('sets the switch and the covered projects in one call', async () => {
+      const { api } = await signUpClient();
+      const teamId = (await api.teams.get()).data![0].id;
+      const on = (await api.projects.post({ key: 'ON', name: 'On' })).data!;
+      const off = (await api.projects.post({ key: 'OFF', name: 'Off' })).data!;
+
+      const res = await api.teams({ teamId }).mcp.patch({
+        enabled: false,
+        projects: [
+          { projectId: on.id, enabled: true },
+          { projectId: off.id, enabled: false },
+        ],
+      });
+      expect(res.status).toBe(200);
+      expect(res.data).toMatchObject({
+        enabled: false,
+        projects: [
+          { projectId: off.id, enabled: false },
+          { projectId: on.id, enabled: true },
+        ],
+      });
+      // The switch reaches the team list, which is what the UI reads it from.
+      expect((await api.teams.get()).data?.[0]).toMatchObject({ mcpEnabled: false });
+    });
+
+    it('ignores a project of another team', async () => {
+      const { api } = await signUpClient();
+      const teamId = (await api.teams.get()).data![0].id;
+      const other = await signUpClient();
+      const foreign = (await other.api.projects.post({ key: 'OTH', name: 'Other' })).data!;
+
+      const res = await api.teams({ teamId }).mcp.patch({
+        projects: [{ projectId: foreign.id, enabled: false }],
+      });
+      expect(res.status).toBe(200);
+      expect(res.data?.projects).toEqual([]);
+
+      // The other team's own project keeps its reach.
+      const otherTeamId = (await other.api.teams.get()).data![0].id;
+      expect((await other.api.teams({ teamId: otherTeamId }).projects.get()).data).toMatchObject([
+        { id: foreign.id, mcpEnabled: true },
+      ]);
+    });
+
+    it('lets a member read the state but not write it', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const member = await addProjectMember(owner.api, 'MKT');
+
+      expect((await member.teams({ teamId }).projects.get()).data).toMatchObject([
+        { key: 'MKT', mcpEnabled: true },
+      ]);
+      expect((await member.teams({ teamId }).mcp.patch({ enabled: false })).status).toBe(403);
+    });
+
+    it("closes the team's own resources to MCP once the switch is off", async () => {
+      const { api } = await signUpClient();
+      const teamId = (await api.teams.get()).data![0].id;
+
+      expect((await api.teams({ teamId })['ai-agents'].get(asMcp)).status).toBe(200);
+      await api.teams({ teamId }).mcp.patch({ enabled: false });
+
+      // The web app still reaches them; only the MCP surface closes.
+      expect((await api.teams({ teamId })['ai-agents'].get()).status).toBe(200);
+      const blocked = await api.teams({ teamId })['ai-agents'].get(asMcp);
+      expect(blocked.status).toBe(403);
+      expect((blocked.error?.value as { error: string }).error).toBe(
+        'MCP is disabled for this team',
+      );
+    });
+
+    it('hides a team with MCP off from an MCP list_teams call', async () => {
+      const { api } = await signUpClient();
+      const teamId = (await api.teams.get()).data![0].id;
+      const second = (await api.teams.post({ name: 'Growth' })).data!;
+      await api.teams({ teamId }).mcp.patch({ enabled: false });
+
+      expect((await api.teams.get()).data?.map((t) => t.id).sort()).toEqual(
+        [teamId, second.id].sort(),
+      );
+      expect((await api.teams.get(asMcp)).data?.map((t) => t.id)).toEqual([second.id]);
+    });
+  });
+
   describe('rename', () => {
     it('renames a team the caller owns', async () => {
       const { api } = await signUpClient();

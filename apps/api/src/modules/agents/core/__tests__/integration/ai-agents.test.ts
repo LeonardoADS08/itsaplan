@@ -48,6 +48,8 @@ describe('ai agents', () => {
       name: 'Webhook Bot',
       username: 'webhook',
       kind: 'external',
+      // Any member of the team may trigger it unless the scope is narrowed.
+      runnerScope: 'team',
     });
     expect(typeof res.data?.apiKey).toBe('string');
     expect(res.data?.apiKey?.length ?? 0).toBeGreaterThan(10);
@@ -399,7 +401,7 @@ describe('ai agents', () => {
     await agents(
       asOwner,
       teamId,
-    )({ agentId: created.data!.agent.id }).patch({ runnerScope: 'project' });
+    )({ agentId: created.data!.agent.id }).patch({ runnerScope: 'team' });
     const widened = await asOwner.projects({ projectKey: 'MKT' }).get();
     expect(
       widened.data?.assignees.find((a) => a.userId === created.data!.agent.userId)

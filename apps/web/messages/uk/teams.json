@@ -30,6 +30,10 @@
       "title": "Інтеграції",
       "description": "Ключі AI-провайдерів і облікові дані інструментів для проєктів команди."
     },
+    "mcp": {
+      "title": "MCP",
+      "description": "До яких проєктів команди AI-клієнти звертаються через Model Context Protocol."
+    },
     "agentSkills": {
       "title": "Навички",
       "description": "Багаторазові інструкції, які внутрішні агенти завантажують за потреби."
@@ -366,9 +370,9 @@
     "runnerWayApiHint": "Забирайте задачі та надсилайте результат через API за ключем агента — з будь-якого скрипта.",
     "runnerScope": "Джерело завдань",
     "runnerScopeOwner": "Лише мої",
-    "runnerScopeProject": "Усіх учасників",
+    "runnerScopeTeam": "Усіх учасників",
     "runnerScopeOwnerHint": "Лише завдання, які ставите ви.",
-    "runnerScopeProjectHint": "Завдання всіх учасників.",
+    "runnerScopeTeamHint": "Завдання всіх учасників.",
     "runnerCopyCommand": "Скопіювати команду",
     "runnerHelpOpen": "Як налаштувати раннер",
     "runnerHelpTitle": "Як запустити раннер",
@@ -464,6 +468,8 @@
     "triggerFieldCount": "{count, plural, one {# поле} few {# поля} many {# полів} other {# поля}}",
     "noMatch": "Нічого не знайдено за «{query}».",
     "useCustomModel": "Використати «{query}»",
+    "roleRule": "Перевіряється за роллю {role}: дія працює, лише якщо роль її теж дозволяє.",
+    "roleRefusesAction": "Роль не дозволяє цю дію.",
     "readOnlyAlwaysOn": "Доступ лише на читання завжди увімкнений, його не можна вимкнути.",
     "instructionsLabel": "Інструкції",
     "done": "Готово",
@@ -485,5 +491,17 @@
   "members": {
     "peopleGroup": "{count, plural, one {# людина} few {# людини} many {# людей} other {# людини}}",
     "agentGroup": "{count, plural, one {# агент} few {# агенти} many {# агентів} other {# агента}}"
+  },
+  "mcp": {
+    "title": "MCP",
+    "description": "Відкрийте команду для MCP-клієнтів і виберіть проєкти, що входять в охоплення. Клієнт отримує доступ того API-ключа, який використовує.",
+    "access": "Доступ MCP",
+    "accessHint": "Вимкнення закриває через MCP і команду, і всі її проєкти.",
+    "managerOnly": "Змінювати ці налаштування може лише власник або менеджер команди.",
+    "toggleAria": "Перемкнути доступ MCP для команди",
+    "projects": "Проєкти в охопленні",
+    "projectsHint": "Новий проєкт потрапляє в охоплення одразу при створенні, за умовчанням інстансу.",
+    "noProjects": "У команди поки немає проєктів.",
+    "projectToggleAria": "Перемкнути доступ MCP для {project}"
   }
 }

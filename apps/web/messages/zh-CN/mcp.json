@@ -1,11 +1,11 @@
 {
   "title": "MCP 服务器",
   "description": "通过模型上下文协议将 AI 代理连接到此项目。代理获得其所用 API 密钥对应的访问权限。",
-  "access": "MCP 访问",
-  "enabled": "已启用",
   "disabled": "已禁用",
-  "ownerOnly": "只有项目所有者可以启用或停用 MCP 访问。",
-  "toggleAria": "切换 MCP 访问",
+  "offForTeam": "团队 {team} 已关闭 MCP。",
+  "offForProject": "团队 {team} 已启用 MCP，但覆盖范围不包含此项目。",
+  "openTeamSettings": "打开团队的 MCP 设置",
+  "askManager": "请团队所有者或管理者开启：",
   "connectClient": "连接客户端",
   "keyHint": "在 <link>API 密钥</link>页面创建个人密钥，然后替换代码片段中的 <code>{apiKey}</code>。",
   "endpoint": "端点",
@@ -21,9 +21,5 @@
   },
   "clients": {
     "other": "其他"
-  },
-  "toast": {
-    "enabled": "MCP 访问已启用",
-    "disabled": "MCP 访问已禁用"
   }
 }

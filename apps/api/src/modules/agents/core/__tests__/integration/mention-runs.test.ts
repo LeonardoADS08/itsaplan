@@ -243,7 +243,7 @@ describe('agent mention runs', () => {
     await asMember.issues({ issueId: issue.id }).comments.post({ body: mention(ext.username) });
     expect((await runsForIssue(issue.id)).length).toBe(0);
 
-    await agents(asOwner, teamId)({ agentId: ext.id }).patch({ runnerScope: 'project' });
+    await agents(asOwner, teamId)({ agentId: ext.id }).patch({ runnerScope: 'team' });
     await asMember.issues({ issueId: issue.id }).comments.post({ body: mention(ext.username) });
     expect((await runsForIssue(issue.id)).length).toBe(1);
   });

@@ -36,7 +36,6 @@ import {
   createProject,
   updateProject,
   deleteProject,
-  setProjectMcpEnabled,
   projectFeatures,
   setProjectFeatures,
   getAutoArchiveSettings,
@@ -198,11 +197,13 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
   )
 
   // Reads the project's settings: whether it is reachable over MCP and which
-  // optional sections are enabled. Any member may read.
+  // optional sections are enabled. Any member may read. MCP reachability is reported
+  // as the two flags behind it, so the page can say which one closed the project.
   .get(
     '/projects/:projectKey/settings',
     ({ project }) => ({
       mcpEnabled: project.mcpEnabled,
+      teamMcpEnabled: project.teamMcpEnabled,
       features: projectFeatures(project),
     }),
     {
@@ -212,26 +213,23 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
     },
   )
 
-  // Updates the project's settings. Each field is optional; only the supplied ones
-  // change. mcpEnabled toggles MCP access to the project. features turns the
-  // optional sections on or off. Open to the project's owner and to an owner or
-  // manager of the team that runs it. Not an MCP tool: it governs MCP access, so an
-  // agent must not change it.
+  // Updates the project's settings: which optional sections are on. Open to the
+  // project's owner and to an owner or manager of the team that runs it. MCP
+  // reachability is not here — it is the team's, set in its MCP settings.
   .patch(
     '/projects/:projectKey/settings',
     async ({ project, body }) => {
       let current = project;
-      if (body.mcpEnabled !== undefined) {
-        const updated = await setProjectMcpEnabled(project.id, body.mcpEnabled);
-        if (!updated) throw new HttpError(404, 'Project not found');
-        current = updated;
-      }
       if (body.features !== undefined) {
         const updated = await setProjectFeatures(project.id, body.features);
         if (!updated) throw new HttpError(404, 'Project not found');
         current = updated;
       }
-      return { mcpEnabled: current.mcpEnabled, features: projectFeatures(current) };
+      return {
+        mcpEnabled: current.mcpEnabled,
+        teamMcpEnabled: current.teamMcpEnabled,
+        features: projectFeatures(current),
+      };
     },
     {
       body: updateProjectSettingsBody,

@@ -29,6 +29,13 @@ checklists and their items.
 search_issues and list_issues are for finding issues by text or by field, not for
 resolving an identifier.
 
+## Teams
+
+A team owns the projects, the AI agents, the skills and the configured tools. It is
+taken from your key: an agent's key acts in its own team, and so does a person who
+belongs to one team, so those tools take no teamId. A person in several teams passes
+teamId on each call and gets the ids from list_teams.
+
 ## Columns and state
 
 Column names are chosen per project and cannot be assumed. The stable part is the

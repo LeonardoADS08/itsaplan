@@ -1,11 +1,11 @@
 {
   "title": "خادم MCP",
   "description": "اربط وكلاء الذكاء الاصطناعي بالمشروع ده عبر Model Context Protocol. الوكيل بياخد نفس صلاحيات مفتاح واجهة البرمجة (API key) اللي بيستخدمه.",
-  "access": "الوصول عبر MCP",
-  "enabled": "مُفعَّل",
   "disabled": "مُعطَّل",
-  "ownerOnly": "مالك المشروع بس هو اللي يقدر يشغّل الوصول عبر MCP أو يوقفه.",
-  "toggleAria": "تبديل الوصول عبر MCP",
+  "offForTeam": "الوصول عبر MCP مقفول لفريق {team}.",
+  "offForProject": "فريق {team} مفعّل عنده MCP، لكن المشروع ده مش داخل في نطاقه.",
+  "openTeamSettings": "افتح إعدادات MCP بتاعة الفريق",
+  "askManager": "اطلب من مالك الفريق أو مديره إنه يفتحه:",
   "connectClient": "ربط عميل",
   "keyHint": "اعمل مفتاح شخصي من صفحة <link>مفاتيح واجهة البرمجة (API keys)</link>، وبعدين بدّل <code>{apiKey}</code> في المقتطف.",
   "endpoint": "نقطة النهاية",
@@ -21,9 +21,5 @@
   },
   "clients": {
     "other": "أخرى"
-  },
-  "toast": {
-    "enabled": "فُعِّل الوصول عبر MCP",
-    "disabled": "عُطِّل الوصول عبر MCP"
   }
 }

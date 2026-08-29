@@ -1,11 +1,11 @@
 {
   "title": "MCP Server",
   "description": "Connect AI agents to this project over the Model Context Protocol. An agent gets the access of the API key it uses.",
-  "access": "MCP access",
-  "enabled": "Enabled",
   "disabled": "Disabled",
-  "ownerOnly": "Only a project owner can turn MCP access on or off.",
-  "toggleAria": "Toggle MCP access",
+  "offForTeam": "MCP is switched off for the team {team}.",
+  "offForProject": "The team {team} has MCP on, but its reach does not cover this project.",
+  "openTeamSettings": "Open the team's MCP settings",
+  "askManager": "Ask an owner or a manager of the team to open it:",
   "connectClient": "Connect a client",
   "keyHint": "Create a personal key on the <link>API keys</link> page, then replace <code>{apiKey}</code> in the snippet.",
   "endpoint": "Endpoint",
@@ -21,9 +21,5 @@
   },
   "clients": {
     "other": "Other"
-  },
-  "toast": {
-    "enabled": "MCP access enabled",
-    "disabled": "MCP access disabled"
   }
 }

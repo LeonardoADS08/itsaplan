@@ -41,6 +41,24 @@ export function useTeamProjectQuery(teamId: number, projectId: number) {
   });
 }
 
+// The team's MCP switch and which of its projects the reach covers, written by an
+// owner or a manager. The current state is read off the team list and its projects,
+// which both carry it, so the write only invalidates them.
+export function useUpdateTeamMcp(teamId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (patch: {
+      enabled?: boolean;
+      projects?: { projectId: number; enabled: boolean }[];
+    }) => api.updateTeamMcp(teamId, patch),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.teams });
+      void qc.invalidateQueries({ queryKey: qk.teamProjects(teamId) });
+      void qc.invalidateQueries({ queryKey: qk.projects });
+    },
+  });
+}
+
 export function useCreateTeam() {
   const qc = useQueryClient();
   return useMutation({

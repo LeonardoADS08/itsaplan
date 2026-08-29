@@ -5,6 +5,8 @@ import { guards } from '#shared/guards';
 import { noContent } from '#shared/http';
 import { HttpError } from '#shared/lib';
 import { errors } from '#shared/responses';
+import { isMcpRequest } from '#shared/mcp-request';
+import { mcpTool } from '#mcp/generate';
 import {
   ProjectResponse,
   copyProjectBody,
@@ -16,6 +18,7 @@ import { copyProject } from '#modules/projects/copy';
 import {
   TeamDetailResponse,
   TeamListResponse,
+  TeamMcpResponse,
   TeamMemberListResponse,
   TeamProjectDetailResponse,
   TeamProjectListResponse,
@@ -24,6 +27,7 @@ import {
   teamParams,
   teamProjectParams,
   updateTeamBody,
+  updateTeamMcpBody,
 } from './model';
 import {
   createTeam,
@@ -34,6 +38,7 @@ import {
   listTeamProjects,
   listTeams,
   renameTeam,
+  setTeamMcp,
   teamOwnsProject,
 } from './service';
 
@@ -50,13 +55,22 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
   .use(authContext)
   .use(guards)
 
-  .get('/teams', ({ user }) => listTeams(requireUser(user).id), {
-    response: { 200: TeamListResponse, ...errors(401) },
-    detail: {
-      summary: 'List teams',
-      description: 'List the teams you are a member of, with your rank in each.',
+  .get(
+    '/teams',
+    ({ user, request }) =>
+      listTeams(requireUser(user).id, { mcpOnly: isMcpRequest(request.headers) }),
+    {
+      response: { 200: TeamListResponse, ...errors(401) },
+      detail: {
+        summary: 'List teams',
+        description:
+          'List the teams you are a member of, with your rank in each. Over MCP, the team is ' +
+          'taken from your key when you belong to one; call this to pick a team when a tool ' +
+          'asks for a teamId. Only teams with MCP switched on are listed there.',
+        ...mcpTool('list_teams'),
+      },
     },
-  })
+  )
 
   .get(
     '/teams/:teamId',
@@ -123,6 +137,23 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
       },
     },
   )
+
+  // The team's MCP settings: whether it is reachable at all, and which of its projects
+  // that reach covers. Written by an owner or a manager, who run the team; the current
+  // state is read off the team list and its projects, which both carry it. Not an MCP
+  // tool: it governs MCP access, so an agent must not change it.
+  .patch('/teams/:teamId/mcp', ({ body, membership }) => setTeamMcp(membership.teamId, body), {
+    teamManager: true,
+    params: teamParams,
+    body: updateTeamMcpBody,
+    response: { 200: TeamMcpResponse, ...errors(400, 401, 403, 404) },
+    detail: {
+      summary: "Update a team's MCP settings",
+      description:
+        'Switch MCP on or off for the team, and set which of its projects the reach covers. ' +
+        'Each field is optional; a project of another team is ignored.',
+    },
+  })
 
   .post(
     '/teams',

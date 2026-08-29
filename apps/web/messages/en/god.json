@@ -117,7 +117,7 @@
     "saved": "Project defaults saved",
     "projectDefaults": "Project defaults",
     "mcpEnabled": "Enable MCP on new projects",
-    "mcpEnabledHint": "A new project is reachable over MCP as soon as it is created."
+    "mcpEnabledHint": "A new project is in its team's MCP reach from the moment it is created."
   },
   "authentication": {
     "saved": "Authentication settings saved",
