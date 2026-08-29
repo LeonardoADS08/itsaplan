@@ -16,7 +16,7 @@
     },
     "members": {
       "title": "Team members",
-      "description": "Who belongs to the team, and the invites waiting to be answered."
+      "description": "Everyone in the team, and the invites that are still open."
     },
     "roles": {
       "title": "Project roles",
@@ -60,7 +60,7 @@
     "owners": "Owners",
     "members": "Members",
     "created": "Created",
-    "account": "Account",
+    "account": "Name",
     "role": "Role",
     "joined": "Joined",
     "permissions": "Permissions"
@@ -68,13 +68,12 @@
   "invite": {
     "action": "Invite to team",
     "title": "Invite to team",
-    "description": "They join the team's member list. Add them to a project afterwards.",
     "emailLabel": "Email",
     "emailPlaceholder": "name@example.com",
-    "roleLabel": "Rank in the team",
+    "roleLabel": "Team role",
     "roleHint": {
-      "member": "Reads the team and works in the projects they are added to.",
-      "manager": "Runs the team's projects and invites people to the team."
+      "member": "Works in the projects you add them to.",
+      "manager": "Manages projects and invites people to the team."
     },
     "submit": "Send invite",
     "joinsTeam": "Joins the team",
@@ -82,7 +81,7 @@
     "copyLink": "Copy link",
     "copied": "Copied",
     "revokeAction": "Revoke invite",
-    "revokeTitle": "Revoke invite for {email}",
+    "revokeTitle": "Revoke invite for {email}?",
     "revokeConfirm": "Revoke invite",
     "revokeDescription": "The link stops working. You can invite them again later.",
     "pending": "Invited"
@@ -175,7 +174,7 @@
   "leaveDialog": {
     "title": "Leave {name}?",
     "confirm": "Leave team",
-    "description": "You will no longer be a member of <strong>{name}</strong>. Its projects stay with the team, and you keep the ones you are a member of. To join again you need an owner to add you back."
+    "description": "You leave <strong>{name}</strong> and all its projects. The projects stay with the team. To come back, ask an owner to invite you."
   },
   "notifications": {
     "ownerOnly": "Only the team owner can manage notification providers.",
@@ -491,7 +490,12 @@
   "members": {
     "peopleGroup": "{count, plural, one {# person} other {# people}}",
     "agentGroup": "{count, plural, one {# agent} other {# agents}}",
-    "roleSaved": "{name} is now {role}"
+    "roleSaved": "{name} is now {role}",
+    "removeAction": "Remove from team",
+    "removeTitle": "Remove {name} from the team?",
+    "removeConfirm": "Remove from team",
+    "removeDescription": "They leave the team and all its projects. Their issues stay assigned to them. You can invite them again later.",
+    "removed": "Removed {name} from the team"
   },
   "mcp": {
     "title": "MCP",

@@ -2746,6 +2746,8 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ role }),
     }),
+  removeTeamMember: (teamId: number, userId: string) =>
+    request<void>(`/teams/${teamId}/members/${userId}`, { method: 'DELETE' }),
   updateTeamMcp: (
     teamId: number,
     patch: { enabled?: boolean; projects?: { projectId: number; enabled: boolean }[] },

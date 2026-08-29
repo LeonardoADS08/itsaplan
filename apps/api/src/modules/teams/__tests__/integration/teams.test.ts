@@ -643,6 +643,60 @@ describe('teams', () => {
     });
   });
 
+  describe('remove a member', () => {
+    it('drops the member and their access to the projects of the team', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const member = await addTeamMember(owner, teamId);
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: member.user.userId, role: 'member' });
+
+      const removed = await owner.api
+        .teams({ teamId })
+        .members({ userId: member.user.userId })
+        .delete();
+      expect(removed.status).toBe(204);
+
+      const members = await owner.api.teams({ teamId }).members.get();
+      expect(members.data?.some((one) => one.userId === member.user.userId)).toBe(false);
+      expect((await member.api.projects({ projectKey: 'MKT' }).get()).status).toBe(403);
+      expect((await member.api.teams.get()).data?.some((one) => one.id === teamId)).toBe(false);
+    });
+
+    it('rejects removing yourself, and 404s for someone outside the team', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      const outsider = await signUpClient();
+
+      const self = await owner.api
+        .teams({ teamId })
+        .members({ userId: owner.user.userId })
+        .delete();
+      expect(self.status).toBe(409);
+
+      const stranger = await owner.api
+        .teams({ teamId })
+        .members({ userId: outsider.user.userId })
+        .delete();
+      expect(stranger.status).toBe(404);
+    });
+
+    it('403s for a manager', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      const manager = await addTeamMember(owner, teamId, 'manager');
+      const member = await addTeamMember(owner, teamId);
+
+      const removed = await manager.api
+        .teams({ teamId })
+        .members({ userId: member.user.userId })
+        .delete();
+      expect(removed.status).toBe(403);
+    });
+  });
+
   describe('leave', () => {
     it('rejects the last owner leaving', async () => {
       const { api } = await signUpClient();
@@ -651,6 +705,19 @@ describe('teams', () => {
       const left = await api.teams({ teamId }).leave.post();
       expect(left.status).toBe(409);
       expect((await api.teams.get()).data).toHaveLength(1);
+    });
+
+    it('takes the projects of the team with it', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const member = await addTeamMember(owner, teamId);
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: member.user.userId, role: 'member' });
+
+      expect((await member.api.teams({ teamId }).leave.post()).status).toBe(204);
+      expect((await member.api.projects({ projectKey: 'MKT' }).get()).status).toBe(403);
     });
 
     it('404s for a team the caller is not a member of', async () => {

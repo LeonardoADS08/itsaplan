@@ -7,6 +7,7 @@ import {
   issue,
   issueActivity,
   project,
+  projectColumn,
   projectMember,
   team,
   teamMember,
@@ -527,9 +528,55 @@ export async function setTeamMemberRole(
     .where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)));
 }
 
-// Drops the caller's membership. The team keeps its projects, so a member who
-// leaves only loses the grouping, not the projects they belong to. The last owner
-// cannot leave: a team without an owner has nobody who can rename it.
+// Ends a team membership: the member leaves the team and every project it owns. What
+// they already did in those projects stays — issues keep their assignee and their
+// author.
+async function dropTeamMembership(teamId: number, userId: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    const teamProjects = tx
+      .select({ id: project.id })
+      .from(project)
+      .where(eq(project.teamId, teamId));
+    await tx
+      .delete(projectMember)
+      .where(and(eq(projectMember.userId, userId), inArray(projectMember.projectId, teamProjects)));
+    // A column cannot keep assigning issues to someone who no longer belongs to the
+    // project, the same rule remove_member follows.
+    await tx
+      .update(projectColumn)
+      .set({ autoAssignUserId: null })
+      .where(
+        and(
+          eq(projectColumn.autoAssignUserId, userId),
+          inArray(projectColumn.projectId, teamProjects),
+        ),
+      );
+    await tx
+      .delete(teamMember)
+      .where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)));
+  });
+}
+
+// Removes a member from the team. Nobody removes themselves — that is leaving the
+// team. Removing an owner is possible because the actor is one and stays, so the team
+// never loses its last owner.
+export async function removeTeamMember(
+  teamId: number,
+  actorId: string,
+  userId: string,
+): Promise<void> {
+  if (userId === actorId) throw new HttpError(409, 'Leave the team instead of removing yourself');
+
+  const current = await getTeamMembership(teamId, userId);
+  if (!current) throw new HttpError(404, 'Member not found');
+  if (current === 'agent') throw new HttpError(409, 'An agent is removed with its agent settings');
+
+  await dropTeamMembership(teamId, userId);
+}
+
+// Drops the caller's own membership, with their access to the team's projects. The
+// team keeps the projects themselves. The last owner cannot leave: a team without an
+// owner has nobody who can rename it.
 export async function leaveTeam(teamId: number, userId: string, role: TeamStanding): Promise<void> {
   if (role === 'owner') {
     const [{ count }] = await db
@@ -538,7 +585,5 @@ export async function leaveTeam(teamId: number, userId: string, role: TeamStandi
       .where(and(eq(teamMember.teamId, teamId), eq(teamMember.role, 'owner')));
     if (count === 1) throw new HttpError(409, 'The last owner cannot leave the team');
   }
-  await db
-    .delete(teamMember)
-    .where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)));
+  await dropTeamMembership(teamId, userId);
 }

@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { InviteRow } from '@/lib/api';
+import { toast } from 'sonner';
+import type { InviteRow, TeamMember } from '@/lib/api';
 import {
   useDeleteTeamInvite,
+  useRemoveTeamMember,
   useTeam,
   useTeamInvitesQuery,
   useTeamMembersQuery,
@@ -26,7 +28,8 @@ import TeamMemberGroupRow from './TeamMemberGroupRow';
 // The team's members, with the invites that have not been answered yet above them.
 // People and agents work on one board, so both are listed, in a group of their own
 // each; selecting an agent opens the section that configures it. Owners and managers
-// run the list, so only they invite and see the pending invites.
+// run the list, so only they invite and see the pending invites; only an owner removes
+// a person from it.
 export default function TeamMembersSection({ teamId }: { teamId: number }) {
   const t = useTranslations('teams');
   const tInvite = useTranslations('teams.invite');
@@ -36,8 +39,10 @@ export default function TeamMembersSection({ teamId }: { teamId: number }) {
   const canInvite = team != null && team.role !== 'member';
   const invitesQuery = useTeamInvitesQuery(teamId, canInvite);
   const deleteInvite = useDeleteTeamInvite(teamId);
+  const removeMember = useRemoveTeamMember(teamId);
   const [inviting, setInviting] = useState(false);
   const [target, setTarget] = useState<InviteRow | null>(null);
+  const [removing, setRemoving] = useState<TeamMember | null>(null);
   const router = useRouter();
   const { data: session } = useSession();
 
@@ -103,6 +108,7 @@ export default function TeamMembersSection({ teamId }: { teamId: number }) {
                   teamId={teamId}
                   viewerRole={team?.role ?? 'member'}
                   self={member.userId === session?.user.id}
+                  onRemove={setRemoving}
                 />
               ))}
               {agents.length > 0 && (
@@ -130,6 +136,21 @@ export default function TeamMembersSection({ teamId }: { teamId: number }) {
           teamRole={team.role}
           onClose={() => setInviting(false)}
         />
+      )}
+
+      {removing && (
+        <ConfirmDialog
+          title={t('members.removeTitle', { name: removing.name || removing.email })}
+          confirmLabel={t('members.removeConfirm')}
+          onConfirm={async () => {
+            await removeMember.mutateAsync(removing.userId);
+            setRemoving(null);
+            toast.success(t('members.removed', { name: removing.name || removing.email }));
+          }}
+          onClose={() => setRemoving(null)}
+        >
+          <div className="text-sm text-muted-foreground">{t('members.removeDescription')}</div>
+        </ConfirmDialog>
       )}
 
       {target && (

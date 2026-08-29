@@ -106,6 +106,24 @@ export function useSetTeamMemberRole(teamId: number) {
   });
 }
 
+// Removes a member from the team, and with them their access to the team's projects.
+// The whole team subtree changes — its member list and every project they were in —
+// and the team list carries the member count. The project member lists lose them too,
+// wherever one is cached.
+export function useRemoveTeamMember(teamId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => api.removeTeamMember(teamId, userId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.team(teamId) });
+      void qc.invalidateQueries({ queryKey: qk.teams });
+      void qc.invalidateQueries({ queryKey: qk.anyMembers });
+    },
+  });
+}
+
+// Leaving a team takes the caller's projects in it with them, so the project list is
+// refreshed along with the teams.
 export function useLeaveTeam() {
   const qc = useQueryClient();
   return useMutation({
@@ -113,6 +131,7 @@ export function useLeaveTeam() {
     onSuccess: (_result, teamId) => {
       qc.setQueryData<Team[]>(qk.teams, (prev) => prev?.filter((t) => t.id !== teamId));
       void qc.invalidateQueries({ queryKey: qk.teams });
+      void qc.invalidateQueries({ queryKey: qk.projects });
     },
   });
 }

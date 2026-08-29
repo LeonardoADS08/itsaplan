@@ -39,6 +39,7 @@ import {
   listTeamMembers,
   listTeamProjects,
   listTeams,
+  removeTeamMember,
   renameTeam,
   setTeamMcp,
   setTeamMemberRole,
@@ -300,6 +301,26 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
     },
   )
 
+  // An agent is removed with its agent settings, not here.
+  .delete(
+    '/teams/:teamId/members/:userId',
+    async ({ membership, params }) => {
+      await removeTeamMember(membership.teamId, membership.userId, params.userId);
+      return noContent();
+    },
+    {
+      teamOwner: true,
+      params: teamMemberParams,
+      response: { 204: t.Void(), ...errors(401, 403, 404, 409) },
+      detail: {
+        summary: 'Remove a member from the team',
+        description:
+          'Remove a member from the team and from every project the team owns. The issues ' +
+          'they were assigned to and the work they logged stay as they are.',
+      },
+    },
+  )
+
   .post(
     '/teams/:teamId/leave',
     async ({ membership }) => {
@@ -313,7 +334,8 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
       detail: {
         summary: 'Leave a team',
         description:
-          'Leave a team you belong to. The last owner cannot leave; the projects stay with the team.',
+          'Leave a team you belong to, and every project it owns. The last owner cannot ' +
+          'leave; the projects stay with the team.',
       },
     },
   );

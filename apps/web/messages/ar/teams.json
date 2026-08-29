@@ -16,7 +16,7 @@
     },
     "members": {
       "title": "أعضاء الفريق",
-      "description": "من ينتمي إلى الفريق والدعوات التي لم يُرد عليها بعد."
+      "description": "كل أعضاء الفريق، والدعوات التي لم يُرد عليها بعد."
     },
     "roles": {
       "title": "أدوار المشاريع",
@@ -60,7 +60,7 @@
     "owners": "المالكون",
     "members": "الأعضاء",
     "created": "أُنشئ",
-    "account": "الحساب",
+    "account": "الاسم",
     "role": "الدور",
     "joined": "تاريخ الانضمام",
     "permissions": "الصلاحيات"
@@ -68,13 +68,12 @@
   "invite": {
     "action": "دعوة للفريق",
     "title": "دعوة للفريق",
-    "description": "هيدخل قائمة أعضاء الفريق. ضيفه لمشروع بعد كده.",
     "emailLabel": "البريد",
     "emailPlaceholder": "name@example.com",
-    "roleLabel": "الرتبة في الفريق",
+    "roleLabel": "الدور في الفريق",
     "roleHint": {
-      "member": "يشوف الفريق ويشتغل في المشاريع اللي يتضاف ليها.",
-      "manager": "يدير مشاريع الفريق ويدعو ناس للفريق."
+      "member": "يعمل في المشاريع التي تضيفه إليها.",
+      "manager": "يدير المشاريع ويدعو أشخاصًا إلى الفريق."
     },
     "submit": "إرسال الدعوة",
     "joinsTeam": "هيدخل الفريق",
@@ -82,7 +81,7 @@
     "copyLink": "نسخ الرابط",
     "copied": "تم النسخ",
     "revokeAction": "إلغاء الدعوة",
-    "revokeTitle": "إلغاء دعوة {email}",
+    "revokeTitle": "إلغاء دعوة {email}؟",
     "revokeConfirm": "إلغاء الدعوة",
     "revokeDescription": "الرابط هيبطل يشتغل. تقدر تدعوه تاني بعدين.",
     "pending": "مدعو"
@@ -175,7 +174,7 @@
   "leaveDialog": {
     "title": "مغادرة {name}؟",
     "confirm": "مغادرة الفريق",
-    "description": "لن تعود عضوًا في <strong>{name}</strong>. تبقى مشاريعه مع الفريق، وتحتفظ بالمشاريع التي أنت عضو فيها. للعودة، على المالك إضافتك من جديد."
+    "description": "ستغادر <strong>{name}</strong> وكل مشاريعه. تبقى المشاريع مع الفريق. للعودة، اطلب من المالك دعوتك."
   },
   "notifications": {
     "ownerOnly": "يمكن لمالك الفريق وحده إدارة مزوّدي الإشعارات.",
@@ -491,7 +490,12 @@
   "members": {
     "peopleGroup": "{count, plural, zero {# أشخاص} one {شخص واحد} two {شخصان} few {# أشخاص} many {# شخصًا} other {# شخص}}",
     "agentGroup": "{count, plural, zero {# وكلاء} one {وكيل واحد} two {وكيلان} few {# وكلاء} many {# وكيلًا} other {# وكيل}}",
-    "roleSaved": "{name} الآن {role}"
+    "roleSaved": "{name} الآن {role}",
+    "removeAction": "إزالة من الفريق",
+    "removeTitle": "إزالة {name} من الفريق؟",
+    "removeConfirm": "إزالة من الفريق",
+    "removeDescription": "سيغادر الفريق وكل مشاريعه. تبقى المهام مسندة إليه. يمكنك دعوته من جديد لاحقًا.",
+    "removed": "{name} لم يعد في الفريق"
   },
   "mcp": {
     "title": "MCP",

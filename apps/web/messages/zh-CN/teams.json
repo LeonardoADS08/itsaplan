@@ -16,7 +16,7 @@
     },
     "members": {
       "title": "团队成员",
-      "description": "团队中的成员，以及尚未回应的邀请。"
+      "description": "团队里的所有成员，以及尚未回应的邀请。"
     },
     "roles": {
       "title": "项目角色",
@@ -60,7 +60,7 @@
     "owners": "所有者",
     "members": "成员",
     "created": "创建时间",
-    "account": "账户",
+    "account": "姓名",
     "role": "角色",
     "joined": "加入时间",
     "permissions": "权限"
@@ -68,13 +68,12 @@
   "invite": {
     "action": "邀请加入团队",
     "title": "邀请加入团队",
-    "description": "受邀者将加入团队成员列表。之后可以再把他们添加到项目。",
     "emailLabel": "邮箱",
     "emailPlaceholder": "name@example.com",
-    "roleLabel": "团队中的等级",
+    "roleLabel": "团队角色",
     "roleHint": {
-      "member": "可以查看团队，并在被添加到的项目中工作。",
-      "manager": "管理团队的项目，并邀请他人加入团队。"
+      "member": "在你添加他的项目中工作。",
+      "manager": "管理项目，并邀请他人加入团队。"
     },
     "submit": "发送邀请",
     "joinsTeam": "加入团队",
@@ -82,7 +81,7 @@
     "copyLink": "复制链接",
     "copied": "已复制",
     "revokeAction": "撤销邀请",
-    "revokeTitle": "撤销 {email} 的邀请",
+    "revokeTitle": "撤销 {email} 的邀请？",
     "revokeConfirm": "撤销邀请",
     "revokeDescription": "链接将失效。之后可以重新邀请。",
     "pending": "已邀请"
@@ -175,7 +174,7 @@
   "leaveDialog": {
     "title": "退出 {name}？",
     "confirm": "退出团队",
-    "description": "你将不再是 <strong>{name}</strong> 的成员。团队的项目仍归团队所有，你仍保留自己参与的项目。若要重新加入，需要所有者再次将你添加进来。"
+    "description": "你将离开 <strong>{name}</strong> 和它的全部项目。项目仍归团队所有。若要回来，请让所有者邀请你。"
   },
   "notifications": {
     "ownerOnly": "只有团队所有者可以管理通知提供商。",
@@ -491,7 +490,12 @@
   "members": {
     "peopleGroup": "{count} 人",
     "agentGroup": "{count} 个智能体",
-    "roleSaved": "{name} 现在是{role}"
+    "roleSaved": "{name} 现在是{role}",
+    "removeAction": "移出团队",
+    "removeTitle": "将 {name} 移出团队？",
+    "removeConfirm": "移出团队",
+    "removeDescription": "该成员将离开团队和它的全部项目。任务仍分配给他。之后可以重新邀请他。",
+    "removed": "{name} 已不在团队中"
   },
   "mcp": {
     "title": "MCP",
