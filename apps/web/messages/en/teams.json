@@ -32,7 +32,7 @@
     },
     "mcp": {
       "title": "MCP",
-      "description": "Which of the team's projects AI clients reach over the Model Context Protocol."
+      "description": "Which of the team's projects AI clients can reach."
     },
     "agentSkills": {
       "title": "Skills",
@@ -495,14 +495,16 @@
   },
   "mcp": {
     "title": "MCP",
-    "description": "Open the team to MCP clients and pick the projects the reach covers. A client gets the access of the API key it uses.",
+    "description": "Open the team to MCP clients and choose which projects they reach. A client sees what its API key allows.",
     "access": "MCP access",
-    "accessHint": "Off closes the team and every project it owns to MCP.",
-    "managerOnly": "Only a team owner or manager can change these settings.",
+    "accessHint": "Off closes the whole team to MCP.",
+    "managerOnly": "Only a team owner or manager can change this.",
+    "statusOn": "On",
+    "statusOff": "Off",
     "toggleAria": "Toggle MCP access for the team",
-    "projects": "Projects in reach",
-    "projectsHint": "A new project is covered from the moment it is created, following the instance default.",
-    "noProjects": "The team owns no projects yet.",
+    "projects": "Projects MCP can reach",
+    "projectsHint": "A new project starts with the instance default.",
+    "noProjects": "This team has no projects yet.",
     "projectToggleAria": "Toggle MCP access for {project}"
   }
 }

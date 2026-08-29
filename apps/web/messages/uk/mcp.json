@@ -1,13 +1,13 @@
 {
   "title": "MCP-сервер",
-  "description": "Підключайте AI-агентів до цього проєкту через Model Context Protocol. Агент отримує доступ того API-ключа, який використовує.",
+  "description": "Підключіть AI-агентів до проєкту через Model Context Protocol. Агент бачить те, що дозволяє його API-ключ.",
   "disabled": "Вимкнено",
   "offForTeam": "MCP вимкнено для команди {team}.",
-  "offForProject": "У команди {team} MCP увімкнено, але цей проєкт не входить в охоплення.",
+  "offForProject": "У команді {team} MCP увімкнено, але для цього проєкту вимкнено.",
   "openTeamSettings": "Відкрити налаштування MCP команди",
-  "askManager": "Попросіть власника або менеджера команди відкрити його:",
+  "askManager": "Попросіть власника або менеджера команди увімкнути його:",
   "connectClient": "Підключити клієнта",
-  "keyHint": "Створіть персональний ключ на сторінці <link>API-ключі</link>, потім замініть <code>{apiKey}</code> у сніпеті.",
+  "keyHint": "Створіть ключ на сторінці <link>API-ключі</link> та підставте його замість <code>{apiKey}</code> нижче.",
   "endpoint": "Endpoint",
   "clientTabsAria": "Клієнт",
   "addToFile": "Додайте до <code>{file}</code>",
@@ -16,8 +16,8 @@
   "notes": {
     "claudeCode": "Виконайте це в терміналі.",
     "vscode": "Потрібен GitHub Copilot.",
-    "claudeDesktop": "Claude Desktop зʼєднується з віддаленими серверами через міст mcp-remote. Потрібен Node.js.",
-    "other": "Підходить будь-який клієнт з підтримкою MCP через Streamable HTTP. Вкажіть йому endpoint і надсилайте заголовок Authorization: Bearer {apiKey}."
+    "claudeDesktop": "Claude Desktop потрібен міст mcp-remote і Node.js.",
+    "other": "Підійде будь-який клієнт з MCP через Streamable HTTP. Вкажіть ендпоінт і заголовок Authorization: Bearer {apiKey}."
   },
   "clients": {
     "other": "Інший"

@@ -101,6 +101,14 @@ next-intl, language from the `NEXT_LOCALE` cookie — no `[locale]` route segmen
   a row that appears, a field that fills in, a dialog that closes on the created entity — needs
   no success toast; one whose effect is invisible does. A mutation that renders its own error
   instead opts out with `meta: { suppressErrorToast: true }`.
+- **A reader gets values, not disabled controls.** When the current user may not change a
+  setting, render its state — an icon plus a word, a plain row — instead of a switch, input,
+  or button that is disabled. A disabled control reads the same whether it is off or merely
+  locked. Say once, next to the setting, who can change it. And when a switch that gates a
+  whole section is off, drop the section: the settings under it and the instructions that
+  depend on them change nothing until it is on. One read-only state looks the same everywhere:
+  the same icon and the same wording for on and off, in the row the control would have taken —
+  reuse the component that already renders it rather than styling a second variant.
 - Add shadcn components with `bunx shadcn@latest add <name>` (config in `components.json`).
 - **Don't edit `src/components/ui/`** — those files are generated and re-adding a component
   overwrites them. Style them from the outside instead: every primitive carries a `data-slot`

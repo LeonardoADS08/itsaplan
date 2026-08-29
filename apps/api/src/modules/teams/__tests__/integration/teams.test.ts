@@ -481,6 +481,20 @@ describe('teams', () => {
       ]);
     });
 
+    it('lets a manager write the settings', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      const project = (await owner.api.projects.post({ key: 'MKT', name: 'Marketing' })).data!;
+      const manager = await addTeamMember(owner, teamId, 'manager');
+
+      const res = await manager.api.teams({ teamId }).mcp.patch({
+        enabled: false,
+        projects: [{ projectId: project.id, enabled: false }],
+      });
+      expect(res.status).toBe(200);
+      expect((await owner.api.teams.get()).data?.[0]).toMatchObject({ mcpEnabled: false });
+    });
+
     it('lets a member read the state but not write it', async () => {
       const owner = await signUpClient();
       const teamId = (await owner.api.teams.get()).data![0].id;

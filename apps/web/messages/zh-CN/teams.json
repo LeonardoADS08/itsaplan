@@ -32,7 +32,7 @@
     },
     "mcp": {
       "title": "MCP",
-      "description": "AI 客户端可通过模型上下文协议访问团队的哪些项目。"
+      "description": "团队中哪些项目可被 AI 客户端通过 MCP 访问。"
     },
     "agentSkills": {
       "title": "技能",
@@ -495,13 +495,15 @@
   },
   "mcp": {
     "title": "MCP",
-    "description": "向 MCP 客户端开放团队，并选择覆盖范围内的项目。客户端获得其所用 API 密钥对应的访问权限。",
+    "description": "向 MCP 客户端开放团队，并选择它们可以访问的项目。客户端能看到的范围由所用 API 密钥决定。",
     "access": "MCP 访问",
-    "accessHint": "关闭后，团队及其所有项目均无法通过 MCP 访问。",
-    "managerOnly": "只有团队所有者或管理者可以修改这些设置。",
+    "accessHint": "关闭后，整个团队都无法通过 MCP 访问。",
+    "managerOnly": "只有团队所有者或管理者可以修改。",
+    "statusOn": "已开启",
+    "statusOff": "已关闭",
     "toggleAria": "切换团队的 MCP 访问",
-    "projects": "覆盖的项目",
-    "projectsHint": "新项目在创建时即按实例默认设置纳入覆盖范围。",
+    "projects": "MCP 可访问的项目",
+    "projectsHint": "新项目创建时采用实例的默认设置。",
     "noProjects": "该团队还没有项目。",
     "projectToggleAria": "切换 {project} 的 MCP 访问"
   }

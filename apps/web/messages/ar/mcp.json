@@ -1,13 +1,13 @@
 {
   "title": "خادم MCP",
-  "description": "اربط وكلاء الذكاء الاصطناعي بالمشروع ده عبر Model Context Protocol. الوكيل بياخد نفس صلاحيات مفتاح واجهة البرمجة (API key) اللي بيستخدمه.",
+  "description": "اربط وكلاء الذكاء الاصطناعي بالمشروع ده عبر Model Context Protocol. الوكيل بيشوف اللي مفتاح الـ API بتاعه بيسمح بيه.",
   "disabled": "مُعطَّل",
-  "offForTeam": "الوصول عبر MCP مقفول لفريق {team}.",
-  "offForProject": "فريق {team} مفعّل عنده MCP، لكن المشروع ده مش داخل في نطاقه.",
+  "offForTeam": "MCP مقفول لفريق {team}.",
+  "offForProject": "فريق {team} مفعّل عنده MCP، بس المشروع ده مقفول.",
   "openTeamSettings": "افتح إعدادات MCP بتاعة الفريق",
-  "askManager": "اطلب من مالك الفريق أو مديره إنه يفتحه:",
+  "askManager": "اطلب من مالك الفريق أو مديره إنه يفعّله:",
   "connectClient": "ربط عميل",
-  "keyHint": "اعمل مفتاح شخصي من صفحة <link>مفاتيح واجهة البرمجة (API keys)</link>، وبعدين بدّل <code>{apiKey}</code> في المقتطف.",
+  "keyHint": "اعمل مفتاح من صفحة <link>مفاتيح API</link>، وبعدين حط مكان <code>{apiKey}</code> تحت.",
   "endpoint": "نقطة النهاية",
   "clientTabsAria": "العميل",
   "addToFile": "أضِف إلى <code>{file}</code>",
@@ -16,8 +16,8 @@
   "notes": {
     "claudeCode": "نفّذ هذا في الطرفية.",
     "vscode": "يتطلّب GitHub Copilot.",
-    "claudeDesktop": "Claude Desktop بيوصل للخوادم البعيدة عن طريق جسر mcp-remote. محتاج Node.js.",
-    "other": "أي عميل بيدعم MCP عبر Streamable HTTP هيشتغل. وجّهه على نقطة النهاية وابعت ترويسة Authorization: Bearer {apiKey}."
+    "claudeDesktop": "Claude Desktop محتاج جسر mcp-remote و Node.js.",
+    "other": "أي عميل بيدعم MCP عبر Streamable HTTP هيشتغل. استخدم الـ endpoint مع هيدر Authorization: Bearer {apiKey}."
   },
   "clients": {
     "other": "أخرى"
