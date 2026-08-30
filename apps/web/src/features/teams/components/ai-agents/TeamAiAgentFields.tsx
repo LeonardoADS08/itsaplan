@@ -48,7 +48,6 @@ export default function TeamAiAgentFields({
   value,
   onChange,
   projects,
-  canAttachProjects,
   tools,
   toolsLoading,
   kindLocked,
@@ -71,7 +70,6 @@ export default function TeamAiAgentFields({
   // The projects of the team, which the Projects section attaches the agent to and the
   // Triggers section reads the member fields of.
   projects: TeamProject[];
-  canAttachProjects: boolean;
   tools: AgentTool[];
   toolsLoading: boolean;
   kindLocked: boolean;
@@ -178,7 +176,7 @@ export default function TeamAiAgentFields({
     />
   );
 
-  const projectsSection = canAttachProjects ? (
+  const projectsSection = (
     <AgentProjectsSection
       key="projects"
       {...sectionProps('projects')}
@@ -186,7 +184,7 @@ export default function TeamAiAgentFields({
       onChange={onChange}
       projects={projects}
     />
-  ) : null;
+  );
 
   const tokenSection = (
     <AgentTokenSection
@@ -345,17 +343,12 @@ export default function TeamAiAgentFields({
   if (expanded && value.kind === 'internal') {
     const navSections: SectionNavItem[] = [
       { id: 'basics', label: t('basics'), icon: IdCard },
-      ...(projectsSection
-        ? [
-            {
-              id: 'projects',
-              label: t('projects'),
-              icon: FolderKanban,
-              badge:
-                projects.length > 0 ? `${value.projectIds.length} / ${projects.length}` : undefined,
-            },
-          ]
-        : []),
+      {
+        id: 'projects',
+        label: t('projects'),
+        icon: FolderKanban,
+        badge: projects.length > 0 ? `${value.projectIds.length} / ${projects.length}` : undefined,
+      },
       { id: 'access', label: t('access'), icon: Shield },
       { id: 'model', label: t('model'), icon: Cpu },
       { id: 'advanced', label: t('advanced'), icon: SlidersHorizontal },

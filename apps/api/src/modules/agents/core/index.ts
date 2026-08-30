@@ -2,11 +2,12 @@ import { Elysia, t } from 'elysia';
 import { noContent, sseFrame, sseResponse } from '#shared/http';
 import { guards } from '#shared/guards';
 import { authContext } from '#shared/auth-context';
-import { requireUser, requireTeamPermission, type TeamMembership } from '#shared/access';
+import { requireUser, type TeamMembership } from '#shared/access';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
 import { teamParams } from '#modules/teams/model';
+import { runsTeam } from '#modules/teams/service';
 import {
   listAgents,
   createAgent,
@@ -16,6 +17,7 @@ import {
   getAgentById,
   getAgentInProject,
   agentScopeOf,
+  memberProjectIds,
   type AgentKind,
 } from './service';
 import {
@@ -119,20 +121,22 @@ async function requireVisibleAgent(agentId: number, membership: TeamMembership) 
   return agent;
 }
 
-// Attaching an agent to a project makes its bot user a member of that project, so
-// changing the set takes the permission adding a project member does, on top of the
-// ai_agents one. A call that sends the set it already has changes nothing and passes.
-async function requireProjectAttach(
+// The projects the caller may put the agent in: an owner or a manager of the team
+// reaches every project it owns, anyone else only the projects they are a member of
+// themselves. A project outside that set is refused. One the agent already works in
+// and the caller cannot see is kept, so a partial view never detaches it.
+async function resolveAgentProjects(
   membership: TeamMembership,
-  user: SessionUser | null,
   next: number[] | undefined,
   current: { id: number }[],
-): Promise<void> {
-  if (next == null) return;
-  const wanted = new Set(next);
-  const held = new Set(current.map((p) => p.id));
-  if (wanted.size === held.size && [...wanted].every((id) => held.has(id))) return;
-  await requireTeamPermission(membership.teamId, user, 'members_manage', 'create');
+): Promise<number[] | undefined> {
+  if (next == null || runsTeam(membership.role)) return next;
+  const mine = new Set(await memberProjectIds(membership.teamId, membership.userId));
+  if (next.some((id) => !mine.has(id))) {
+    throw new HttpError(403, 'You can only attach an agent to a project you are a member of');
+  }
+  const hidden = current.filter((p) => !mine.has(p.id)).map((p) => p.id);
+  return [...next, ...hidden];
 }
 
 // An agent belongs to a team, so managing it — creating, editing, attaching it to a
@@ -145,7 +149,8 @@ async function requireProjectAttach(
 // The permission is merged from every project role the caller holds in the team, so it
 // says what they may do, not which agents they may do it to. Which ones is
 // requireVisibleAgent above: everyone but an owner or a manager of the team reaches
-// only the agents working in a project they belong to.
+// only the agents working in a project they belong to, and resolveAgentProjects bounds
+// where they may put one the same way.
 //
 // Running an agent and chatting with it stay under :projectKey. Both act inside one
 // project, which is what the permission check and the agent's tools are bound to.
@@ -192,9 +197,13 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   .post(
     '/teams/:teamId/ai-agents',
     async ({ membership, body, set, user }) => {
-      await requireProjectAttach(membership, user, body.projectIds, []);
+      const projectIds = await resolveAgentProjects(membership, body.projectIds, []);
       set.status = 201;
-      return createAgent(membership.teamId, { ...body, ownerUserId: requireUser(user).id });
+      return createAgent(membership.teamId, {
+        ...body,
+        projectIds,
+        ownerUserId: requireUser(user).id,
+      });
     },
     {
       params: teamParams,
@@ -215,11 +224,11 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
     '/teams/:teamId/ai-agents/:agentId',
     async ({ params, membership, body, user }) => {
       const current = await requireVisibleAgent(params.agentId, membership);
-      await requireProjectAttach(membership, user, body.projectIds, current.projects);
+      const projectIds = await resolveAgentProjects(membership, body.projectIds, current.projects);
       const agent = await updateAgent(
         params.agentId,
         membership.teamId,
-        body,
+        { ...body, projectIds },
         requireUser(user).id,
       );
       if (!agent) throw new HttpError(404, 'Agent not found');
@@ -244,11 +253,11 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
     '/teams/:teamId/ai-agents/:agentId/projects',
     async ({ params, membership, body, user }) => {
       const current = await requireVisibleAgent(params.agentId, membership);
-      await requireProjectAttach(membership, user, body.projectIds, current.projects);
+      const projectIds = await resolveAgentProjects(membership, body.projectIds, current.projects);
       const agent = await updateAgent(
         params.agentId,
         membership.teamId,
-        { projectIds: body.projectIds },
+        { projectIds },
         requireUser(user).id,
       );
       if (!agent) throw new HttpError(404, 'Agent not found');
@@ -263,8 +272,8 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
         summary: "Set an AI agent's projects",
         description:
           'Replace the projects of the team the agent works in. Send the full set: a project ' +
-          'left out is detached. A project of another team is rejected. Changing the set also ' +
-          'takes the members_manage create permission: attaching makes the agent a member.',
+          'left out is detached. A project of another team is rejected, and so is one the ' +
+          'caller is not a member of unless they run the team.',
         ...mcpTool('set_ai_agent_projects'),
       },
     },

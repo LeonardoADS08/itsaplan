@@ -249,6 +249,18 @@ export function agentScopeOf(membership: {
   return runsTeam(membership.role) ? undefined : membership.userId;
 }
 
+// The projects of the team the user is a member of. Attaching an agent to a project
+// makes its bot user a member of that one, so the set bounds where someone who does
+// not run the team may put an agent.
+export async function memberProjectIds(teamId: number, userId: string): Promise<number[]> {
+  const rows = await db
+    .select({ id: project.id })
+    .from(projectMember)
+    .innerJoin(project, eq(project.id, projectMember.projectId))
+    .where(and(eq(project.teamId, teamId), eq(projectMember.userId, userId)));
+  return rows.map((row) => row.id);
+}
+
 // Whether the agent works in a project the user is a member of, as a condition on a
 // query over ai_agent. Both sides are project_member rows: the agent's bot user and
 // the user themselves.

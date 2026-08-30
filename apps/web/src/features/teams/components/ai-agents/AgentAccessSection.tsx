@@ -51,10 +51,11 @@ export default function AgentAccessSection({
           <span className="block text-sm font-medium">{t('role')}</span>
           <span className="block text-xs text-muted-foreground">{t('roleHint')}</span>
         </div>
-        {/* Keyed by the option set: the roles arrive after the first render, and a
-            Select that mounted without them keeps showing an empty trigger. */}
+        {/* Keyed by the options and the selection: both arrive after the first
+            render, and a Select that mounted without them keeps showing an empty
+            trigger. */}
         <Select
-          key={roles.map((r) => r.id).join(',')}
+          key={`${roles.map((r) => r.id).join(',')}:${selectedRoleValue}`}
           value={selectedRoleValue}
           onValueChange={(v) => onChange({ roleId: Number(v) })}
         >

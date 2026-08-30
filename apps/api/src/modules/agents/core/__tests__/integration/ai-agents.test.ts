@@ -843,27 +843,55 @@ describe('ai agents', () => {
     });
   });
 
-  // Attaching an agent to a project makes its bot user a member of that project, so it
-  // takes the permission adding a member does, not the ai_agents one alone.
-  it('refuses to change the projects of an agent without members_manage', async () => {
+  // Where an agent may work is bounded by the projects of the caller: a member who does
+  // not run the team attaches it to their own and to nothing else, and a project of the
+  // agent they cannot see stays attached through their edit.
+  it('bounds the projects an agent is attached to by the caller’s own', async () => {
     const { asOwner, teamId } = await setup();
+    const ops = await asOwner.teams({ teamId }).projects.post({ key: 'OPS', name: 'Operations' });
+    const mkt = await projectIdOf(asOwner, 'MKT');
     const created = await createAgent(asOwner, 'MKT', {
       name: 'Bot',
       username: 'bot',
       kind: 'external',
+      projectIds: [mkt, ops.data!.id],
     });
-    const ops = await asOwner.teams({ teamId }).projects.post({ key: 'OPS', name: 'Operations' });
     const role = await createRole(asOwner, 'MKT', {
       name: 'Agent handler',
-      permissions: { ai_agents: { read: true, edit: true } },
+      permissions: { ai_agents: { read: true, create: true, edit: true } },
     });
     const asMember = await addProjectMember(asOwner, 'MKT', role.data!.id);
     const agent = agents(asMember, teamId)({ agentId: created.data!.agent.id });
-    const mkt = await projectIdOf(asOwner, 'MKT');
+    const roleId = created.data!.agent.roleId;
 
+    // OPS is not a project of theirs, so they cannot put an agent there.
     expect((await agent.projects.put({ projectIds: [mkt, ops.data!.id] })).status).toBe(403);
-    // The set it already has changes nothing, so an edit that carries it goes through.
-    expect((await agent.patch({ name: 'Renamed', projectIds: [mkt] })).status).toBe(200);
+    expect(
+      (
+        await agents(asMember, teamId).post({
+          name: 'Ops bot',
+          username: 'ops-bot',
+          kind: 'external',
+          roleId,
+          projectIds: [ops.data!.id],
+        })
+      ).status,
+    ).toBe(403);
+
+    // Their own project is theirs to attach.
+    const mine = await agents(asMember, teamId).post({
+      name: 'Mkt bot',
+      username: 'mkt-bot',
+      kind: 'external',
+      roleId,
+      projectIds: [mkt],
+    });
+    expect(mine.data?.agent.projects.map((p) => p.key)).toEqual(['MKT']);
+
+    // Their set replaces only what they see: OPS is out of their view and stays.
+    const detached = await agent.projects.put({ projectIds: [] });
+    expect(detached.status).toBe(200);
+    expect(detached.data?.projects.map((p) => p.key)).toEqual(['OPS']);
   });
 
   // An agent is set up and talked to entirely over MCP. What stays out serves the chat

@@ -94,7 +94,7 @@
       "description": "Close issues when their pull requests merge on GitHub, GitLab, Gitea, Forgejo, or Bitbucket."
     },
     "ai-agents": {
-      "label": "Teammates",
+      "label": "AI Teammates",
       "description": "AI teammates working in this project."
     }
   }

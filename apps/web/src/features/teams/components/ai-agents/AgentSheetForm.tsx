@@ -49,16 +49,25 @@ import { useTranslations } from 'next-intl';
 // the agent exists (they are linked through a separate endpoint).
 export function AgentSheetForm({
   agent,
+  defaultProjectId,
   expanded = false,
   onCreated,
 }: {
   agent: AiAgent | null;
+  // The project a new agent starts attached to, set when the sheet is opened from
+  // inside one. An agent reaches nothing until it works in a project, so creating it
+  // there means creating it for that project.
+  defaultProjectId?: number;
   expanded?: boolean;
   onCreated: (agent: AiAgent) => void;
 }) {
   const t = useTranslations('teams.agents');
   const tCommon = useTranslations('common');
-  const [value, setValue] = useState<AgentFormValue>(() => initialAgentValue(agent ?? undefined));
+  const [value, setValue] = useState<AgentFormValue>(() => {
+    const initial = initialAgentValue(agent ?? undefined);
+    if (agent || defaultProjectId == null) return initial;
+    return { ...initial, projectIds: [defaultProjectId] };
+  });
   const isCreate = agent == null;
   // The plaintext key issued in this sheet, by the create or by a regenerate. It is
   // shown once in the API key section and cannot be read back from the server.
@@ -75,10 +84,6 @@ export function AgentSheetForm({
   const team = useTeamQuery(teamId).data;
   const canManageSkills = team?.permissions.agent_skills.edit ?? false;
   const canManageTools = team?.permissions.agent_tools.edit ?? false;
-  // Attaching the agent to a project makes it a member of that project, so the section
-  // belongs to whoever may add project members. The API refuses a changed set without
-  // it too.
-  const canAttachProjects = team?.permissions.members_manage.create ?? false;
 
   const projects = useTeamProjectsQuery(teamId).data ?? [];
   const toolsQuery = useAgentToolsQuery(teamId);
@@ -289,7 +294,6 @@ export function AgentSheetForm({
       value={value}
       onChange={merge}
       projects={projects}
-      canAttachProjects={canAttachProjects}
       tools={toolsQuery.data ?? []}
       toolsLoading={toolsQuery.isLoading}
       kindLocked={!isCreate}

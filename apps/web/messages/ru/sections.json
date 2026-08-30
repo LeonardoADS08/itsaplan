@@ -94,7 +94,7 @@
       "description": "Закрытие задач, когда их pull request смержен в GitHub, GitLab, Gitea, Forgejo или Bitbucket."
     },
     "ai-agents": {
-      "label": "Тиммейты",
+      "label": "AI-тиммейты",
       "description": "AI-тиммейты, которые работают в этом проекте."
     }
   }
