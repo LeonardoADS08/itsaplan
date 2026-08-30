@@ -39,7 +39,7 @@ export default function TeamInfoSection({ teamId }: { teamId: number }) {
   const name = draft ?? team.name;
   const isOwner = team.role === 'owner';
   const trimmed = name.trim();
-  const canSave = isOwner && trimmed !== '' && trimmed !== team.name && !renameTeam.isPending;
+  const canSave = trimmed !== '' && trimmed !== team.name && !renameTeam.isPending;
 
   async function save() {
     await renameTeam.mutateAsync({ teamId, name: trimmed });
@@ -64,15 +64,17 @@ export default function TeamInfoSection({ teamId }: { teamId: number }) {
       <div className="space-y-10">
         <SettingsSection title={t('team')} description={t('teamHint')}>
           <SettingsCard className="space-y-4 p-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="team-name">{tCommon('name')}</Label>
-              <Input
-                id="team-name"
-                value={name}
-                onChange={(e) => setDraft(e.target.value)}
-                disabled={!isOwner}
-              />
-            </div>
+            {isOwner ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="team-name">{tCommon('name')}</Label>
+                <Input id="team-name" value={name} onChange={(e) => setDraft(e.target.value)} />
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-4">
+                <Label>{tCommon('name')}</Label>
+                <span className="text-sm text-muted-foreground">{team.name}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-4">
               <Label>{t('role')}</Label>
               <Badge variant="secondary" className="font-normal">

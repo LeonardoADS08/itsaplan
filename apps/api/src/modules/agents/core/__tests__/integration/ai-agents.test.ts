@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { apiKeyApi, authedApi, type Api } from '#tests/helpers/app';
-import { listProjectRoles } from '#tests/helpers/roles';
+import { createRole, listProjectRoles } from '#tests/helpers/roles';
+import { addProjectMember } from '#tests/helpers/members';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { createAgent, projectIdOf } from '#tests/helpers/agents';
@@ -795,6 +796,74 @@ describe('ai agents', () => {
       ['ai-agents']({ agentId: created.data!.agent.id })
       .run.post({ prompt: '' });
     expect(res.status).toBe(400);
+  });
+
+  describe('visibility', () => {
+    // The ai_agents permission is merged from every project role the caller holds in
+    // the team, so it says what they may do, not to which agents. A member reaches only
+    // the agents working in a project they are in; the team's owner reaches them all.
+    it('scopes a member to the agents of the projects they joined', async () => {
+      const { asOwner, teamId } = await setup();
+      await asOwner.teams({ teamId }).projects.post({ key: 'OPS', name: 'Operations' });
+      const mine = await createAgent(asOwner, 'MKT', {
+        name: 'Marketing Bot',
+        username: 'mkt-bot',
+        kind: 'external',
+      });
+      const theirs = await createAgent(asOwner, 'OPS', {
+        name: 'Ops Bot',
+        username: 'ops-bot',
+        kind: 'external',
+      });
+      const role = await createRole(asOwner, 'MKT', {
+        name: 'Agent handler',
+        permissions: {
+          ai_agents: { read: true, edit: true, delete: true },
+          agent_skills: { read: true },
+        },
+      });
+      const asMember = await addProjectMember(asOwner, 'MKT', role.data!.id);
+
+      const list = await agents(asMember, teamId).get();
+      expect(list.data?.map((a) => a.username)).toEqual(['mkt-bot']);
+
+      const hidden = agents(asMember, teamId)({ agentId: theirs.data!.agent.id });
+      expect((await hidden.get()).status).toBe(404);
+      expect((await hidden.patch({ name: 'Renamed' })).status).toBe(404);
+      expect((await hidden.delete()).status).toBe(404);
+      expect((await hidden.skills.get()).status).toBe(404);
+
+      const own = agents(asMember, teamId)({ agentId: mine.data!.agent.id });
+      expect((await own.get()).status).toBe(200);
+      expect((await own.patch({ name: 'Renamed' })).status).toBe(200);
+
+      // The owner runs the team, so both agents stay theirs.
+      const all = await agents(asOwner, teamId).get();
+      expect(all.data?.map((a) => a.username).sort()).toEqual(['mkt-bot', 'ops-bot']);
+    });
+  });
+
+  // Attaching an agent to a project makes its bot user a member of that project, so it
+  // takes the permission adding a member does, not the ai_agents one alone.
+  it('refuses to change the projects of an agent without members_manage', async () => {
+    const { asOwner, teamId } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Bot',
+      username: 'bot',
+      kind: 'external',
+    });
+    const ops = await asOwner.teams({ teamId }).projects.post({ key: 'OPS', name: 'Operations' });
+    const role = await createRole(asOwner, 'MKT', {
+      name: 'Agent handler',
+      permissions: { ai_agents: { read: true, edit: true } },
+    });
+    const asMember = await addProjectMember(asOwner, 'MKT', role.data!.id);
+    const agent = agents(asMember, teamId)({ agentId: created.data!.agent.id });
+    const mkt = await projectIdOf(asOwner, 'MKT');
+
+    expect((await agent.projects.put({ projectIds: [mkt, ops.data!.id] })).status).toBe(403);
+    // The set it already has changes nothing, so an edit that carries it goes through.
+    expect((await agent.patch({ name: 'Renamed', projectIds: [mkt] })).status).toBe(200);
   });
 
   // An agent is set up and talked to entirely over MCP. What stays out serves the chat

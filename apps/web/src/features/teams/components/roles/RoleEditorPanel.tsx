@@ -57,7 +57,7 @@ export default function RoleEditorPanel({
 }) {
   const t = useTranslations('teams.roles');
   const tCommon = useTranslations('common');
-  const { actionLabel, resourceLabel, resourceHint, groupLabel } = usePermissionLabels();
+  const { actionLabel, resourceLabel, groupLabel } = usePermissionLabels();
   const [name, setName] = useState(role?.name ?? '');
   const [matrix, setMatrix] = useState<Permissions>(() => seedMatrix(catalog, role));
   const createRole = useCreateRole(teamId);
@@ -202,14 +202,7 @@ export default function RoleEditorPanel({
                     </tr>
                     {group.resources.map((resource) => (
                       <tr key={resource} className="border-b last:border-b-0">
-                        <td className="py-2 pr-2 pl-6">
-                          {resourceLabel(resource)}
-                          {resourceHint(resource) && (
-                            <span className="block text-xs font-normal text-muted-foreground">
-                              {resourceHint(resource)}
-                            </span>
-                          )}
-                        </td>
+                        <td className="py-2 pr-2 pl-6">{resourceLabel(resource)}</td>
                         {actions.map((action) => (
                           <td key={action} className="px-1 py-2 text-center">
                             <MatrixCheckbox

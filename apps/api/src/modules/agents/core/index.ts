@@ -2,7 +2,7 @@ import { Elysia, t } from 'elysia';
 import { noContent, sseFrame, sseResponse } from '#shared/http';
 import { guards } from '#shared/guards';
 import { authContext } from '#shared/auth-context';
-import { requireUser } from '#shared/access';
+import { requireUser, requireTeamPermission, type TeamMembership } from '#shared/access';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
@@ -15,6 +15,7 @@ import {
   regenerateKey,
   getAgentById,
   getAgentInProject,
+  agentScopeOf,
   type AgentKind,
 } from './service';
 import {
@@ -110,12 +111,41 @@ function threadStore(kind: AgentKind) {
       };
 }
 
+// The agent a :agentId path addresses, scoped by agentScopeOf — one of another team, and
+// one of a project the caller is not in, both read as missing.
+async function requireVisibleAgent(agentId: number, membership: TeamMembership) {
+  const agent = await getAgentById(agentId, membership.teamId, agentScopeOf(membership));
+  if (!agent) throw new HttpError(404, 'Agent not found');
+  return agent;
+}
+
+// Attaching an agent to a project makes its bot user a member of that project, so
+// changing the set takes the permission adding a project member does, on top of the
+// ai_agents one. A call that sends the set it already has changes nothing and passes.
+async function requireProjectAttach(
+  membership: TeamMembership,
+  user: SessionUser | null,
+  next: number[] | undefined,
+  current: { id: number }[],
+): Promise<void> {
+  if (next == null) return;
+  const wanted = new Set(next);
+  const held = new Set(current.map((p) => p.id));
+  if (wanted.size === held.size && [...wanted].every((id) => held.has(id))) return;
+  await requireTeamPermission(membership.teamId, user, 'members_manage', 'create');
+}
+
 // An agent belongs to a team, so managing it — creating, editing, attaching it to a
 // project, reading its key — sits under :teamId, gated by the ai_agents resource on the
 // team: its owner and managers always, an owner of one of its projects always, another
 // member when a project role of theirs grants it. One path carries one guard; a second
 // one under the project would need its own answer for a project member who holds no
 // rights in the team.
+//
+// The permission is merged from every project role the caller holds in the team, so it
+// says what they may do, not which agents they may do it to. Which ones is
+// requireVisibleAgent above: everyone but an owner or a manager of the team reaches
+// only the agents working in a project they belong to.
 //
 // Running an agent and chatting with it stay under :projectKey. Both act inside one
 // project, which is what the permission check and the agent's tools are bound to.
@@ -124,7 +154,8 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   .use(guards)
   .get(
     '/teams/:teamId/ai-agents',
-    ({ membership, query }) => listAgents(membership.teamId, query.projectId),
+    ({ membership, query }) =>
+      listAgents(membership.teamId, query.projectId, agentScopeOf(membership)),
     {
       params: teamParams,
       query: agentListQuery,
@@ -142,11 +173,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
 
   .get(
     '/teams/:teamId/ai-agents/:agentId',
-    async ({ params, membership }) => {
-      const agent = await getAgentById(params.agentId, membership.teamId);
-      if (!agent) throw new HttpError(404, 'Agent not found');
-      return agent;
-    },
+    ({ params, membership }) => requireVisibleAgent(params.agentId, membership),
     {
       params: agentParams,
       teamPermission: ['ai_agents', 'read'],
@@ -165,6 +192,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   .post(
     '/teams/:teamId/ai-agents',
     async ({ membership, body, set, user }) => {
+      await requireProjectAttach(membership, user, body.projectIds, []);
       set.status = 201;
       return createAgent(membership.teamId, { ...body, ownerUserId: requireUser(user).id });
     },
@@ -186,6 +214,8 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   .patch(
     '/teams/:teamId/ai-agents/:agentId',
     async ({ params, membership, body, user }) => {
+      const current = await requireVisibleAgent(params.agentId, membership);
+      await requireProjectAttach(membership, user, body.projectIds, current.projects);
       const agent = await updateAgent(
         params.agentId,
         membership.teamId,
@@ -213,6 +243,8 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   .put(
     '/teams/:teamId/ai-agents/:agentId/projects',
     async ({ params, membership, body, user }) => {
+      const current = await requireVisibleAgent(params.agentId, membership);
+      await requireProjectAttach(membership, user, body.projectIds, current.projects);
       const agent = await updateAgent(
         params.agentId,
         membership.teamId,
@@ -231,7 +263,8 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
         summary: "Set an AI agent's projects",
         description:
           'Replace the projects of the team the agent works in. Send the full set: a project ' +
-          'left out is detached. A project of another team is rejected.',
+          'left out is detached. A project of another team is rejected. Changing the set also ' +
+          'takes the members_manage create permission: attaching makes the agent a member.',
         ...mcpTool('set_ai_agent_projects'),
       },
     },
@@ -242,8 +275,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   .post(
     '/teams/:teamId/ai-agents/:agentId/regenerate-key',
     async ({ params, membership }) => {
-      const agent = await getAgentById(params.agentId, membership.teamId);
-      if (!agent) throw new HttpError(404, 'Agent not found');
+      const agent = await requireVisibleAgent(params.agentId, membership);
       if (agent.kind !== 'external')
         throw new HttpError(400, 'Internal agents do not use an API key');
       const apiKey = await regenerateKey(params.agentId, membership.teamId);
@@ -269,8 +301,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   .get(
     '/teams/:teamId/ai-agents/:agentId/runs',
     async ({ params, membership, query }) => {
-      const agent = await getAgentById(params.agentId, membership.teamId);
-      if (!agent) throw new HttpError(404, 'Agent not found');
+      await requireVisibleAgent(params.agentId, membership);
       return listAgentRuns(params.agentId, { before: query.before, limit: query.limit });
     },
     {
@@ -288,6 +319,7 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   .delete(
     '/teams/:teamId/ai-agents/:agentId',
     async ({ params, membership }) => {
+      await requireVisibleAgent(params.agentId, membership);
       const ok = await deleteAgent(params.agentId, membership.teamId);
       if (!ok) throw new HttpError(404, 'Agent not found');
       return noContent();

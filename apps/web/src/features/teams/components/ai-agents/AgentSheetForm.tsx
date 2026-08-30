@@ -75,6 +75,10 @@ export function AgentSheetForm({
   const team = useTeamQuery(teamId).data;
   const canManageSkills = team?.permissions.agent_skills.edit ?? false;
   const canManageTools = team?.permissions.agent_tools.edit ?? false;
+  // Attaching the agent to a project makes it a member of that project, so the section
+  // belongs to whoever may add project members. The API refuses a changed set without
+  // it too.
+  const canAttachProjects = team?.permissions.members_manage.create ?? false;
 
   const projects = useTeamProjectsQuery(teamId).data ?? [];
   const toolsQuery = useAgentToolsQuery(teamId);
@@ -285,6 +289,7 @@ export function AgentSheetForm({
       value={value}
       onChange={merge}
       projects={projects}
+      canAttachProjects={canAttachProjects}
       tools={toolsQuery.data ?? []}
       toolsLoading={toolsQuery.isLoading}
       kindLocked={!isCreate}

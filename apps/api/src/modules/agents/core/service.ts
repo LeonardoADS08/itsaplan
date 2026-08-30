@@ -21,6 +21,7 @@ import { encryptSecret, decryptSecret } from '@repo/crypto';
 import { normalizeToolKeys, ALWAYS_ON_ACTIONS } from './runtime/tools/catalog';
 import { deleteThreadsWhere } from './runtime/memory';
 import { listAgentMemberFieldIds } from '#modules/custom-fields/service';
+import { runsTeam, type TeamStanding } from '#modules/teams/service';
 
 // Data access for AI agents. Each agent is backed by a hidden bot user
 // (ai_agent.user_id -> user.id): that user is what a work item is assigned to,
@@ -238,18 +239,57 @@ function inProject(projectId: number) {
   return sql`exists (select 1 from ${projectMember} pm where pm.user_id = ${aiAgent.userId} and pm.project_id = ${projectId})`;
 }
 
+// The agents a caller may reach: an owner or a manager of the team reaches every agent
+// it has, anyone else only the ones working in a project they are a member of. The
+// reads below take the id it returns, or nothing when the whole team is theirs.
+export function agentScopeOf(membership: {
+  role: TeamStanding;
+  userId: string;
+}): string | undefined {
+  return runsTeam(membership.role) ? undefined : membership.userId;
+}
+
+// Whether the agent works in a project the user is a member of, as a condition on a
+// query over ai_agent. Both sides are project_member rows: the agent's bot user and
+// the user themselves.
+function sharesProjectWith(userId: string) {
+  return sql`exists (select 1 from ${projectMember} pm join ${projectMember} mine on mine.project_id = pm.project_id and mine.user_id = ${userId} where pm.user_id = ${aiAgent.userId})`;
+}
+
 // The agents of the team, or only the ones working in one of its projects when
-// projectId is given.
-export async function listAgents(teamId: number, projectId?: number): Promise<AiAgentRow[]> {
+// projectId is given. visibleTo narrows the list to the agents working in a project
+// that user belongs to; the callers who run the team pass nothing and see them all.
+export async function listAgents(
+  teamId: number,
+  projectId?: number,
+  visibleTo?: string,
+): Promise<AiAgentRow[]> {
   const rows = await agentQuery()
-    .where(and(eq(aiAgent.teamId, teamId), projectId == null ? undefined : inProject(projectId)))
+    .where(
+      and(
+        eq(aiAgent.teamId, teamId),
+        projectId == null ? undefined : inProject(projectId),
+        visibleTo == null ? undefined : sharesProjectWith(visibleTo),
+      ),
+    )
     .orderBy(user.name);
   return rows.map(mapAgent);
 }
 
-// Scoped to teamId so an id from another team resolves to null.
-export async function getAgentById(id: number, teamId: number): Promise<AiAgentRow | null> {
-  const rows = await agentQuery().where(and(eq(aiAgent.id, id), eq(aiAgent.teamId, teamId)));
+// Scoped to teamId so an id from another team resolves to null, and to visibleTo the
+// same way the list is: an agent of a project that user is not in reads as missing.
+export async function getAgentById(
+  id: number,
+  teamId: number,
+  visibleTo?: string,
+): Promise<AiAgentRow | null> {
+  const rows = await agentQuery().where(
+    and(
+      eq(aiAgent.id, id),
+      eq(aiAgent.teamId, teamId),
+      visibleTo == null ? undefined : sharesProjectWith(visibleTo),
+    ),
+  );
   return rows[0] ? mapAgent(rows[0]) : null;
 }
 
@@ -824,11 +864,21 @@ export async function deleteAgent(id: number, teamId: number): Promise<boolean> 
 }
 
 // True if the agent belongs to the team (guards addressing an agent by id).
-export async function agentInTeam(agentId: number, teamId: number): Promise<boolean> {
+export async function agentInTeam(
+  agentId: number,
+  teamId: number,
+  visibleTo?: string,
+): Promise<boolean> {
   const rows = await db
     .select({ id: aiAgent.id })
     .from(aiAgent)
-    .where(and(eq(aiAgent.id, agentId), eq(aiAgent.teamId, teamId)))
+    .where(
+      and(
+        eq(aiAgent.id, agentId),
+        eq(aiAgent.teamId, teamId),
+        visibleTo == null ? undefined : sharesProjectWith(visibleTo),
+      ),
+    )
     .limit(1);
   return rows.length > 0;
 }

@@ -20,6 +20,7 @@ import { useTranslations } from 'next-intl';
 import type { Team } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { teamSectionPath, type TeamSection } from '@/utils/paths';
+import { useTeamQuery } from '@/services/teams.service';
 import {
   SectionNav,
   sectionNavIdleClass,
@@ -33,11 +34,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 // AI group — the integration credentials the agents run on, the agents themselves,
 // the skills they load and the tools they can call — with the notification providers
 // last. The counts come with the team list, so each is shown before its section is
-// opened.
+// opened. A section the caller may not read is left out, and the AI group with it
+// once none of its four is readable.
 export default function TeamSectionNav({ team }: { team: Team }) {
   const t = useTranslations('teams.sections');
   const tNav = useTranslations('nav');
   const pathname = usePathname();
+  const permissions = useTeamQuery(team.id).data?.permissions;
 
   function section(
     id: TeamSection,
@@ -65,12 +68,22 @@ export default function TeamSectionNav({ team }: { team: Team }) {
     section('mcp', t('mcp.title'), Radio),
   ];
   const ai = [
-    section('integrations', t('integrations.title'), Plug, team.integrationCount),
-    section('ai-agents', t('agents.title'), Bot, team.agentCount),
-    section('agent-skills', t('agentSkills.title'), BookText, team.skillCount),
-    section('agent-tools', t('agentTools.title'), Wrench, team.toolCount),
+    ...(permissions?.integrations.read
+      ? [section('integrations', t('integrations.title'), Plug, team.integrationCount)]
+      : []),
+    ...(permissions?.ai_agents.read
+      ? [section('ai-agents', t('agents.title'), Bot, team.agentCount)]
+      : []),
+    ...(permissions?.agent_skills.read
+      ? [section('agent-skills', t('agentSkills.title'), BookText, team.skillCount)]
+      : []),
+    ...(permissions?.agent_tools.read
+      ? [section('agent-tools', t('agentTools.title'), Wrench, team.toolCount)]
+      : []),
   ];
-  const bottom = [section('notifications', t('notifications.title'), Bell)];
+  // The notification providers are the owner's: nobody else reads or writes them.
+  const bottom =
+    team.role === 'owner' ? [section('notifications', t('notifications.title'), Bell)] : [];
 
   const activeId = [...top, ...ai, ...bottom].find((entry) => entry.href === pathname)?.id ?? null;
   const aiActive = ai.some((entry) => entry.id === activeId);
@@ -86,22 +99,26 @@ export default function TeamSectionNav({ team }: { team: Team }) {
       </h2>
       <div className="space-y-0.5">
         <SectionNav sections={top} activeId={activeId} label={team.name} />
-        <Collapsible open={aiOpen} onOpenChange={setToggled}>
-          <CollapsibleTrigger className={cn(sectionNavItemClass, sectionNavIdleClass)}>
-            <Bot className="size-4 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 flex-1 truncate">{tNav('aiTeam')}</span>
-            <ChevronRight
-              className={cn(
-                'size-4 shrink-0 text-muted-foreground transition-transform duration-150',
-                aiOpen && 'rotate-90',
-              )}
-            />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="ps-4">
-            <SectionNav sections={ai} activeId={activeId} label={tNav('aiTeam')} />
-          </CollapsibleContent>
-        </Collapsible>
-        <SectionNav sections={bottom} activeId={activeId} label={team.name} />
+        {ai.length > 0 && (
+          <Collapsible open={aiOpen} onOpenChange={setToggled}>
+            <CollapsibleTrigger className={cn(sectionNavItemClass, sectionNavIdleClass)}>
+              <Bot className="size-4 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate">{tNav('aiTeam')}</span>
+              <ChevronRight
+                className={cn(
+                  'size-4 shrink-0 text-muted-foreground transition-transform duration-150',
+                  aiOpen && 'rotate-90',
+                )}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="ps-4">
+              <SectionNav sections={ai} activeId={activeId} label={tNav('aiTeam')} />
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+        {bottom.length > 0 && (
+          <SectionNav sections={bottom} activeId={activeId} label={team.name} />
+        )}
       </div>
     </div>
   );

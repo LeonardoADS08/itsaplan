@@ -20,9 +20,6 @@ export function usePermissionLabels() {
   return {
     resourceLabel: (resource: PermissionResource) =>
       label(`resources.${resource}`, prettify(resource)),
-    // What a resource grants beyond its name, where the name alone understates it.
-    // Empty for a resource that needs no warning.
-    resourceHint: (resource: PermissionResource) => label(`hints.${resource}`, ''),
     actionLabel: (action: PermissionAction) => label(`actions.${action}`, prettify(action)),
     groupLabel: (key: string) => label(`groups.${key}`, prettify(key)),
   };
