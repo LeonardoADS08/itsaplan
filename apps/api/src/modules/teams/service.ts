@@ -161,8 +161,16 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
     toolCounts,
   ] = await Promise.all([
     db
-      .select({ teamId: project.teamId, count: sql<number>`count(*)::int` })
+      .select({
+        teamId: project.teamId,
+        count: sql<number>`count(*)::int`,
+        joined: sql<number>`count(${projectMember.userId})::int`,
+      })
       .from(project)
+      .leftJoin(
+        projectMember,
+        and(eq(projectMember.projectId, project.id), eq(projectMember.userId, userId)),
+      )
       .where(inArray(project.teamId, ids))
       .groupBy(project.teamId),
     db
@@ -200,7 +208,7 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
       .where(inArray(agentTool.teamId, ids))
       .groupBy(agentTool.teamId),
   ]);
-  const projects = new Map(projectCounts.map((r) => [r.teamId, r.count]));
+  const projects = new Map(projectCounts.map((r) => [r.teamId, r]));
   const members = new Map(memberCounts.map((r) => [r.teamId, r]));
   const roles = new Map(roleCounts.map((r) => [r.teamId, r.count]));
   const integrations = new Map(integrationCounts.map((r) => [r.teamId, r.count]));
@@ -208,22 +216,26 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
   const skills = new Map(skillCounts.map((r) => [r.teamId, r.count]));
   const tools = new Map(toolCounts.map((r) => [r.teamId, r.count]));
 
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    mcpEnabled: row.mcpEnabled,
-    role: row.role as TeamStanding,
-    joinedAt: iso(row.joinedAt),
-    projectCount: projects.get(row.id) ?? 0,
-    memberCount: members.get(row.id)?.count ?? 0,
-    ownerCount: members.get(row.id)?.owners ?? 0,
-    roleCount: roles.get(row.id) ?? 0,
-    integrationCount: integrations.get(row.id) ?? 0,
-    agentCount: agents.get(row.id) ?? 0,
-    skillCount: skills.get(row.id) ?? 0,
-    toolCount: tools.get(row.id) ?? 0,
-    createdAt: iso(row.createdAt),
-  }));
+  return rows.map((row) => {
+    const standing = row.role as TeamStanding;
+    const projectCount = projects.get(row.id);
+    return {
+      id: row.id,
+      name: row.name,
+      mcpEnabled: row.mcpEnabled,
+      role: standing,
+      joinedAt: iso(row.joinedAt),
+      projectCount: (runsTeam(standing) ? projectCount?.count : projectCount?.joined) ?? 0,
+      memberCount: members.get(row.id)?.count ?? 0,
+      ownerCount: members.get(row.id)?.owners ?? 0,
+      roleCount: roles.get(row.id) ?? 0,
+      integrationCount: integrations.get(row.id) ?? 0,
+      agentCount: agents.get(row.id) ?? 0,
+      skillCount: skills.get(row.id) ?? 0,
+      toolCount: tools.get(row.id) ?? 0,
+      createdAt: iso(row.createdAt),
+    };
+  });
 }
 
 // The teams the user belongs to. mcpOnly drops the ones with MCP switched off, so an
@@ -345,8 +357,13 @@ export async function listTeamMembers(teamId: number): Promise<TeamMemberRow[]> 
   }));
 }
 
-// The projects the team owns, with the caller's own access to each.
-export async function listTeamProjects(teamId: number, userId: string): Promise<TeamProjectRow[]> {
+// The projects the team owns, with the caller's own access to each. Owners and
+// managers see every project of the team; everyone else only the ones they joined.
+export async function listTeamProjects(
+  teamId: number,
+  userId: string,
+  standing: TeamStanding,
+): Promise<TeamProjectRow[]> {
   const [projects, projectOwners] = await Promise.all([
     db
       .select({
@@ -385,7 +402,9 @@ export async function listTeamProjects(teamId: number, userId: string): Promise<
     ownersByProject.set(o.projectId, owners);
   }
 
-  return projects.map((p) => ({
+  const visible = runsTeam(standing) ? projects : projects.filter((p) => p.isMember);
+
+  return visible.map((p) => ({
     id: p.id,
     key: p.key,
     name: p.name,
@@ -422,11 +441,13 @@ export async function teamOwnsProject(teamId: number, projectId: number): Promis
 }
 
 // One project the team owns, with its issue stats and its members. Returns null
-// when the project is not owned by the team, so the route answers 404 for a
-// project of another team.
+// when the project is not owned by the team, and when the caller neither runs the
+// team nor belongs to the project, so the route answers 404 in both cases.
 export async function getTeamProject(
   teamId: number,
   projectId: number,
+  userId: string,
+  standing: TeamStanding,
 ): Promise<TeamProjectDetail | null> {
   if (!(await teamOwnsProject(teamId, projectId))) return null;
 
@@ -453,6 +474,8 @@ export async function getTeamProject(
       },
     ];
   });
+
+  if (!runsTeam(standing) && !memberRows.some((m) => m.userId === userId)) return null;
 
   return {
     lastActivityAt: activity,

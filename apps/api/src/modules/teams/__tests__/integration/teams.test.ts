@@ -148,6 +148,48 @@ describe('teams', () => {
       ]);
     });
 
+    it('lists a member only the projects they joined, and the manager all of them', async () => {
+      const { api } = await signUpClient();
+      const teamId = (await api.teams.get()).data![0].id;
+      await api.teams({ teamId }).projects.post({ key: 'MKT', name: 'Marketing' });
+      await api.teams({ teamId }).projects.post({ key: 'OPS', name: 'Operations' });
+      const member = await addTeamMember({ api }, teamId);
+      const manager = await addTeamMember({ api }, teamId, 'manager');
+      await api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: member.user.userId, role: 'member' });
+
+      const mine = await member.api.teams({ teamId }).projects.get();
+      expect(mine.data?.map((p) => p.key)).toEqual(['MKT']);
+      expect((await member.api.teams.get()).data?.[0]).toMatchObject({ projectCount: 1 });
+
+      const all = await manager.api.teams({ teamId }).projects.get();
+      expect(all.data?.map((p) => p.key)).toEqual(['MKT', 'OPS']);
+      expect((await manager.api.teams.get()).data?.[0]).toMatchObject({ projectCount: 2 });
+    });
+
+    it('hides a project detail from a member who did not join it', async () => {
+      const { api } = await signUpClient();
+      const teamId = (await api.teams.get()).data![0].id;
+      const project = await api.teams({ teamId }).projects.post({ key: 'MKT', name: 'Marketing' });
+      const member = await addTeamMember({ api }, teamId);
+
+      const denied = await member.api
+        .teams({ teamId })
+        .projects({ projectId: project.data!.id })
+        .get();
+      expect(denied.status).toBe(404);
+
+      await api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: member.user.userId, role: 'member' });
+      const allowed = await member.api
+        .teams({ teamId })
+        .projects({ projectId: project.data!.id })
+        .get();
+      expect(allowed.status).toBe(200);
+    });
+
     it('hides the members and the projects of a team the caller is not in', async () => {
       const { api } = await signUpClient();
       const other = await signUpClient();

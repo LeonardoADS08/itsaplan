@@ -109,7 +109,7 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
 
   .get(
     '/teams/:teamId/projects',
-    ({ membership }) => listTeamProjects(membership.teamId, membership.userId),
+    ({ membership }) => listTeamProjects(membership.teamId, membership.userId, membership.role),
     {
       teamMember: true,
       params: teamParams,
@@ -117,8 +117,8 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
       detail: {
         summary: 'List team projects',
         description:
-          'The projects a team owns. Every member sees them all, with whether they belong ' +
-          'to each.',
+          'The projects a team owns. An owner or a manager sees them all; anyone else only ' +
+          'the ones they belong to.',
       },
     },
   )
@@ -126,7 +126,12 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
   .get(
     '/teams/:teamId/projects/:projectId',
     async ({ membership, params }) => {
-      const detail = await getTeamProject(membership.teamId, params.projectId);
+      const detail = await getTeamProject(
+        membership.teamId,
+        params.projectId,
+        membership.userId,
+        membership.role,
+      );
       if (!detail) throw new HttpError(404, 'Project not found');
       return detail;
     },
@@ -137,7 +142,7 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
       detail: {
         summary: 'Get a project the team owns',
         description:
-          'How one project of the team is doing and who can reach it, with what each membership resolves to. Any team member may read it, including for a project they do not belong to.',
+          'How one project of the team is doing and who can reach it, with what each membership resolves to. An owner or a manager may read it for any project of the team; anyone else only for one they belong to.',
       },
     },
   )
