@@ -34,29 +34,50 @@ export type PermissionAction = (typeof PERMISSION_ACTIONS)[number];
 export type ResourcePermissions = Record<PermissionAction, boolean>;
 export type Permissions = Record<PermissionResource, ResourcePermissions>;
 
-function fill(value: boolean): ResourcePermissions {
-  return { create: value, edit: value, read: value, delete: value };
+// Resources that do not carry the whole CRUD set: the danger zone is the project's
+// settings page and its deletion, the workflow config is read and written, an invite
+// is created and revoked but never edited. A resource left out here supports every
+// action. Unsupported cells stay present and false, so a caller reads any cell
+// without a lookup.
+const RESOURCE_ACTIONS: Partial<Record<PermissionResource, readonly PermissionAction[]>> = {
+  danger_zone: ['read', 'delete'],
+  workflow_config: ['read', 'edit'],
+  members_invite: ['read', 'create', 'delete'],
+};
+
+export function resourceActions(resource: PermissionResource): readonly PermissionAction[] {
+  return RESOURCE_ACTIONS[resource] ?? PERMISSION_ACTIONS;
+}
+
+function allowAll(resource: PermissionResource): ResourcePermissions {
+  const allowed = resourceActions(resource);
+  return Object.fromEntries(
+    PERMISSION_ACTIONS.map((a) => [a, allowed.includes(a)]),
+  ) as ResourcePermissions;
+}
+
+function denyAll(): ResourcePermissions {
+  return { create: false, edit: false, read: false, delete: false };
 }
 
 // All flags false — the base a normalizer starts from.
 export function emptyPermissions(): Permissions {
-  return Object.fromEntries(PERMISSION_RESOURCES.map((r) => [r, fill(false)])) as Permissions;
+  return Object.fromEntries(PERMISSION_RESOURCES.map((r) => [r, denyAll()])) as Permissions;
 }
 
-// All flags true — the effective matrix for an owner (owners bypass checks, but
-// this is returned so a member context always carries a resolved matrix).
+// Every supported action allowed — the effective matrix for an owner (owners bypass
+// checks, but this is returned so a member context always carries a resolved matrix).
 export function fullPermissions(): Permissions {
-  return Object.fromEntries(PERMISSION_RESOURCES.map((r) => [r, fill(true)])) as Permissions;
+  return Object.fromEntries(PERMISSION_RESOURCES.map((r) => [r, allowAll(r)])) as Permissions;
 }
 
-// The default "Member" role every team is created with. Keep in sync with the matrix
-// migration 0107 seeds for a team that has none of its own.
+// The default "Member" role every team is created with. Teams seeded by migration
+// 0112 carry the older matrix, without members_manage.read and members_invite.read.
 export function defaultMemberPermissions(): Permissions {
   const p = emptyPermissions();
-  p.work_items = fill(true);
-  p.initiatives = fill(true);
-  p.cycles = fill(true);
-  p.note_boards = fill(true);
+  for (const r of ['work_items', 'initiatives', 'cycles', 'note_boards'] as const) {
+    p[r] = allowAll(r);
+  }
   p.dashboards.read = true;
   p.views.read = true;
   p.states.read = true;
@@ -64,12 +85,15 @@ export function defaultMemberPermissions(): Permissions {
   p.labels.read = true;
   p.ai_agents.read = true;
   p.custom_fields.read = true;
+  p.members_manage.read = true;
+  p.members_invite.read = true;
   return p;
 }
 
 // Coerces arbitrary input (a jsonb blob or a request body) into the canonical
 // matrix: every resource and action present, values coerced to booleans, unknown
-// keys dropped, missing entries defaulted to false.
+// keys dropped, missing entries and actions the resource does not support
+// defaulted to false.
 export function normalizePermissions(input: unknown): Permissions {
   const out = emptyPermissions();
   if (!input || typeof input !== 'object') return out;
@@ -78,7 +102,7 @@ export function normalizePermissions(input: unknown): Permissions {
     const entry = src[resource];
     if (!entry || typeof entry !== 'object') continue;
     const e = entry as Record<string, unknown>;
-    for (const action of PERMISSION_ACTIONS) {
+    for (const action of resourceActions(resource)) {
       out[resource][action] = e[action] === true;
     }
   }

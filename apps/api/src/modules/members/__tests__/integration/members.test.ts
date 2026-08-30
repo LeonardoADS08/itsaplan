@@ -213,9 +213,22 @@ describe('members', () => {
       expect(memberRow?.roleId).not.toBeNull();
     });
 
-    it('denies a plain member (default role lacks members_manage read) with 403', async () => {
+    it('lets a plain member read the list on the default role', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
+
+      const res = await member.api.projects({ projectKey: 'MKT' }).members.get();
+      expect(res.status).toBe(200);
+    });
+
+    it('denies a member whose role lacks members_manage read with 403', async () => {
+      const owner = await setupOwner();
+      const member = await addMember(owner);
+      const role = await createRole(owner.api, 'MKT', { name: 'Reader', permissions: {} });
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: member.user.userId })
+        .patch({ role: 'member', roleId: role.data!.id });
 
       const res = await member.api.projects({ projectKey: 'MKT' }).members.get();
       expect(res.status).toBe(403);

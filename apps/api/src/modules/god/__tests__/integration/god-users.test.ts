@@ -171,7 +171,7 @@ describe('god users', () => {
       });
       // The default Member role: full work items, no member management.
       expect(res.data?.projects[0].permissions.work_items.create).toBe(true);
-      expect(res.data?.projects[0].permissions.members_manage.read).toBe(false);
+      expect(res.data?.projects[0].permissions.members_manage.create).toBe(false);
     });
 
     it('counts every owner of a shared project', async () => {

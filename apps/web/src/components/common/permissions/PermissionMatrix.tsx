@@ -4,7 +4,7 @@ import { Fragment, useMemo } from 'react';
 import { Check, Minus } from 'lucide-react';
 import type { PermissionCatalog, Permissions } from '@/lib/api';
 import { useTranslations } from 'next-intl';
-import { groupResources, orderActions } from '@/utils/permissions';
+import { catalogSupport, groupResources, orderActions } from '@/utils/permissions';
 import { usePermissionLabels } from '@/hooks/usePermissionLabels';
 
 // A read-only permission matrix: resources down, actions across, a check where the
@@ -19,7 +19,11 @@ export default function PermissionMatrix({
 }) {
   const t = useTranslations('permissions');
   const { actionLabel, resourceLabel, groupLabel } = usePermissionLabels();
-  const groups = useMemo(() => groupResources(catalog.resources), [catalog.resources]);
+  const supports = useMemo(() => catalogSupport(catalog), [catalog]);
+  const groups = useMemo(
+    () => groupResources(catalog.resources.map((r) => r.key)),
+    [catalog.resources],
+  );
   const actions = useMemo(() => orderActions(catalog.actions), [catalog.actions]);
 
   return (
@@ -52,14 +56,18 @@ export default function PermissionMatrix({
                 <td className="py-1.5 pr-2 pl-4 text-xs">{resourceLabel(resource)}</td>
                 {actions.map((action) => (
                   <td key={action} className="px-1 py-1.5 text-center">
-                    {permissions[resource]?.[action] ? (
-                      <Check className="mx-auto size-3.5 text-primary" aria-label={t('allowed')} />
-                    ) : (
-                      <Minus
-                        className="mx-auto size-3.5 text-muted-foreground/40"
-                        aria-label={t('notAllowed')}
-                      />
-                    )}
+                    {supports(resource, action) &&
+                      (permissions[resource]?.[action] ? (
+                        <Check
+                          className="mx-auto size-3.5 text-primary"
+                          aria-label={t('allowed')}
+                        />
+                      ) : (
+                        <Minus
+                          className="mx-auto size-3.5 text-muted-foreground/40"
+                          aria-label={t('notAllowed')}
+                        />
+                      ))}
                   </td>
                 ))}
               </tr>

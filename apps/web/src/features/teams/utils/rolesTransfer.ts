@@ -4,13 +4,8 @@
 // robust across catalog changes. The default role is never included — every team has
 // one of its own.
 
-import type {
-  PermissionAction,
-  PermissionCatalog,
-  PermissionResource,
-  Permissions,
-  Role,
-} from '@/lib/api';
+import type { PermissionCatalog, Permissions, Role } from '@/lib/api';
+import { matrixFromCatalog } from '@/utils/permissions';
 
 const PAYLOAD_TYPE = 'plan.roles';
 const PAYLOAD_VERSION = 1;
@@ -46,25 +41,6 @@ export function serializeRoles(roles: Role[]): string {
   return JSON.stringify(envelope, null, 2);
 }
 
-// Builds a full matrix from the catalog, reading each flag from the input and
-// defaulting anything missing (or non-boolean) to false. Unknown resources/actions in
-// the input are dropped.
-function normalizeMatrix(input: unknown, catalog: PermissionCatalog): Permissions {
-  const src = (input && typeof input === 'object' ? input : {}) as Record<
-    string,
-    Record<string, unknown>
-  >;
-  const out = {} as Permissions;
-  for (const resource of catalog.resources) {
-    const row = {} as Record<PermissionAction, boolean>;
-    for (const action of catalog.actions) {
-      row[action] = src[resource]?.[action] === true;
-    }
-    out[resource as PermissionResource] = row;
-  }
-  return out;
-}
-
 // Parses clipboard text into normalized roles, or throws with a user-facing message.
 export function parseRolesText(text: string, catalog: PermissionCatalog): RoleTransfer[] {
   let data: unknown;
@@ -85,7 +61,7 @@ export function parseRolesText(text: string, catalog: PermissionCatalog): RoleTr
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    roles.push({ name, permissions: normalizeMatrix(raw.permissions, catalog) });
+    roles.push({ name, permissions: matrixFromCatalog(catalog, raw.permissions) });
   }
   if (roles.length === 0) throw new Error('empty');
   return roles;

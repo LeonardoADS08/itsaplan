@@ -16,22 +16,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateRole, useUpdateRole } from '@/services/roles.service';
 import { MatrixCheckbox } from './MatrixCheckbox';
-import { groupResources, orderActions } from '@/utils/permissions';
+import {
+  catalogSupport,
+  groupResources,
+  matrixFromCatalog,
+  orderActions,
+} from '@/utils/permissions';
 import { usePermissionLabels } from '@/hooks/usePermissionLabels';
-
-// A full permission matrix over the catalog, seeded from an existing role (edit)
-// or all-false (create). Building from the catalog keeps the grid in sync with the
-// API even if the role omitted a cell the catalog defines.
-function seedMatrix(catalog: PermissionCatalog, role: Role | null): Permissions {
-  const matrix = {} as Permissions;
-  for (const resource of catalog.resources) {
-    matrix[resource] = {} as Permissions[PermissionResource];
-    for (const action of catalog.actions) {
-      matrix[resource][action] = role?.permissions[resource]?.[action] === true;
-    }
-  }
-  return matrix;
-}
 
 // The check state of a set of cells: all on, all off, or mixed.
 function triState(values: boolean[]): boolean | 'indeterminate' {
@@ -59,30 +50,36 @@ export default function RoleEditorPanel({
   const tCommon = useTranslations('common');
   const { actionLabel, resourceLabel, groupLabel } = usePermissionLabels();
   const [name, setName] = useState(role?.name ?? '');
-  const [matrix, setMatrix] = useState<Permissions>(() => seedMatrix(catalog, role));
+  const [matrix, setMatrix] = useState<Permissions>(() =>
+    matrixFromCatalog(catalog, role?.permissions),
+  );
   const createRole = useCreateRole(teamId);
   const updateRole = useUpdateRole(teamId);
   const busy = createRole.isPending || updateRole.isPending;
 
   useExitOnEscape(onClose);
 
-  const groups = useMemo(() => groupResources(catalog.resources), [catalog.resources]);
+  const supports = useMemo(() => catalogSupport(catalog), [catalog]);
+  const resourceKeys = useMemo(() => catalog.resources.map((r) => r.key), [catalog.resources]);
+  const groups = useMemo(() => groupResources(resourceKeys), [resourceKeys]);
   const actions = useMemo(() => orderActions(catalog.actions), [catalog.actions]);
 
-  // Set `value` on every (resource, action) pair in the given sets.
+  // Set `value` on every supported (resource, action) pair in the given sets.
   function apply(resources: PermissionResource[], actions: PermissionAction[], value: boolean) {
     setMatrix((m) => {
       const next = { ...m };
       for (const resource of resources) {
         next[resource] = { ...next[resource] };
-        for (const action of actions) next[resource][action] = value;
+        for (const action of actions) {
+          if (supports(resource, action)) next[resource][action] = value;
+        }
       }
       return next;
     });
   }
 
   const cellsFor = (resources: PermissionResource[], actions: PermissionAction[]) =>
-    resources.flatMap((r) => actions.map((a) => matrix[r][a]));
+    resources.flatMap((r) => actions.filter((a) => supports(r, a)).map((a) => matrix[r][a]));
 
   async function save() {
     const trimmed = name.trim();
@@ -140,7 +137,7 @@ export default function RoleEditorPanel({
               <tr className="border-b">
                 <th className="py-2 pr-2 text-left text-xs font-medium">{t('resourceColumn')}</th>
                 {actions.map((action) => {
-                  const state = triState(cellsFor(catalog.resources, [action]));
+                  const state = triState(cellsFor(resourceKeys, [action]));
                   return (
                     <th key={action} className="px-1 py-2">
                       <div className="flex flex-col items-center gap-1">
@@ -149,7 +146,7 @@ export default function RoleEditorPanel({
                         </span>
                         <MatrixCheckbox
                           checked={state}
-                          onCheckedChange={() => apply(catalog.resources, [action], state !== true)}
+                          onCheckedChange={() => apply(resourceKeys, [action], state !== true)}
                           title={t('toggleActionAll', { action: actionLabel(action) })}
                           aria-label={t('toggleActionAll', { action: actionLabel(action) })}
                         />
@@ -205,16 +202,18 @@ export default function RoleEditorPanel({
                         <td className="py-2 pr-2 pl-6">{resourceLabel(resource)}</td>
                         {actions.map((action) => (
                           <td key={action} className="px-1 py-2 text-center">
-                            <MatrixCheckbox
-                              checked={matrix[resource][action]}
-                              onCheckedChange={() =>
-                                apply([resource], [action], !matrix[resource][action])
-                              }
-                              aria-label={t('cellAria', {
-                                resource: resourceLabel(resource),
-                                action: actionLabel(action),
-                              })}
-                            />
+                            {supports(resource, action) && (
+                              <MatrixCheckbox
+                                checked={matrix[resource][action]}
+                                onCheckedChange={() =>
+                                  apply([resource], [action], !matrix[resource][action])
+                                }
+                                aria-label={t('cellAria', {
+                                  resource: resourceLabel(resource),
+                                  action: actionLabel(action),
+                                })}
+                              />
+                            )}
                           </td>
                         ))}
                       </tr>

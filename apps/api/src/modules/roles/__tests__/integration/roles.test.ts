@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { api, authedApi } from '#tests/helpers/app';
 import { signUpTestUser, type TestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
-import { PERMISSION_RESOURCES, PERMISSION_ACTIONS } from '#shared/permissions';
+import { PERMISSION_RESOURCES, PERMISSION_ACTIONS, resourceActions } from '#shared/permissions';
 import { createAgent } from '#tests/helpers/agents';
 
 // Integration coverage for the roles feature: the static permission catalog, the
@@ -64,8 +64,19 @@ describe('roles', () => {
       const res = await owner.api['permission-catalog'].get();
 
       expect(res.status).toBe(200);
-      expect(res.data?.resources).toEqual([...PERMISSION_RESOURCES]);
+      expect(res.data?.resources).toEqual(
+        PERMISSION_RESOURCES.map((key) => ({ key, actions: [...resourceActions(key)] })),
+      );
       expect(res.data?.actions).toEqual([...PERMISSION_ACTIONS]);
+    });
+
+    it('narrows a resource that does not carry the whole action set', async () => {
+      const owner = await setupOwner();
+
+      const res = await owner.api['permission-catalog'].get();
+
+      const dangerZone = res.data?.resources.find((r) => r.key === 'danger_zone');
+      expect(dangerZone?.actions).toEqual(['read', 'delete']);
     });
   });
 
@@ -78,10 +89,11 @@ describe('roles', () => {
       expect(res.status).toBe(200);
       expect(res.data).toHaveLength(1);
       expect(res.data?.[0]).toMatchObject({ name: 'Member', isDefault: true });
-      // The default role carries a normalized matrix: full work_items, no member
-      // management.
+      // The default role carries a normalized matrix: full work_items, the member
+      // list readable, no member management.
       expect(res.data?.[0].permissions.work_items.create).toBe(true);
-      expect(res.data?.[0].permissions.members_manage.read).toBe(false);
+      expect(res.data?.[0].permissions.members_manage.read).toBe(true);
+      expect(res.data?.[0].permissions.members_manage.create).toBe(false);
     });
 
     it('lists roles ordered by id, default first', async () => {

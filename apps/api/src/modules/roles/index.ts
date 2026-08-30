@@ -3,7 +3,7 @@ import { mcpTool } from '#mcp/generate';
 import { noContent } from '#shared/http';
 import { guards } from '#shared/guards';
 import { HttpError, rethrowDuplicate } from '#shared/lib';
-import { PERMISSION_RESOURCES, PERMISSION_ACTIONS } from '#shared/permissions';
+import { PERMISSION_RESOURCES, PERMISSION_ACTIONS, resourceActions } from '#shared/permissions';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import {
   listRoles,
@@ -36,13 +36,17 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
   // Static; any authenticated user may read it to render a role editor.
   .get(
     '/permission-catalog',
-    () => ({ resources: [...PERMISSION_RESOURCES], actions: [...PERMISSION_ACTIONS] }),
+    () => ({
+      resources: PERMISSION_RESOURCES.map((key) => ({ key, actions: [...resourceActions(key)] })),
+      actions: [...PERMISSION_ACTIONS],
+    }),
     {
       response: { 200: PermissionCatalogResponse, ...errors(401) },
       detail: {
         summary: 'List the permission catalog',
         description:
           "List the resources and actions a role's permission matrix is built from. " +
+          'A resource lists the actions it supports; one it omits is always denied. ' +
           'ai_agents is administrative: it also attaches an agent to any project of the team ' +
           'and exposes the API key of an agent.',
         ...mcpTool('list_permission_catalog'),

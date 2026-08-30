@@ -40,6 +40,8 @@ export const RoleUsageResponse = t.Object({
 });
 
 export const PermissionCatalogResponse = t.Object({
-  resources: t.Array(t.String()),
+  // `actions` is the full action set, in the order a matrix renders its columns;
+  // each resource names the subset it supports.
+  resources: t.Array(t.Object({ key: t.String(), actions: t.Array(t.String()) })),
   actions: t.Array(t.String()),
 });

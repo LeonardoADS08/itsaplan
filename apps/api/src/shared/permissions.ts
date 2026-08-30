@@ -11,6 +11,7 @@ export {
   defaultMemberPermissions,
   normalizePermissions,
   hasPermission,
+  resourceActions,
 } from '@repo/db';
 export type {
   PermissionResource,
