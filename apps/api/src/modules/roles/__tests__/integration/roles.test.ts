@@ -461,7 +461,7 @@ describe('roles', () => {
       expect(res.status).toBe(204);
 
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      expect(list.data?.find((m) => m.userId === member.user.userId)).toMatchObject({
+      expect(list.data?.items.find((m) => m.userId === member.user.userId)).toMatchObject({
         roleId: target,
         roleName: 'Reviewer',
       });

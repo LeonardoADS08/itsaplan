@@ -15,7 +15,7 @@ async function createProject(owner: Actor, name: string, key: string) {
 
 async function membersOf(owner: Actor, projectKey: string) {
   const res = await owner.api.projects({ projectKey }).members.get();
-  return res.data!;
+  return res.data!.items;
 }
 
 async function provisionGroup(setup: ScimSetup, displayName: string, memberIds: string[]) {

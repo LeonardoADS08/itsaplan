@@ -3,7 +3,7 @@ import { mcpTool } from '#mcp/generate';
 import { noContent } from '#shared/http';
 import { authContext } from '#shared/auth-context';
 import { guards } from '#shared/guards';
-import { assertPermission, requireUser } from '#shared/access';
+import { requireUser } from '#shared/access';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { getDefaultRoleId, getRole } from '#modules/roles/service';
@@ -12,12 +12,14 @@ import {
   MemberCandidateListResponse,
   MemberListResponse,
   addMemberBody,
+  memberListQuery,
   memberParams,
   setMemberDescriptionBody,
   setMemberRoleBody,
 } from './model';
 import {
   addMember,
+  countMembers,
   listMembers,
   listMemberCandidates,
   getMembership,
@@ -42,13 +44,27 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
   .use(guards)
   .get(
     '/projects/:projectKey/members',
-    async ({ project }) => {
-      return listMembers(project.id);
+    async ({ project, query }) => {
+      const filters = { search: query.search, kind: query.kind };
+      const [items, total, ownerCount] = await Promise.all([
+        listMembers(project.id, { ...filters, limit: query.limit, offset: query.offset }),
+        countMembers(project.id, filters),
+        countOwners(project.id),
+      ]);
+      return { items, total, ownerCount };
     },
     {
-      permission: ['members_manage', 'read'],
+      memberAdmin: ['members_manage', 'read'],
+      query: memberListQuery,
       response: { 200: MemberListResponse, ...accessErrors },
-      detail: { summary: 'List project members', ...mcpTool('list_members') },
+      detail: {
+        summary: 'List project members',
+        description:
+          'The members of the project, the newest membership first. `search` matches the ' +
+          'name, the address or the handle, `kind` narrows the list to the people or to the ' +
+          'AI agents, and without `limit` the whole list is returned.',
+        ...mcpTool('list_members'),
+      },
     },
   )
 
@@ -143,14 +159,15 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
     {
       params: memberParams,
       body: setMemberRoleBody,
-      projectOwner: true,
+      memberAdmin: ['members_manage', 'edit'],
       response: { 204: t.Void(), ...commonErrors, ...errors(409) },
       detail: {
         summary: "Update a member's role",
         description:
           "Set a member's role. 'owner' promotes to owner; 'member' assigns a custom role by " +
-          'roleId, or null for the default. The last owner cannot be demoted, and a membership ' +
-          'granted by a provisioned group is managed by the identity provider.',
+          'roleId, or null for the default. You cannot change your own role, the last owner ' +
+          'cannot be demoted, and a membership granted by a provisioned group is managed by ' +
+          'the identity provider.',
         ...mcpTool('set_member_role'),
       },
     },
@@ -160,14 +177,7 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
   // pick who to tag on an unassigned issue.
   .patch(
     '/projects/:projectKey/members/:userId/description',
-    async ({ project, params, body, user }) => {
-      const current = requireUser(user);
-      if (params.userId !== current.id) {
-        const role = await getMembership(project.id, current.id);
-        if (role !== 'owner') {
-          throw new HttpError(403, "Only a project owner can edit another member's description");
-        }
-      }
+    async ({ project, params, body }) => {
       const ok = await setMemberDescription(project.id, params.userId, body.description);
       if (!ok) throw new HttpError(404, 'Member not found');
       return noContent();
@@ -175,7 +185,7 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
     {
       params: memberParams,
       body: setMemberDescriptionBody,
-      projectMember: true,
+      memberSelfOrAdmin: ['members_manage', 'edit'],
       response: { 204: t.Void(), ...commonErrors },
       detail: {
         summary: "Set a member's description",
@@ -188,12 +198,7 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
 
   .delete(
     '/projects/:projectKey/members/:userId',
-    async ({ project, params, user }) => {
-      const current = requireUser(user);
-      const isSelf = params.userId === current.id;
-      if (!isSelf) {
-        await assertPermission(project.id, user, 'members_manage', 'delete');
-      }
+    async ({ project, params }) => {
       const target = await getMembership(project.id, params.userId);
       if (!target) throw new HttpError(404, 'Member not found');
       await assertNotProvisioned(project.id, params.userId);
@@ -205,7 +210,7 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
     },
     {
       params: memberParams,
-      projectMember: true,
+      memberSelfOrAdmin: ['members_manage', 'delete'],
       response: { 204: t.Void(), ...commonErrors, ...errors(409) },
       detail: {
         summary: 'Remove a member',

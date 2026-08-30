@@ -29,9 +29,11 @@
   },
   "you": "(вы)",
   "aiAgent": "AI-агент",
-  "groups": {
+  "tabs": {
+    "all": "Все",
     "people": "Люди",
-    "agents": "AI-агенты"
+    "agents": "ИИ-помощники",
+    "label": "Показывать"
   },
   "leaveProject": "Выйти из проекта",
   "revokeAccess": "Отозвать доступ",
@@ -67,5 +69,12 @@
   "roleUpdated": "Роль участника обновлена",
   "descriptionUpdated": "Описание участника обновлено",
   "added": "Участник добавлен",
-  "provisioned": "Управляется SCIM"
+  "provisioned": "Управляется SCIM",
+  "emptyTitle": "Здесь пусто",
+  "emptyDescription": "Под текущий фильтр никто не подходит.",
+  "search": {
+    "all": "Поиск участников",
+    "people": "Поиск людей",
+    "agents": "Поиск ИИ-помощников"
+  }
 }

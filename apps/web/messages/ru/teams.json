@@ -160,6 +160,9 @@
     "owners": "Владельцы: {names}",
     "openProject": "Открыть проект",
     "noProjectMembers": "К этому проекту пока ни у кого нет доступа.",
+    "noMembersTitle": "Участников пока нет",
+    "noMemberMatches": "Под этот поиск никто не подходит.",
+    "searchMembers": "Поиск участников",
     "lastActivity": "Последняя активность: {value}",
     "noActivity": "пока не было",
     "stats": {

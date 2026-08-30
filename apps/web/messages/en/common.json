@@ -176,5 +176,10 @@
     "download": "Save chart",
     "downloadFailed": "The chart could not be saved"
   },
-  "agent": "Agent"
+  "agent": "Agent",
+  "pager": {
+    "previous": "Previous page",
+    "next": "Next page",
+    "page": "Page {number}"
+  }
 }

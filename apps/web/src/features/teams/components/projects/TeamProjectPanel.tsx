@@ -6,11 +6,11 @@ import type { TeamProject, TeamRole } from '@/lib/api';
 import { formatDate, formatDateTime } from '@/utils/dates';
 import { useExitOnEscape } from '@/hooks/useExitOnEscape';
 import { useTeamProjectQuery } from '@/services/teams.service';
-import { usePermissionCatalogQuery } from '@/services/roles.service';
-import MemberAccessCard from '@/components/common/permissions/MemberAccessCard';
+import { useSession } from '@/lib/auth-client';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
 import { Button } from '@/components/ui/button';
 import TeamProjectActions from './TeamProjectActions';
+import TeamProjectMembers from './TeamProjectMembers';
 import TeamProjectStats from './TeamProjectStats';
 
 // One project of the team in a right-hand side panel (the same surface the role
@@ -31,9 +31,18 @@ export default function TeamProjectPanel({
   const t = useTranslations('teams.panel');
   const tCommon = useTranslations('common');
   const { data: detail } = useTeamProjectQuery(teamId, project.id);
-  const catalogQuery = usePermissionCatalogQuery();
+  const { data: session } = useSession();
 
   useExitOnEscape(onClose);
+
+  // An owner or manager of the team manages the members of every project it owns, and
+  // so does an owner of the project itself; anyone else acts through the member
+  // permission of their own membership, as the project's members page does. The API
+  // enforces the same pair.
+  const viewer = detail?.viewer ?? null;
+  const runsProject = teamRole === 'owner' || teamRole === 'manager' || viewer?.role === 'owner';
+  const canEdit = runsProject || viewer?.permissions.members_manage.edit === true;
+  const canDelete = runsProject || viewer?.permissions.members_manage.delete === true;
 
   return (
     <div
@@ -53,7 +62,7 @@ export default function TeamProjectPanel({
               teamId={teamId}
               teamRole={teamRole}
               project={project}
-              members={detail?.members ?? []}
+              viewer={viewer}
             />
             <Button
               variant="ghost"
@@ -91,27 +100,15 @@ export default function TeamProjectPanel({
                 <TeamProjectStats stats={detail.stats} />
               </section>
 
-              <section className="space-y-3">
-                <div className="flex items-baseline gap-2">
-                  <h3 className="text-sm font-medium">{t('projectMembers')}</h3>
-                  {detail.members.length > 0 && (
-                    <span className="text-xs text-muted-foreground">{detail.members.length}</span>
-                  )}
-                </div>
-                {detail.members.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{t('noProjectMembers')}</p>
-                ) : (
-                  <div className="space-y-2">
-                    {detail.members.map((member) => (
-                      <MemberAccessCard
-                        key={member.userId}
-                        member={member}
-                        catalog={catalogQuery.data}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
+              <TeamProjectMembers
+                teamId={teamId}
+                projectId={project.id}
+                projectKey={project.key}
+                ownerCount={project.owners.length}
+                viewerId={session?.user.id}
+                canEdit={canEdit}
+                canDelete={canDelete}
+              />
             </>
           )}
         </div>

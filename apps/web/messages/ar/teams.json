@@ -160,6 +160,9 @@
     "owners": "المالكون: {names}",
     "openProject": "فتح المشروع",
     "noProjectMembers": "لا يمكن لأحد الوصول إلى هذا المشروع بعد.",
+    "noMembersTitle": "لا أعضاء بعد",
+    "noMemberMatches": "لا يطابق أي عضو هذا البحث.",
+    "searchMembers": "البحث عن الأعضاء",
     "lastActivity": "آخر نشاط: {value}",
     "noActivity": "لا يوجد بعد",
     "stats": {

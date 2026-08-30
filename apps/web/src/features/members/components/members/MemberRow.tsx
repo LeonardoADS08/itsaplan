@@ -17,10 +17,11 @@ import MemberDescription from './MemberDescription';
 import MemberDescriptionDialog from './MemberDescriptionDialog';
 
 // One member's row in the members list: identity, role control, and the actions
-// (edit description, leave or revoke access). An owner can revoke anyone's
-// access; a member can only leave. The last owner cannot be removed, and neither
-// is a membership a provisioned group granted — that one changes in the identity
-// provider, and the API refuses it here.
+// (edit description, leave or revoke access). Acting on someone else's membership
+// needs the member permission or the standing of an owner or manager of the team
+// that runs the project; anyone can leave and describe what they do themselves. The
+// last owner cannot be removed, and neither is a membership a provisioned group
+// granted — that one changes in the identity provider, and the API refuses it here.
 export default function MemberRow({
   projectKey,
   member,
@@ -35,7 +36,7 @@ export default function MemberRow({
   onRemove: (member: Member) => void;
 }) {
   const t = useTranslations('members');
-  const { can, isOwner } = usePermissions();
+  const { can, isAdmin } = usePermissions();
   const { data: session } = useSession();
 
   const self = member.userId === session?.user.id;
@@ -43,8 +44,10 @@ export default function MemberRow({
   const provisioned = member.source === 'scim';
   // Agents join and leave with their AI Agent config, not from this list,
   // so they cannot be revoked or reassigned here.
-  const canRemove = !member.isAgent && !provisioned && (self || can('members_manage', 'delete'));
-  const canEditDescription = !member.isAgent && (isOwner || self);
+  const canEdit = can('members_manage', 'edit') || isAdmin;
+  const canRemove =
+    !member.isAgent && !provisioned && (self || can('members_manage', 'delete') || isAdmin);
+  const canEditDescription = !member.isAgent && (self || canEdit);
   const removeLabel = self ? t('leaveProject') : t('revokeAccess');
   const displayName = member.name || member.email;
 
@@ -96,7 +99,7 @@ export default function MemberRow({
           projectKey={projectKey}
           member={member}
           roles={roles}
-          canManage={isOwner && !self && !member.isAgent && !provisioned}
+          canManage={canEdit && !self && !member.isAgent && !provisioned}
           isLastOwner={isLastOwner}
         />
       </TableCell>

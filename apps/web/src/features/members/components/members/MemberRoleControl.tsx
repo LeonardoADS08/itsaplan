@@ -15,10 +15,10 @@ import { useSetMemberRole } from '@/services/members.service';
 // Owner is not a custom role, so it sits outside the roles list under this value.
 const OWNER_VALUE = 'owner';
 
-// A member's role, shown in the members list. An owner viewing the list gets a
-// select to reassign the role — the project's custom roles plus Owner; anyone
-// else sees the current role name as a read-only badge. The last owner cannot be
-// demoted, so their select is disabled.
+// A member's role, shown in the members list and in the team's project panel. A
+// reader who may reassign it gets a select — the project's custom roles plus Owner;
+// anyone else sees the current role name as a read-only badge. The last owner cannot
+// be demoted, so their select is disabled.
 export default function MemberRoleControl({
   projectKey,
   member,
@@ -27,7 +27,7 @@ export default function MemberRoleControl({
   isLastOwner,
 }: {
   projectKey: string;
-  member: MemberRow;
+  member: Pick<MemberRow, 'userId' | 'role' | 'roleId' | 'roleName'>;
   roles: Role[];
   canManage: boolean;
   isLastOwner: boolean;

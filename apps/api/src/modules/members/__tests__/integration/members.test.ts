@@ -45,25 +45,27 @@ async function addMember(owner: Actor, role: 'owner' | 'member' = 'member'): Pro
   return { user, api };
 }
 
+// Signs up a user and puts them in the team that owns MKT on the given rank, without
+// joining the project itself. A manager runs the team's projects from that standing
+// alone, which is what the member routes accept in place of a project permission.
+async function addTeamMember(
+  owner: Actor,
+  role: 'manager' | 'member' = 'member',
+): Promise<TestUser> {
+  const projects = await owner.api.projects.get();
+  const teamId = projects.data!.find((p) => p.key === 'MKT')!.teamId;
+  const user = await signUpTestUser();
+  const invite = await owner.api.teams({ teamId }).invites.post({ email: user.email, role });
+  await authedApi(user.cookie).invites({ token: invite.data!.token }).accept.post();
+  return user;
+}
+
 describe('members', () => {
   beforeEach(async () => {
     await resetDb();
   });
 
   describe('add — POST /projects/:projectKey/members', () => {
-    // Someone in the team of MKT who is not in the project itself: they were invited
-    // into the team alone.
-    async function addTeamMember(owner: Actor): Promise<TestUser> {
-      const projects = await owner.api.projects.get();
-      const teamId = projects.data!.find((p) => p.key === 'MKT')!.teamId;
-      const user = await signUpTestUser();
-      const invite = await owner.api
-        .teams({ teamId })
-        .invites.post({ email: user.email, role: 'member' });
-      await authedApi(user.cookie).invites({ token: invite.data!.token }).accept.post();
-      return user;
-    }
-
     it('lists a team member who is not in the project as a candidate', async () => {
       const owner = await setupOwner();
       const joiner = await addTeamMember(owner);
@@ -96,7 +98,7 @@ describe('members', () => {
       expect(res.status).toBe(204);
 
       const members = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      expect(members.data?.find((m) => m.userId === joiner.userId)).toMatchObject({
+      expect(members.data?.items.find((m) => m.userId === joiner.userId)).toMatchObject({
         role: 'member',
         roleId: role.data!.id,
         roleName: 'Editor',
@@ -114,7 +116,7 @@ describe('members', () => {
         .members.post({ userId: joiner.userId, role: 'member' });
 
       const members = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      expect(members.data?.find((m) => m.userId === joiner.userId)).toMatchObject({
+      expect(members.data?.items.find((m) => m.userId === joiner.userId)).toMatchObject({
         roleId: fallback.id,
         roleName: fallback.name,
       });
@@ -130,7 +132,7 @@ describe('members', () => {
       expect(res.status).toBe(204);
 
       const members = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      expect(members.data?.find((m) => m.userId === joiner.userId)).toMatchObject({
+      expect(members.data?.items.find((m) => m.userId === joiner.userId)).toMatchObject({
         role: 'owner',
         roleId: null,
       });
@@ -189,8 +191,8 @@ describe('members', () => {
       const res = await owner.api.projects({ projectKey: 'MKT' }).members.get();
 
       expect(res.status).toBe(200);
-      expect(res.data).toHaveLength(1);
-      expect(res.data?.[0]).toMatchObject({
+      expect(res.data?.items).toHaveLength(1);
+      expect(res.data?.items[0]).toMatchObject({
         userId: owner.user.userId,
         email: owner.user.email,
         username: expect.any(String),
@@ -200,17 +202,58 @@ describe('members', () => {
       });
     });
 
-    it('reflects an added member on the default role, ordered by join time', async () => {
+    it('reflects an added member on the default role, the newest membership first', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
 
       const res = await owner.api.projects({ projectKey: 'MKT' }).members.get();
 
       expect(res.status).toBe(200);
-      expect(res.data?.map((m) => m.userId)).toEqual([owner.user.userId, member.user.userId]);
-      const memberRow = res.data?.find((m) => m.userId === member.user.userId);
+      expect(res.data?.items.map((m) => m.userId)).toEqual([member.user.userId, owner.user.userId]);
+      const memberRow = res.data?.items.find((m) => m.userId === member.user.userId);
       expect(memberRow).toMatchObject({ role: 'member', roleName: 'Member' });
       expect(memberRow?.roleId).not.toBeNull();
+    });
+
+    it('narrows the list to the people or to the AI agents', async () => {
+      const owner = await setupOwner();
+      await addMember(owner);
+      const members = owner.api.projects({ projectKey: 'MKT' }).members;
+
+      const people = await members.get({ query: { kind: 'human' } });
+      expect(people.data?.total).toBe(2);
+      expect(people.data?.items.every((m) => !m.isAgent)).toBe(true);
+
+      const agents = await members.get({ query: { kind: 'agent' } });
+      expect(agents.data).toMatchObject({ items: [], total: 0 });
+    });
+
+    it('searches by name, address and handle', async () => {
+      const owner = await setupOwner();
+      const member = await addMember(owner);
+      const members = owner.api.projects({ projectKey: 'MKT' }).members;
+
+      const found = await members.get({ query: { search: member.user.email } });
+      expect(found.data?.items.map((m) => m.userId)).toEqual([member.user.userId]);
+      expect(found.data?.total).toBe(1);
+
+      const none = await members.get({ query: { search: 'nobody-by-that-name' } });
+      expect(none.data).toMatchObject({ items: [], total: 0 });
+    });
+
+    it('windows the list and reports how many there are in total', async () => {
+      const owner = await setupOwner();
+      await addMember(owner);
+      await addMember(owner);
+      const members = owner.api.projects({ projectKey: 'MKT' }).members;
+
+      const first = await members.get({ query: { limit: 2, offset: 0 } });
+      expect(first.data?.items).toHaveLength(2);
+      expect(first.data).toMatchObject({ total: 3, ownerCount: 1 });
+
+      const second = await members.get({ query: { limit: 2, offset: 2 } });
+      expect(second.data?.items).toHaveLength(1);
+      expect(second.data?.total).toBe(3);
     });
 
     it('lets a plain member read the list on the default role', async () => {
@@ -232,6 +275,15 @@ describe('members', () => {
 
       const res = await member.api.projects({ projectKey: 'MKT' }).members.get();
       expect(res.status).toBe(403);
+    });
+
+    it('lets a manager of the team read the list without being in the project', async () => {
+      const owner = await setupOwner();
+      const manager = await addTeamMember(owner, 'manager');
+
+      const res = await authedApi(manager.cookie).projects({ projectKey: 'MKT' }).members.get();
+      expect(res.status).toBe(200);
+      expect(res.data?.items).toHaveLength(1);
     });
 
     it('denies a non-member with 403', async () => {
@@ -262,7 +314,7 @@ describe('members', () => {
       expect(res.status).toBe(204);
 
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      const row = list.data?.find((m) => m.userId === member.user.userId);
+      const row = list.data?.items.find((m) => m.userId === member.user.userId);
       expect(row).toMatchObject({ roleId, roleName: 'Editor' });
     });
 
@@ -282,7 +334,7 @@ describe('members', () => {
       expect(res.status).toBe(204);
 
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      const row = list.data?.find((m) => m.userId === member.user.userId);
+      const row = list.data?.items.find((m) => m.userId === member.user.userId);
       expect(row?.roleId).toBeNull();
     });
 
@@ -309,7 +361,7 @@ describe('members', () => {
       expect(res.status).toBe(204);
 
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      const row = list.data?.find((m) => m.userId === member.user.userId);
+      const row = list.data?.items.find((m) => m.userId === member.user.userId);
       expect(row).toMatchObject({ role: 'owner', roleId: null, roleName: null });
     });
 
@@ -325,7 +377,7 @@ describe('members', () => {
       expect(res.status).toBe(204);
 
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      const row = list.data?.find((m) => m.userId === other.user.userId);
+      const row = list.data?.items.find((m) => m.userId === other.user.userId);
       expect(row).toMatchObject({ role: 'member', roleId, roleName: 'Editor' });
     });
 
@@ -341,7 +393,7 @@ describe('members', () => {
 
       // The owner is unchanged.
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      const row = list.data?.find((m) => m.userId === owner.user.userId);
+      const row = list.data?.items.find((m) => m.userId === owner.user.userId);
       expect(row).toMatchObject({ role: 'owner' });
     });
 
@@ -385,6 +437,44 @@ describe('members', () => {
       expect(res.status).toBe(403);
     });
 
+    it('lets a manager of the team assign a role without being in the project', async () => {
+      const owner = await setupOwner();
+      const member = await addMember(owner);
+      const manager = await addTeamMember(owner, 'manager');
+      const roleId = await makeRole(owner);
+
+      const res = await authedApi(manager.cookie)
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: member.user.userId })
+        .patch({ role: 'member', roleId });
+      expect(res.status).toBe(204);
+
+      const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
+      expect(list.data?.items.find((m) => m.userId === member.user.userId)).toMatchObject({
+        roleId,
+      });
+    });
+
+    it('lets a member whose role grants members_manage edit assign a role', async () => {
+      const owner = await setupOwner();
+      const editor = await addMember(owner);
+      const other = await addMember(owner);
+      const role = await createRole(owner.api, 'MKT', {
+        name: 'People',
+        permissions: { members_manage: { read: true, edit: true } },
+      });
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: editor.user.userId })
+        .patch({ role: 'member', roleId: role.data!.id });
+
+      const res = await editor.api
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: other.user.userId })
+        .patch({ role: 'member', roleId: role.data!.id });
+      expect(res.status).toBe(204);
+    });
+
     it('denies a non-member with 403', async () => {
       const owner = await setupOwner();
       const member = await addMember(owner);
@@ -403,7 +493,7 @@ describe('members', () => {
       const owner = await setupOwner();
 
       const res = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      expect(res.data?.[0]).toMatchObject({ description: '' });
+      expect(res.data?.items[0]).toMatchObject({ description: '' });
     });
 
     it("lets an owner set a member's description", async () => {
@@ -417,7 +507,7 @@ describe('members', () => {
       expect(res.status).toBe(204);
 
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      const row = list.data?.find((m) => m.userId === member.user.userId);
+      const row = list.data?.items.find((m) => m.userId === member.user.userId);
       expect(row).toMatchObject({ description: 'Backend engineer' });
     });
 
@@ -436,7 +526,7 @@ describe('members', () => {
       expect(res.status).toBe(204);
 
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      const row = list.data?.find((m) => m.userId === member.user.userId);
+      const row = list.data?.items.find((m) => m.userId === member.user.userId);
       expect(row).toMatchObject({ description: '' });
     });
 
@@ -462,8 +552,25 @@ describe('members', () => {
       expect(res.status).toBe(204);
 
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      const row = list.data?.find((m) => m.userId === member.user.userId);
+      const row = list.data?.items.find((m) => m.userId === member.user.userId);
       expect(row).toMatchObject({ description: 'I do the docs' });
+    });
+
+    it("lets a manager of the team set a member's description without being in the project", async () => {
+      const owner = await setupOwner();
+      const member = await addMember(owner);
+      const manager = await addTeamMember(owner, 'manager');
+
+      const res = await authedApi(manager.cookie)
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: member.user.userId })
+        .description.patch({ description: 'Runs the launch' });
+      expect(res.status).toBe(204);
+
+      const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
+      expect(list.data?.items.find((m) => m.userId === member.user.userId)).toMatchObject({
+        description: 'Runs the launch',
+      });
     });
 
     it("denies a member editing another member's description with 403", async () => {
@@ -491,7 +598,7 @@ describe('members', () => {
       expect(res.status).toBe(204);
 
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      expect(list.data?.map((m) => m.userId)).toEqual([owner.user.userId]);
+      expect(list.data?.items.map((m) => m.userId)).toEqual([owner.user.userId]);
 
       // The removed member can no longer reach the project.
       const gone = await member.api.projects({ projectKey: 'MKT' }).get();
@@ -525,7 +632,7 @@ describe('members', () => {
 
       // b is still a member.
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      expect(list.data?.map((m) => m.userId)).toContain(b.user.userId);
+      expect(list.data?.items.map((m) => m.userId)).toContain(b.user.userId);
     });
 
     it('returns 404 when the userId is not a member', async () => {
@@ -550,7 +657,7 @@ describe('members', () => {
 
       // The owner is still a member.
       const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      expect(list.data?.map((m) => m.userId)).toContain(owner.user.userId);
+      expect(list.data?.items.map((m) => m.userId)).toContain(owner.user.userId);
     });
 
     it('lets an owner leave when another owner remains', async () => {
@@ -562,6 +669,21 @@ describe('members', () => {
         .members({ userId: owner.user.userId })
         .delete();
       expect(res.status).toBe(204);
+    });
+
+    it('lets a manager of the team remove a member without being in the project', async () => {
+      const owner = await setupOwner();
+      const member = await addMember(owner);
+      const manager = await addTeamMember(owner, 'manager');
+
+      const res = await authedApi(manager.cookie)
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: member.user.userId })
+        .delete();
+      expect(res.status).toBe(204);
+
+      const list = await owner.api.projects({ projectKey: 'MKT' }).members.get();
+      expect(list.data?.items.map((m) => m.userId)).toEqual([owner.user.userId]);
     });
 
     it('denies a non-member with 403', async () => {

@@ -8,19 +8,22 @@ import DisclosureCard from '@/components/common/DisclosureCard';
 import PermissionMatrix from './PermissionMatrix';
 
 // One membership, from either side of it: a project the user can reach, or a member
-// of the project. `header` is what the row states about that side; the matrix behind
-// the toggle spells the access out per resource.
+// of the project. `header` is what the row states about that side, `trailing` the
+// controls that act on it; the matrix behind the toggle spells the access out per
+// resource.
 export default function AccessCard({
   header,
+  trailing,
   isOwner,
   roleName,
   permissions,
   catalog,
 }: {
   header: ReactNode;
+  trailing?: ReactNode;
   isOwner: boolean;
   roleName: string | null;
-  permissions: Permissions;
+  permissions: Permissions | undefined;
   catalog: PermissionCatalog | undefined;
 }) {
   const t = useTranslations('permissions.source');
@@ -34,9 +37,9 @@ export default function AccessCard({
   }
 
   return (
-    <DisclosureCard header={header}>
+    <DisclosureCard header={header} trailing={trailing}>
       <p className="mb-2 text-xs text-muted-foreground">{permissionSource()}</p>
-      {catalog ? (
+      {catalog && permissions ? (
         <PermissionMatrix catalog={catalog} permissions={permissions} />
       ) : (
         <ListSkeleton rows={3} rowClassName="h-6" />

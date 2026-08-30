@@ -23,7 +23,26 @@ const MemberResponse = t.Object({
   createdAt: t.String(),
 });
 
-export const MemberListResponse = t.Array(MemberResponse);
+// One page of members, with how many the project has in total. Without limit and
+// offset the page is the whole list.
+export const MemberListResponse = t.Object({
+  items: t.Array(MemberResponse),
+  total: t.Number(),
+  // How many of them own the project, which a page window cannot answer: the last
+  // owner is protected, and the list marks their row for it.
+  ownerCount: t.Number(),
+});
+
+export const memberListQuery = t.Object({
+  search: t.Optional(t.String({ description: 'Matches the name, the address or the handle.' })),
+  kind: t.Optional(
+    t.UnionEnum(['all', 'human', 'agent'], {
+      description: "Everyone, the people, or the AI agents' bot users. Defaults to everyone.",
+    }),
+  ),
+  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+  offset: t.Optional(t.Numeric({ minimum: 0, default: 0 })),
+});
 
 // Someone who can be added to the project straight away (MemberCandidate).
 const MemberCandidateResponse = t.Object({

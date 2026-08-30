@@ -173,15 +173,17 @@ export interface TeamDetail extends Team {
 }
 
 // One project the team owns, as its row in the team panel opens it: how its issues
-// stand, and who can reach it.
+// stand, and where the reader stands in it. Its members are a page of their own.
 export interface TeamProjectDetail {
   lastActivityAt: string | null;
   stats: AnalyticsStats;
-  members: TeamProjectMember[];
+  // The reader's own membership in the project, null when they only run the team.
+  viewer: { role: MemberRole; permissions: Permissions } | null;
 }
 
-// One member of a project the team owns, with the access their project membership
-// resolves to.
+// One member of a project the team owns. The access their membership resolves to is
+// the matrix of the role they hold, which the reader already has from the team's
+// roles.
 export interface TeamProjectMember {
   userId: string;
   name: string;
@@ -192,8 +194,17 @@ export interface TeamProjectMember {
   image: string | null;
   isAgent: boolean;
   role: MemberRole;
+  roleId: number | null;
   roleName: string | null;
-  permissions: Permissions;
+  // What the member does in the project, and which path their membership came from —
+  // both needed by the panel, which edits the membership from there.
+  description: string;
+  source: 'invite' | 'scim';
+}
+
+export interface TeamProjectMemberPage {
+  items: TeamProjectMember[];
+  total: number;
 }
 
 export interface Project {
@@ -2596,6 +2607,36 @@ export interface MemberRow {
   createdAt: string;
 }
 
+// Which members a list asks for: everyone, the people, or the AI agents.
+export type MemberKind = 'all' | 'human' | 'agent';
+
+export interface MemberPage {
+  items: MemberRow[];
+  total: number;
+  // How many of them own the project. A page window cannot answer it, and the last
+  // owner's row is the one that may not be removed.
+  ownerCount: number;
+}
+
+export interface MemberListParams {
+  search?: string;
+  kind: MemberKind;
+  limit: number;
+  offset: number;
+}
+
+// The query string both member lists take. The search runs on the server, so the
+// page and the total agree.
+function memberListQuery(params: MemberListParams): string {
+  const qs = new URLSearchParams({
+    kind: params.kind,
+    limit: String(params.limit),
+    offset: String(params.offset),
+  });
+  if (params.search) qs.set('search', params.search);
+  return `?${qs}`;
+}
+
 // Someone who can be added to a project without an invite: a member of the team that
 // owns it who is not in the project yet.
 export interface MemberCandidate {
@@ -2743,6 +2784,12 @@ export const api = {
   listTeamProjects: (teamId: number) => request<TeamProject[]>(`/teams/${teamId}/projects`),
   getTeamProject: (teamId: number, projectId: number) =>
     request<TeamProjectDetail>(`/teams/${teamId}/projects/${projectId}`),
+  // One page of a project's members. `search` matches the name, the address or the
+  // handle.
+  listTeamProjectMembers: (teamId: number, projectId: number, params: MemberListParams) =>
+    request<TeamProjectMemberPage>(
+      `/teams/${teamId}/projects/${projectId}/members${memberListQuery(params)}`,
+    ),
   createTeam: (input: { name: string }) =>
     request<Team>('/teams', { method: 'POST', body: JSON.stringify(input) }),
   renameTeam: (teamId: number, input: { name: string }) =>
@@ -3300,7 +3347,9 @@ export const api = {
   // Members: list who is on a project, add someone from its team, and revoke access
   // (an owner removes anyone; a member removes only themselves — leaving the
   // project).
-  listMembers: (projectKey: string) => request<MemberRow[]>(`/projects/${projectKey}/members`),
+  // One page of the project's members, or all of them when no window is asked for.
+  listMembers: (projectKey: string, params?: MemberListParams) =>
+    request<MemberPage>(`/projects/${projectKey}/members${params ? memberListQuery(params) : ''}`),
   listMemberCandidates: (projectKey: string) =>
     request<MemberCandidate[]>(`/projects/${projectKey}/members/candidates`),
   addMember: (

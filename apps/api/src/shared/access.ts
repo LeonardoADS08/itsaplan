@@ -105,6 +105,22 @@ export async function requireMemberAdmin(
   return project;
 }
 
+// Resolves the :projectKey path param for a route acting on one member's own row.
+// A member acts on themselves — leaving the project, saying what they do in it —
+// without any member permission; anyone else needs what requireMemberAdmin asks
+// for. Wrapped by the memberSelfOrAdmin guard.
+export async function requireSelfOrMemberAdmin(
+  projectKey: string,
+  targetUserId: string,
+  user: AuthUser | undefined | null,
+  resource: PermissionResource,
+  action: PermissionAction,
+): Promise<ProjectRow> {
+  const current = requireUser(user);
+  if (targetUserId === current.id) return requireProjectAccess(projectKey, current);
+  return requireMemberAdmin(projectKey, current, resource, action);
+}
+
 // Denies an MCP tool call against a project out of its team's MCP reach: the team
 // switched MCP off, or the project is not among the ones it covers. A no-op for
 // normal web/API requests (isMcp false), so the toggles only gate the MCP surface,

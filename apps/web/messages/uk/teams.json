@@ -160,6 +160,9 @@
     "owners": "Власники: {names}",
     "openProject": "Відкрити проєкт",
     "noProjectMembers": "До цього проєкту поки ніхто не має доступу.",
+    "noMembersTitle": "Учасників поки немає",
+    "noMemberMatches": "Під цей пошук ніхто не підходить.",
+    "searchMembers": "Пошук учасників",
     "lastActivity": "Остання активність: {value}",
     "noActivity": "ще не було",
     "stats": {

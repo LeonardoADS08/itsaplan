@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
-import GodSearchInput from './components/GodSearchInput';
+import SearchInput from '@/components/common/SearchInput';
 import GodSectionPage from './components/GodSectionPage';
 import GodPager, { PAGE_SIZES } from './components/GodPager';
 import GodProjectDetailPanel from './components/projects/GodProjectDetailPanel';
@@ -33,7 +33,7 @@ export default function GodProjectsPage() {
   return (
     <GodSectionPage slug="projects" widthClassName="max-w-none">
       <div className="space-y-4">
-        <GodSearchInput
+        <SearchInput
           value={search}
           onChange={withOffsetReset(setOffset, setSearch)}
           placeholder={t('searchPlaceholder')}

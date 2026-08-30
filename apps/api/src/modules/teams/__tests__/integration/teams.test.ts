@@ -216,47 +216,15 @@ describe('teams', () => {
   });
 
   describe('project detail', () => {
-    it('returns the members of a project the team owns with their resolved access', async () => {
-      const { user, api } = await signUpClient();
+    it("returns the reader's own access to a project the team owns", async () => {
+      const { api } = await signUpClient();
       const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
-      await addProjectMember(api, 'MKT');
       const teamId = (await api.teams.get()).data![0].id;
 
       const detail = await api.teams({ teamId }).projects({ projectId: project.data!.id }).get();
       expect(detail.status).toBe(200);
-      expect(detail.data?.members).toHaveLength(2);
-
-      const owner = detail.data!.members.find((m) => m.email === user.email)!;
-      expect(owner).toMatchObject({ role: 'owner', roleName: null, isAgent: false });
-      expect(owner.permissions.work_items.delete).toBe(true);
-
-      const member = detail.data!.members.find((m) => m.email !== user.email)!;
-      expect(member.role).toBe('member');
-      expect(member.permissions.danger_zone.delete).toBe(false);
-    });
-
-    it('lists the owners of the project before its members', async () => {
-      const { user, api } = await signUpClient();
-      const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
-      const promoted = await addProjectMember(api, 'MKT');
-      const promotedUserId = (await api.projects({ projectKey: 'MKT' }).members.get()).data!.find(
-        (m) => m.email !== user.email,
-      )!.userId;
-      await api
-        .projects({ projectKey: 'MKT' })
-        .members({ userId: promotedUserId })
-        .patch({ role: 'owner' });
-      // The account that created the project joined first, so it heads the list until
-      // the other owner demotes it.
-      await promoted
-        .projects({ projectKey: 'MKT' })
-        .members({ userId: user.userId })
-        .patch({ role: 'member' });
-      const teamId = (await api.teams.get()).data![0].id;
-
-      const detail = await api.teams({ teamId }).projects({ projectId: project.data!.id }).get();
-      expect(detail.data?.members.map((m) => m.role)).toEqual(['owner', 'member']);
-      expect(detail.data?.members[0].userId).toBe(promotedUserId);
+      expect(detail.data?.viewer?.role).toBe('owner');
+      expect(detail.data?.viewer?.permissions.work_items.delete).toBe(true);
     });
 
     it('counts the open issues of the project and reports its last activity', async () => {
@@ -300,6 +268,113 @@ describe('teams', () => {
         .projects({ projectId: otherProject.data!.id })
         .get();
       expect(detail.status).toBe(404);
+    });
+  });
+
+  describe('project members', () => {
+    it('lists the owners of the project before its members', async () => {
+      const { user, api } = await signUpClient();
+      const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const promoted = await addProjectMember(api, 'MKT');
+      const promotedUserId = (
+        await api.projects({ projectKey: 'MKT' }).members.get()
+      ).data!.items.find((m) => m.email !== user.email)!.userId;
+      await api
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: promotedUserId })
+        .patch({ role: 'owner' });
+      // The account that created the project joined first, so it heads the list until
+      // the other owner demotes it.
+      await promoted
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: user.userId })
+        .patch({ role: 'member' });
+      const teamId = (await api.teams.get()).data![0].id;
+
+      const page = await api
+        .teams({ teamId })
+        .projects({ projectId: project.data!.id })
+        .members.get();
+      expect(page.status).toBe(200);
+      expect(page.data?.total).toBe(2);
+      expect(page.data?.items.map((m) => m.role)).toEqual(['owner', 'member']);
+      expect(page.data?.items[0]).toMatchObject({ userId: promotedUserId, isAgent: false });
+    });
+
+    it('windows the list and reports how many there are in total', async () => {
+      const { api } = await signUpClient();
+      const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      await addProjectMember(api, 'MKT');
+      await addProjectMember(api, 'MKT');
+      const teamId = (await api.teams.get()).data![0].id;
+      const members = api.teams({ teamId }).projects({ projectId: project.data!.id }).members;
+
+      const first = await members.get({ query: { limit: 2, offset: 0 } });
+      expect(first.data?.items).toHaveLength(2);
+      expect(first.data?.total).toBe(3);
+
+      const second = await members.get({ query: { limit: 2, offset: 2 } });
+      expect(second.data?.items).toHaveLength(1);
+      expect(second.data?.total).toBe(3);
+    });
+
+    it('narrows the list to the people or to the AI agents', async () => {
+      const { api } = await signUpClient();
+      const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      await addProjectMember(api, 'MKT');
+      const teamId = (await api.teams.get()).data![0].id;
+      const members = api.teams({ teamId }).projects({ projectId: project.data!.id }).members;
+
+      const people = await members.get({ query: { kind: 'human' } });
+      expect(people.data?.total).toBe(2);
+
+      const agents = await members.get({ query: { kind: 'agent' } });
+      expect(agents.data).toMatchObject({ items: [], total: 0 });
+    });
+
+    it('searches by name, address and handle', async () => {
+      const { user, api } = await signUpClient();
+      const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      await addProjectMember(api, 'MKT');
+      const teamId = (await api.teams.get()).data![0].id;
+      const members = api.teams({ teamId }).projects({ projectId: project.data!.id }).members;
+
+      const byEmail = await members.get({ query: { search: user.email } });
+      expect(byEmail.data?.total).toBe(1);
+      expect(byEmail.data?.items[0].email).toBe(user.email);
+
+      const byHandle = await members.get({ query: { search: user.username } });
+      expect(byHandle.data?.items.map((m) => m.email)).toEqual([user.email]);
+
+      const none = await members.get({ query: { search: 'nobody-by-that-name' } });
+      expect(none.data).toMatchObject({ items: [], total: 0 });
+    });
+
+    it('404s for a member of the team who is not in the project', async () => {
+      const { api } = await signUpClient();
+      const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const teamId = (await api.teams.get()).data![0].id;
+      const outsider = await addTeamMember({ api }, teamId);
+
+      const page = await outsider.api
+        .teams({ teamId })
+        .projects({ projectId: project.data!.id })
+        .members.get();
+      expect(page.status).toBe(404);
+    });
+
+    it('lets a manager of the team read a project they are not in', async () => {
+      const { api } = await signUpClient();
+      const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const teamId = (await api.teams.get()).data![0].id;
+      const manager = await addTeamMember({ api }, teamId, 'manager');
+
+      const page = await manager.api
+        .teams({ teamId })
+        .projects({ projectId: project.data!.id })
+        .members.get();
+      expect(page.status).toBe(200);
+      expect(page.data?.total).toBe(1);
     });
   });
 

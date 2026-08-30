@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Copy, LogOut, Pencil, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { TeamProject, TeamProjectMember, TeamRole } from '@/lib/api';
+import type { MemberRole, TeamProject, TeamRole } from '@/lib/api';
 import { useSession } from '@/lib/auth-client';
 import { projectPath } from '@/utils/paths';
 import RowAction from '@/components/common/RowAction';
@@ -21,12 +21,12 @@ export default function TeamProjectActions({
   teamId,
   teamRole,
   project,
-  members,
+  viewer,
 }: {
   teamId: number;
   teamRole: TeamRole;
   project: TeamProject;
-  members: TeamProjectMember[];
+  viewer: { role: MemberRole } | null;
 }) {
   const t = useTranslations('projects');
   const router = useRouter();
@@ -37,10 +37,8 @@ export default function TeamProjectActions({
   const [leaving, setLeaving] = useState(false);
 
   const userId = session?.user.id;
-  const own = members.find((m) => m.userId === userId);
-  const isLastOwner =
-    own?.role === 'owner' && members.filter((m) => m.role === 'owner').length === 1;
-  const canLeave = !!own && !isLastOwner;
+  const isLastOwner = viewer?.role === 'owner' && project.owners.length === 1;
+  const canLeave = !!viewer && !isLastOwner;
   const canEdit = teamRole !== 'member';
   const canDelete = teamRole === 'owner';
 

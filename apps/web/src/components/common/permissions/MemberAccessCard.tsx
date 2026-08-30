@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { Bot } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PermissionCatalog, Permissions } from '@/lib/api';
@@ -9,10 +10,13 @@ import AccessCard from './AccessCard';
 
 // One member of a project, with the access their membership resolves to behind the
 // toggle. Rendered wherever a project's member list is shown: the instance project
-// panel and the team panel.
+// panel and the team panel. `actions` holds what the reader may do with the
+// membership; it sits outside the toggle, so a control in it opens nothing.
 export default function MemberAccessCard({
   member,
+  permissions,
   catalog,
+  actions,
 }: {
   member: {
     name: string;
@@ -22,9 +26,13 @@ export default function MemberAccessCard({
     isAgent: boolean;
     role: 'owner' | 'member';
     roleName: string | null;
-    permissions: Permissions;
+    description?: string;
   };
+  // What the membership resolves to, shown behind the toggle. Undefined renders as a
+  // skeleton, for a caller that resolves it from the team's roles as they load.
+  permissions: Permissions | undefined;
   catalog: PermissionCatalog | undefined;
+  actions?: ReactNode;
 }) {
   const tCommon = useTranslations('common');
   const isOwner = member.role === 'owner';
@@ -42,8 +50,9 @@ export default function MemberAccessCard({
     <AccessCard
       isOwner={isOwner}
       roleName={member.roleName}
-      permissions={member.permissions}
+      permissions={permissions}
       catalog={catalog}
+      trailing={actions && <div className="flex shrink-0 items-center gap-1 pe-2">{actions}</div>}
       header={
         <>
           <Avatar name={displayName} image={member.image} className="size-8 shrink-0 text-[11px]" />
@@ -59,6 +68,11 @@ export default function MemberAccessCard({
             </span>
             {secondary && (
               <span className="block truncate text-xs text-muted-foreground">{secondary}</span>
+            )}
+            {member.description && (
+              <span className="block truncate text-xs text-muted-foreground">
+                {member.description}
+              </span>
             )}
           </span>
           <Badge

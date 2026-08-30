@@ -139,7 +139,12 @@ export default function GodProjectDetailPanel({
                 ) : (
                   <div className="space-y-2">
                     {project.members.map((m) => (
-                      <MemberAccessCard key={m.userId} member={m} catalog={catalogQuery.data} />
+                      <MemberAccessCard
+                        key={m.userId}
+                        member={m}
+                        permissions={m.permissions}
+                        catalog={catalogQuery.data}
+                      />
                     ))}
                   </div>
                 )}

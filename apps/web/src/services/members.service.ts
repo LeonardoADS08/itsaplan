@@ -1,14 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
-import { api, type MemberRole } from '@/lib/api';
+import { api, type MemberListParams, type MemberRole } from '@/lib/api';
 import { qk } from '@/services/queryKeys';
 
-export function useMembersQuery(projectKey: string | null) {
+// One page of the project's members. The window runs on the server, so the page
+// never holds every member of the project; the previous page stays on screen while
+// the next one loads.
+export function useMembersQuery(projectKey: string | null, params: MemberListParams) {
   return useQuery({
-    queryKey: qk.members(projectKey ?? ''),
-    queryFn: () => api.listMembers(projectKey!),
+    queryKey: qk.memberPage(projectKey ?? '', params),
+    queryFn: () => api.listMembers(projectKey!, params),
     enabled: projectKey != null,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -32,6 +36,7 @@ export function useAddMember(projectKey: string) {
       api.addMember(projectKey, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.members(projectKey) });
+      qc.invalidateQueries({ queryKey: qk.anyTeam });
       toast.success(t('added'));
     },
   });
@@ -41,12 +46,15 @@ export function useRemoveMember(projectKey: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (userId: string) => api.removeMember(projectKey, userId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.members(projectKey) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.members(projectKey) });
+      qc.invalidateQueries({ queryKey: qk.anyTeam });
+    },
   });
 }
 
-// Set a member's role (owner-only on the API). role 'owner' promotes to owner;
-// role 'member' assigns a custom role by roleId (null resets to the default role).
+// Set a member's role. role 'owner' promotes to owner; role 'member' assigns a custom
+// role by roleId (null resets to the default role).
 export function useSetMemberRole(projectKey: string) {
   const t = useTranslations('members');
   const qc = useQueryClient();
@@ -62,12 +70,13 @@ export function useSetMemberRole(projectKey: string) {
     }) => api.setMemberRole(projectKey, userId, { role, roleId }),
     onSuccess: (_data, { role }) => {
       qc.invalidateQueries({ queryKey: qk.members(projectKey) });
+      qc.invalidateQueries({ queryKey: qk.anyTeam });
       toast.success(t(role === 'owner' ? 'promoted' : 'roleUpdated'));
     },
   });
 }
 
-// Set what a member does in the project (owner-only on the API).
+// Set what a member does in the project.
 export function useSetMemberDescription(projectKey: string) {
   const t = useTranslations('members');
   const qc = useQueryClient();
@@ -76,6 +85,7 @@ export function useSetMemberDescription(projectKey: string) {
       api.setMemberDescription(projectKey, userId, description),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.members(projectKey) });
+      qc.invalidateQueries({ queryKey: qk.anyTeam });
       toast.success(t('descriptionUpdated'));
     },
   });

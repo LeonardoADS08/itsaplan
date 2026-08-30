@@ -6,6 +6,7 @@ import {
   requireProjectOwner,
   requireProjectAdmin,
   requireMemberAdmin,
+  requireSelfOrMemberAdmin,
   requireTeamMembership,
   requireTeamPermission,
   assertPermission,
@@ -174,6 +175,26 @@ export const guards = new Elysia({ name: 'guards' }).use(authContext).macro({
     return {
       async resolve({ params, user, request }) {
         const project = await requireProjectAdmin((params as ProjectKeyParams).projectKey, user);
+        assertMcpEnabled(project, isMcpRequest(request.headers));
+        return { project };
+      },
+    };
+  },
+
+  // One member's own row, addressed by :userId: the member themselves act on it
+  // without a member permission, everyone else needs what memberAdmin asks for.
+  memberSelfOrAdmin(permission: Permission) {
+    return {
+      ...permissionDetail(permission),
+      async resolve({ params, user, request }) {
+        const { projectKey, userId } = params as ProjectKeyParams & { userId: string };
+        const project = await requireSelfOrMemberAdmin(
+          projectKey,
+          userId,
+          user,
+          permission[0],
+          permission[1],
+        );
         assertMcpEnabled(project, isMcpRequest(request.headers));
         return { project };
       },

@@ -160,6 +160,9 @@
     "owners": "所有者：{names}",
     "openProject": "打开项目",
     "noProjectMembers": "目前还没有人可以访问该项目。",
+    "noMembersTitle": "还没有成员",
+    "noMemberMatches": "没有成员匹配此搜索。",
+    "searchMembers": "搜索成员",
     "lastActivity": "最近活动：{value}",
     "noActivity": "暂无",
     "stats": {

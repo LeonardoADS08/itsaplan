@@ -1,7 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   api,
   type InviteTeamRole,
+  type MemberListParams,
   type NotificationSettingsPatch,
   type Team,
   type TeamRole,
@@ -39,11 +40,26 @@ export function useTeamProjectsQuery(teamId: number) {
 }
 
 // One project the team owns. Fetched when the project's row is opened, so a team
-// with many projects loads no stats or permission matrix it does not show.
+// with many projects loads no stats it does not show.
 export function useTeamProjectQuery(teamId: number, projectId: number) {
   return useQuery({
     queryKey: qk.teamProject(teamId, projectId),
     queryFn: () => api.getTeamProject(teamId, projectId),
+  });
+}
+
+// One page of that project's members. The search and the window run on the server,
+// so the panel holds a page rather than every member of the project. The previous
+// page stays on screen while the next one loads.
+export function useTeamProjectMembersQuery(
+  teamId: number,
+  projectId: number,
+  params: MemberListParams,
+) {
+  return useQuery({
+    queryKey: qk.teamProjectMembers(teamId, projectId, params),
+    queryFn: () => api.listTeamProjectMembers(teamId, projectId, params),
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -9,9 +9,12 @@ export const qk = {
   // The members of a team and the projects it owns, each read by its own section.
   teamMembers: (teamId: number) => ['team', teamId, 'members'] as const,
   teamProjects: (teamId: number) => ['team', teamId, 'projects'] as const,
-  // One project the team owns, loaded when its row is opened.
+  // One project the team owns, loaded when its row is opened, and one page of its
+  // members (the search term and the window scope the entry).
   teamProject: (teamId: number, projectId: number) =>
     ['team', teamId, 'project', projectId] as const,
+  teamProjectMembers: (teamId: number, projectId: number, params: unknown) =>
+    ['team', teamId, 'project', projectId, 'members', params] as const,
   // Every team detail and every project of one, for a write that changes what any
   // of them shows (a project gained or lost a member).
   anyTeam: ['team'] as const,
@@ -58,6 +61,10 @@ export const qk = {
   analyticsForProject: (projectKey: string) => ['analytics', projectKey] as const,
   // Project membership and invite links (the Members section).
   members: (projectKey: string) => ['members', projectKey] as const,
+  // One page of them. Under the key above, so a membership write invalidates every
+  // page with the one call.
+  memberPage: (projectKey: string, params: unknown) =>
+    ['members', projectKey, 'page', params] as const,
   // Every project's member list, for a write that changes what any of them resolves
   // to (a role edited on the team they belong to).
   anyMembers: ['members'] as const,

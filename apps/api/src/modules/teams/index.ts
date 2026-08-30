@@ -21,6 +21,7 @@ import {
   TeamMcpResponse,
   TeamMemberListResponse,
   TeamProjectDetailResponse,
+  TeamProjectMemberPageResponse,
   TeamProjectListResponse,
   TeamResponse,
   createTeamBody,
@@ -28,6 +29,7 @@ import {
   teamMemberParams,
   teamParams,
   teamProjectParams,
+  teamProjectMembersQuery,
   updateTeamBody,
   updateTeamMcpBody,
 } from './model';
@@ -37,6 +39,7 @@ import {
   getTeamProject,
   leaveTeam,
   listTeamMembers,
+  listTeamProjectMembers,
   listTeamProjects,
   listTeams,
   removeTeamMember,
@@ -143,6 +146,40 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
         summary: 'Get a project the team owns',
         description:
           'How one project of the team is doing and who can reach it, with what each membership resolves to. An owner or a manager may read it for any project of the team; anyone else only for one they belong to.',
+      },
+    },
+  )
+
+  .get(
+    '/teams/:teamId/projects/:projectId/members',
+    async ({ membership, params, query }) => {
+      const page = await listTeamProjectMembers(
+        membership.teamId,
+        params.projectId,
+        membership.userId,
+        membership.role,
+        {
+          search: query.search,
+          kind: query.kind,
+          limit: query.limit ?? 25,
+          offset: query.offset ?? 0,
+        },
+      );
+      if (!page) throw new HttpError(404, 'Project not found');
+      return page;
+    },
+    {
+      teamMember: true,
+      params: teamProjectParams,
+      query: teamProjectMembersQuery,
+      response: { 200: TeamProjectMemberPageResponse, ...errors(401, 404) },
+      detail: {
+        summary: "List a project's members, one page at a time",
+        description:
+          'The members of one project of the team, owners first. `search` matches the name, ' +
+          'the address or the handle, and `kind` narrows the list to the people or to the AI ' +
+          'agents. An owner or a manager may read it for any project of the team; anyone ' +
+          'else only for one they belong to.',
       },
     },
   )

@@ -29,9 +29,11 @@
   },
   "you": "(you)",
   "aiAgent": "AI Agent",
-  "groups": {
+  "tabs": {
+    "all": "All",
     "people": "People",
-    "agents": "AI agents"
+    "agents": "AI teammates",
+    "label": "Show"
   },
   "leaveProject": "Leave project",
   "revokeAccess": "Revoke access",
@@ -67,5 +69,12 @@
   "roleUpdated": "Member role updated",
   "descriptionUpdated": "Member description updated",
   "added": "Member added",
-  "provisioned": "Managed by SCIM"
+  "provisioned": "Managed by SCIM",
+  "emptyTitle": "No members here",
+  "emptyDescription": "Nobody matches the current filter.",
+  "search": {
+    "all": "Search members",
+    "people": "Search people",
+    "agents": "Search AI teammates"
+  }
 }

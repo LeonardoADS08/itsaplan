@@ -9,7 +9,7 @@ import {
   aiAgent,
   userPreference,
 } from '@repo/db';
-import { and, eq, isNull, notExists, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNotNull, isNull, notExists, or, sql } from 'drizzle-orm';
 import { iso } from '#shared/lib';
 import { DEFAULT_TIMEZONE } from '#modules/user-preferences/service';
 import {
@@ -258,7 +258,54 @@ export async function listAssigneeCandidates(projectId: number): Promise<Assigne
   return [...members, ...agents].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function listMembers(projectId: number): Promise<MemberRow[]> {
+// The whole member list where no window is asked for. A project is not expected to
+// hold more members than this; the paginated callers pass their own limit.
+const MAX_MEMBER_PAGE = 1000;
+
+// Which members a list asks for: everyone, the people, or the AI agents' bot users.
+export type MemberKind = 'all' | 'human' | 'agent';
+
+// The filters of a member list. The search term is matched against the name, the
+// address and the handle — the three the list shows.
+export interface MemberFilters {
+  search?: string;
+  kind?: MemberKind;
+}
+
+function matchesFilters({ search, kind }: MemberFilters) {
+  const term = search?.trim();
+  return and(
+    term
+      ? or(
+          ilike(user.name, `%${term}%`),
+          ilike(user.email, `%${term}%`),
+          ilike(user.username, `%${term}%`),
+          ilike(aiAgent.username, `%${term}%`),
+        )
+      : undefined,
+    kind === 'human' ? isNull(aiAgent.id) : undefined,
+    kind === 'agent' ? isNotNull(aiAgent.id) : undefined,
+  );
+}
+
+// How many members match, ignoring the page window, so the two agree.
+export async function countMembers(
+  projectId: number,
+  filters: MemberFilters = {},
+): Promise<number> {
+  const rows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(projectMember)
+    .innerJoin(user, eq(user.id, projectMember.userId))
+    .leftJoin(aiAgent, eq(aiAgent.userId, projectMember.userId))
+    .where(and(eq(projectMember.projectId, projectId), matchesFilters(filters)));
+  return rows[0]?.count ?? 0;
+}
+
+export async function listMembers(
+  projectId: number,
+  options: MemberFilters & { limit?: number; offset?: number } = {},
+): Promise<MemberRow[]> {
   const rows = await db
     .select({
       userId: projectMember.userId,
@@ -281,8 +328,12 @@ export async function listMembers(projectId: number): Promise<MemberRow[]> {
     .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
     .leftJoin(aiAgent, eq(aiAgent.userId, projectMember.userId))
     .leftJoin(userPreference, eq(userPreference.userId, projectMember.userId))
-    .where(eq(projectMember.projectId, projectId))
-    .orderBy(projectMember.createdAt);
+    .where(and(eq(projectMember.projectId, projectId), matchesFilters(options)))
+    // The newest membership first: who joined last is what a reader checks after
+    // filling a project.
+    .orderBy(desc(projectMember.createdAt))
+    .limit(options.limit ?? MAX_MEMBER_PAGE)
+    .offset(options.offset ?? 0);
   return rows.map((r) => ({
     userId: r.userId,
     name: r.name,

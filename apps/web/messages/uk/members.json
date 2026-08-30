@@ -29,9 +29,11 @@
   },
   "you": "(ви)",
   "aiAgent": "AI-агент",
-  "groups": {
+  "tabs": {
+    "all": "Усі",
     "people": "Люди",
-    "agents": "AI-агенти"
+    "agents": "ШІ-помічники",
+    "label": "Показувати"
   },
   "leaveProject": "Вийти з проєкту",
   "revokeAccess": "Відкликати доступ",
@@ -67,5 +69,12 @@
   "roleUpdated": "Роль учасника оновлено",
   "descriptionUpdated": "Опис учасника оновлено",
   "added": "Учасника додано",
-  "provisioned": "Керується SCIM"
+  "provisioned": "Керується SCIM",
+  "emptyTitle": "Тут порожньо",
+  "emptyDescription": "Під поточний фільтр ніхто не підходить.",
+  "search": {
+    "all": "Пошук учасників",
+    "people": "Пошук людей",
+    "agents": "Пошук ШІ-помічників"
+  }
 }

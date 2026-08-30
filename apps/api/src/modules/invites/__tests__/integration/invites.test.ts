@@ -315,7 +315,7 @@ describe('invites', () => {
       expect(accept.status).toBe(200);
 
       const members = await owner.api.projects({ projectKey: 'MKT' }).members.get();
-      const row = members.data?.find((m) => m.userId === invitee.userId);
+      const row = members.data?.items.find((m) => m.userId === invitee.userId);
       expect(row).toMatchObject({ role: 'member', roleId: role.data!.id, roleName: 'Editor' });
     });
 

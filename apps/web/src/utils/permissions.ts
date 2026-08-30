@@ -44,6 +44,34 @@ export function matrixFromCatalog(catalog: PermissionCatalog, source: unknown): 
   return out;
 }
 
+// Every action the catalog's resources support: the matrix an owner resolves to,
+// who bypasses the stored one entirely.
+function fullMatrix(catalog: PermissionCatalog): Permissions {
+  const out = {} as Permissions;
+  for (const resource of catalog.resources) {
+    const row = {} as Record<PermissionAction, boolean>;
+    for (const action of catalog.actions) row[action] = resource.actions.includes(action);
+    out[resource.key] = row;
+  }
+  return out;
+}
+
+// What a project membership resolves to, read from the team's roles rather than
+// carried on every member: an owner gets everything, anyone else the matrix of the
+// role they hold, or of the team's default role when they carry none. Undefined
+// while the catalog or the roles are still loading, which renders as a skeleton.
+export function membershipPermissions(
+  catalog: PermissionCatalog | undefined,
+  roles: { id: number; isDefault: boolean; permissions: Permissions }[],
+  member: { role: 'owner' | 'member'; roleId: number | null },
+): Permissions | undefined {
+  if (!catalog) return undefined;
+  if (member.role === 'owner') return fullMatrix(catalog);
+  if (roles.length === 0) return undefined;
+  const role = roles.find((r) => r.id === member.roleId) ?? roles.find((r) => r.isDefault);
+  return matrixFromCatalog(catalog, role?.permissions ?? {});
+}
+
 export interface PermissionGroup {
   // The key of the group's title in messages (permissions.groups).
   key: string;

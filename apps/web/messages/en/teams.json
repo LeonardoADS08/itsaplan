@@ -160,6 +160,9 @@
     "owners": "Owners: {names}",
     "openProject": "Open project",
     "noProjectMembers": "Nobody can reach this project yet.",
+    "noMembersTitle": "No members yet",
+    "noMemberMatches": "No member matches this search.",
+    "searchMembers": "Search members",
     "lastActivity": "Last activity: {value}",
     "noActivity": "none yet",
     "stats": {

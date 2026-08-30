@@ -105,8 +105,11 @@ Enforced declaratively through macros, never imperative calls in handlers.
   pending invite per (team, email) and per (project, email) — partial unique indexes →
   409. `members/` removes (last owner protected).
 - The member list of a project is governed by its role matrix **or** by the team that
-  owns it: `memberAdmin: ["members_invite", "create"]` passes an owner or manager of
-  the team without a `project_member` row of their own.
+  owns it: `memberAdmin: ["members_manage", "<action>"]` passes an owner or manager of
+  the team without a `project_member` row of their own, and every member route uses it
+  — list, add, assign a role, describe, remove. The two that address one member by
+  `:userId` use `memberSelfOrAdmin` instead: that member acts on their own row —
+  leaving the project, saying what they do in it — with no member permission at all.
 - `project_member.source` says which path a row came from: `modules/scim/reconcile.ts`
   only ever writes, re-roles or removes its own `'scim'` rows, and `members/` refuses to
   edit or remove one (409) because the next sync would undo the change. A project

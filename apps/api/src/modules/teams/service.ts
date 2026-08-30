@@ -18,10 +18,14 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { HttpError, iso } from '#shared/lib';
 import { defaultMemberPermissions, fullPermissions, type Permissions } from '#shared/permissions';
 import {
+  countMembers,
+  getMemberContext,
+  getMembership,
   getTeamPermissions,
-  listMemberContexts,
   listMembers,
+  type MemberFilters,
   type MemberRole,
+  type MemberSource,
 } from '#modules/members/service';
 import { getStats, type StatsDto } from '#modules/analytics/service';
 
@@ -96,8 +100,9 @@ export interface TeamProjectRow {
   createdAt: string;
 }
 
-// One member of a project the team owns, with the access their project membership
-// resolves to. The same facts the god project panel shows, read by a team member.
+// One member of a project the team owns. The access their membership resolves to is
+// not carried here: it is the matrix of the role they hold, which the reader already
+// has from the team's roles.
 export interface TeamProjectMemberRow {
   userId: string;
   name: string;
@@ -108,17 +113,31 @@ export interface TeamProjectMemberRow {
   image: string | null;
   isAgent: boolean;
   role: MemberRole;
+  roleId: number | null;
   roleName: string | null;
-  permissions: Permissions;
+  // What the member does in the project, and which path their membership came from —
+  // both needed by the panel, which edits the membership from there.
+  description: string;
+  source: MemberSource;
 }
 
-// One project of the team, opened: how it is doing and who can reach it.
+// One project of the team, opened: how it is doing, and where the reader stands in
+// it. Its members are a page of their own, so a project with many of them is not
+// loaded whole.
 export interface TeamProjectDetail {
   // The most recent entry in the project's issue feed, or null when nothing has
   // happened in it yet.
   lastActivityAt: string | null;
   stats: StatsDto;
-  members: TeamProjectMemberRow[];
+  // The reader's own membership in this project, or null when they only reach it
+  // through the team. What they may do with its members is decided from it.
+  viewer: { role: MemberRole; permissions: Permissions } | null;
+}
+
+// One page of a project's members, with how many match the search.
+export interface TeamProjectMemberPage {
+  items: TeamProjectMemberRow[];
+  total: number;
 }
 
 export interface TeamDetail extends TeamRow {
@@ -440,9 +459,10 @@ export async function teamOwnsProject(teamId: number, projectId: number): Promis
   return rows.length > 0;
 }
 
-// One project the team owns, with its issue stats and its members. Returns null
-// when the project is not owned by the team, and when the caller neither runs the
-// team nor belongs to the project, so the route answers 404 in both cases.
+// One project the team owns, with its issue stats and the reader's standing in it.
+// Returns null when the project is not owned by the team, and when the caller
+// neither runs the team nor belongs to the project, so the route answers 404 in both
+// cases.
 export async function getTeamProject(
   teamId: number,
   projectId: number,
@@ -451,17 +471,39 @@ export async function getTeamProject(
 ): Promise<TeamProjectDetail | null> {
   if (!(await teamOwnsProject(teamId, projectId))) return null;
 
-  const [activity, stats, members, contexts] = await Promise.all([
-    lastActivityAt(projectId),
-    getStats(projectId),
-    listMembers(projectId),
-    listMemberContexts(projectId),
+  const viewer = await getMemberContext(projectId, userId);
+  if (!runsTeam(standing) && !viewer) return null;
+
+  const [activity, stats] = await Promise.all([lastActivityAt(projectId), getStats(projectId)]);
+
+  return {
+    lastActivityAt: activity,
+    stats,
+    viewer: viewer ? { role: viewer.role, permissions: viewer.permissions } : null,
+  };
+}
+
+// One page of a project's members, owners first and the rest newest membership
+// first: who runs the project is the first thing the list has to answer. Returns
+// null under the same two conditions getTeamProject does.
+export async function listTeamProjectMembers(
+  teamId: number,
+  projectId: number,
+  userId: string,
+  standing: TeamStanding,
+  options: MemberFilters & { limit: number; offset: number },
+): Promise<TeamProjectMemberPage | null> {
+  if (!(await teamOwnsProject(teamId, projectId))) return null;
+  if (!runsTeam(standing) && !(await getMembership(projectId, userId))) return null;
+
+  const [members, total] = await Promise.all([
+    listMembers(projectId, options),
+    countMembers(projectId, { search: options.search, kind: options.kind }),
   ]);
-  const memberRows = members.flatMap((m) => {
-    const context = contexts.get(m.userId);
-    if (!context) return [];
-    return [
-      {
+
+  return {
+    items: members
+      .map((m) => ({
         userId: m.userId,
         name: m.name,
         email: m.email,
@@ -469,20 +511,13 @@ export async function getTeamProject(
         image: m.image,
         isAgent: m.isAgent,
         role: m.role,
+        roleId: m.roleId,
         roleName: m.roleName,
-        permissions: context.permissions,
-      },
-    ];
-  });
-
-  if (!runsTeam(standing) && !memberRows.some((m) => m.userId === userId)) return null;
-
-  return {
-    lastActivityAt: activity,
-    stats,
-    // Owners first, the rest in the order they joined: who runs the project is the
-    // first thing the list has to answer.
-    members: memberRows.sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')),
+        description: m.description,
+        source: m.source,
+      }))
+      .sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')),
+    total,
   };
 }
 

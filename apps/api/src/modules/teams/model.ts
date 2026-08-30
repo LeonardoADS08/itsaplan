@@ -92,12 +92,25 @@ export const TeamProjectListResponse = t.Array(
   }),
 );
 
-// One project the team owns: how its issues stand, and the members with the access
-// each membership resolves to.
+// One project the team owns: how its issues stand, and where the reader stands in it.
 export const TeamProjectDetailResponse = t.Object({
   lastActivityAt: t.Nullable(t.String()),
   stats: StatsDto,
-  members: t.Array(
+  viewer: t.Nullable(
+    t.Object({
+      role: t.Union([t.Literal('owner'), t.Literal('member')]),
+      permissions: PermissionMatrixSchema,
+    }),
+    {
+      description: "The reader's own membership in the project, null when they only run the team.",
+    },
+  ),
+});
+
+// One page of the project's members. The access a membership resolves to is the
+// matrix of the role it names, which the caller reads from the team's roles.
+export const TeamProjectMemberPageResponse = t.Object({
+  items: t.Array(
     t.Object({
       userId: t.String(),
       name: t.String(),
@@ -106,10 +119,24 @@ export const TeamProjectDetailResponse = t.Object({
       image: t.Nullable(t.String()),
       isAgent: t.Boolean(),
       role: t.Union([t.Literal('owner'), t.Literal('member')]),
+      roleId: t.Nullable(t.Number()),
       roleName: t.Nullable(t.String()),
-      permissions: PermissionMatrixSchema,
+      description: t.String(),
+      source: t.Union([t.Literal('invite'), t.Literal('scim')]),
     }),
   ),
+  total: t.Number(),
+});
+
+export const teamProjectMembersQuery = t.Object({
+  search: t.Optional(t.String({ description: 'Matches the name, the address or the handle.' })),
+  kind: t.Optional(
+    t.UnionEnum(['all', 'human', 'agent'], {
+      description: "Everyone, the people, or the AI agents' bot users. Defaults to everyone.",
+    }),
+  ),
+  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100, default: 25 })),
+  offset: t.Optional(t.Numeric({ minimum: 0, default: 0 })),
 });
 
 // The team's MCP settings: the switch, and the projects its reach covers.

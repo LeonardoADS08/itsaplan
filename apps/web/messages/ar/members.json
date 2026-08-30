@@ -29,9 +29,11 @@
   },
   "you": "(أنت)",
   "aiAgent": "وكيل ذكاء اصطناعي",
-  "groups": {
+  "tabs": {
+    "all": "الكل",
     "people": "الأشخاص",
-    "agents": "وكلاء الذكاء الاصطناعي"
+    "agents": "زملاء الذكاء الاصطناعي",
+    "label": "عرض"
   },
   "leaveProject": "مغادرة المشروع",
   "revokeAccess": "إلغاء الوصول",
@@ -67,5 +69,12 @@
   "roleUpdated": "تم تحديث دور العضو",
   "descriptionUpdated": "تم تحديث وصف العضو",
   "added": "اتضاف العضو",
-  "provisioned": "مُدار عبر SCIM"
+  "provisioned": "مُدار عبر SCIM",
+  "emptyTitle": "لا أعضاء هنا",
+  "emptyDescription": "لا أحد يطابق عامل التصفية الحالي.",
+  "search": {
+    "all": "البحث عن الأعضاء",
+    "people": "البحث عن الأشخاص",
+    "agents": "البحث عن زملاء الذكاء الاصطناعي"
+  }
 }

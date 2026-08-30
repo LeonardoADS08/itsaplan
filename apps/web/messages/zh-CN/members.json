@@ -29,9 +29,11 @@
   },
   "you": "（你）",
   "aiAgent": "AI 代理",
-  "groups": {
-    "people": "成员",
-    "agents": "AI 智能体"
+  "tabs": {
+    "all": "全部",
+    "people": "人员",
+    "agents": "AI 队友",
+    "label": "显示"
   },
   "leaveProject": "退出项目",
   "revokeAccess": "撤销访问权限",
@@ -67,5 +69,12 @@
   "roleUpdated": "成员角色已更新",
   "descriptionUpdated": "成员描述已更新",
   "added": "已添加成员",
-  "provisioned": "由 SCIM 管理"
+  "provisioned": "由 SCIM 管理",
+  "emptyTitle": "这里没有成员",
+  "emptyDescription": "没有人符合当前筛选条件。",
+  "search": {
+    "all": "搜索成员",
+    "people": "搜索人员",
+    "agents": "搜索 AI 队友"
+  }
 }
