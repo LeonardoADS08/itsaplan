@@ -785,6 +785,27 @@
       "when": 1787927286587,
       "tag": "0111_bitter_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1788033386142,
+      "tag": "0112_sparkling_pandemic",
+      "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1788065824575,
+      "tag": "0113_complete_power_pack",
+      "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1788173880309,
+      "tag": "0114_ordinary_fixer",
+      "breakpoints": true
     }
   ]
 }
