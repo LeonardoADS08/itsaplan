@@ -1158,6 +1158,10 @@ export interface InstanceEmailSettingsPatch {
   allowProjects?: boolean;
 }
 
+export interface InstanceEmailTestResult {
+  recipient: string;
+}
+
 // The Google OAuth credentials used for social sign-in. The client secret is never
 // returned, only a `hasClientSecret` flag. redirectUri is derived from the API origin
 // and has to be registered in the Google Cloud console.
@@ -3558,6 +3562,11 @@ export const api = {
   updateInstanceEmailSettings: (patch: InstanceEmailSettingsPatch) =>
     request<InstanceEmailSettings>('/god/email-settings', {
       method: 'PUT',
+      body: JSON.stringify(patch),
+    }),
+  testInstanceEmailSettings: (patch: InstanceEmailSettingsPatch) =>
+    request<InstanceEmailTestResult>('/god/email-settings/test', {
+      method: 'POST',
       body: JSON.stringify(patch),
     }),
   getInstanceTelegramSettings: () => request<InstanceTelegramSettings>('/god/telegram-settings'),
