@@ -36,6 +36,9 @@ export const qk = {
   subtaskAutomation: (projectKey: string) => ['subtaskAutomation', projectKey] as const,
   // The project's repository integration settings (the Repositories settings section).
   gitSettings: (projectKey: string) => ['gitSettings', projectKey] as const,
+  gitConnections: (projectKey: string) => ['gitConnections', projectKey] as const,
+  gitAvailableRepositories: (projectKey: string, connectionId: number, search: string) =>
+    ['gitConnections', projectKey, connectionId, 'repositories', search] as const,
   // The member's own notification preferences for a project.
   notificationPreferences: (projectKey: string) => ['notificationPreferences', projectKey] as const,
   views: (projectKey: string) => ['views', projectKey] as const,

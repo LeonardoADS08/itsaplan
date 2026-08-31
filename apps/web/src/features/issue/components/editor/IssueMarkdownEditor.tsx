@@ -13,6 +13,7 @@ import { SlashCommand } from '@/lib/tiptap-slash-command';
 import { MarkdownTable } from '../../utils/tiptap-table';
 import { Video } from '../../utils/tiptap-video';
 import { attachmentHtml, type Embeddable } from '../../utils/attachmentEmbed';
+import { openLinkOnModifierClick } from '../../utils/modifierClickLink';
 import EditorImagePicker from './EditorImagePicker';
 import EditorSelectionMenu from '@/components/common/editor/EditorSelectionMenu';
 import EditorTableMenu from '@/components/common/editor/EditorTableMenu';
@@ -22,6 +23,11 @@ import { useTranslations } from 'next-intl';
 // Shared by every editor instance. A block with no language is detected by
 // highlightAuto, so there is no language picker.
 const lowlight = createLowlight(common);
+
+export const issueEditorStarterKitOptions = {
+  codeBlock: false,
+  link: false,
+} as const;
 
 // A minimal WYSIWYG editor over markdown text — no persistent toolbar, just a
 // bubble menu on selection and a "/" command list (Linear/Notion-style). Content
@@ -84,7 +90,7 @@ export default function IssueMarkdownEditor({
     editable,
     extensions: [
       // Replaces StarterKit's plain code block, keeping the node name codeBlock.
-      StarterKit.configure({ codeBlock: false }),
+      StarterKit.configure(issueEditorStarterKitOptions),
       CodeBlockLowlight.configure({ lowlight }),
       Placeholder.configure({ placeholder }),
       Link.configure({ openOnClick: false, autolink: true }),
@@ -120,6 +126,9 @@ export default function IssueMarkdownEditor({
       attributes: {
         // flex-1 so the typing area covers a container taller than the text.
         class: 'md-content flex-1 focus:outline-none',
+      },
+      handleClick(view, _pos, event) {
+        return openLinkOnModifierClick(event, view.dom);
       },
       // Files dropped from the OS are uploaded, then inserted at the drop
       // position. Internal moves and attachment-card drags (which carry

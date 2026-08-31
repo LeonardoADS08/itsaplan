@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia';
+import { isInvitePending } from '#modules/invites/service';
 import { getDeliveryConfig } from '#modules/notification-settings/service';
 import { getProjectById } from '#modules/projects/service';
 import { sendDeliveryBody } from './model';
@@ -19,6 +20,14 @@ export const internalNotificationRoutes = new Elysia({
     if (!expected || headers['x-worker-token'] !== expected) {
       set.status = 401;
       return { ok: false, retryable: false, error: 'Unauthorized' };
+    }
+    if (
+      body.payload.projectInviteId != null &&
+      !(await isInvitePending(body.projectId, body.payload.projectInviteId))
+    ) {
+      // The invite was accepted, rejected, or revoked while its email waited in
+      // the outbox. Treat it as delivered so the worker removes the stale row.
+      return { ok: true };
     }
     // The row names the project it came from; the credentials belong to the team
     // that owns it.

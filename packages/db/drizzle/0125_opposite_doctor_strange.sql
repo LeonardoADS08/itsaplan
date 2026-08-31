@@ -1,1 +1,0 @@
-ALTER TABLE "team" ADD COLUMN "mcp_enabled" boolean DEFAULT true NOT NULL;

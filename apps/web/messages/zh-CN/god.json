@@ -197,7 +197,12 @@
     "optional": "可选",
     "apiKey": "API 密钥",
     "teamNotifications": "团队通知",
-    "teamNotificationsHint": "允许团队通过该提供商投递通知，而无需配置自己的提供商。是否使用仍由各团队决定。"
+    "teamNotificationsHint": "允许团队通过该提供商投递通知，而无需配置自己的提供商。是否使用仍由各团队决定。",
+    "test": "发送测试邮件",
+    "testing": "正在发送…",
+    "testHint": "使用当前设置发送真实邮件，无需先保存。",
+    "testConfigureFirst": "请先启用服务商并填写所需凭据。",
+    "testSent": "测试邮件已发送至 {email}"
   },
   "authProvider": {
     "saved": "身份验证提供商已保存",
