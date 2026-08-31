@@ -334,6 +334,8 @@ export interface InstanceProjectMember {
   roleId: number | null;
   roleName: string | null;
   permissions: Permissions;
+  description: string;
+  timezone: string;
   joinedAt: string;
 }
 
@@ -538,6 +540,8 @@ export async function getInstanceProject(projectId: number): Promise<InstancePro
         roleId: m.roleId,
         roleName: m.roleName,
         permissions: context.permissions,
+        description: m.description,
+        timezone: m.timezone,
         joinedAt: m.createdAt,
       },
     ];

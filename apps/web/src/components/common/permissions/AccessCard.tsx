@@ -14,36 +14,32 @@ import PermissionMatrix from './PermissionMatrix';
 export default function AccessCard({
   header,
   trailing,
-  isOwner,
-  roleName,
+  details,
   permissions,
   catalog,
 }: {
   header: ReactNode;
   trailing?: ReactNode;
-  isOwner: boolean;
-  roleName: string | null;
+  // Shown above the matrix: a member's profile. A project row has none.
+  details?: ReactNode;
   permissions: Permissions | undefined;
   catalog: PermissionCatalog | undefined;
 }) {
-  const t = useTranslations('permissions.source');
-
-  // Where the permissions on show come from, in words. An owner bypasses the matrix
-  // entirely, so its rows are all on and this says why.
-  function permissionSource(): string {
-    if (isOwner) return t('owner');
-    if (roleName) return t('role', { role: roleName });
-    return t('default');
-  }
+  const t = useTranslations('permissions');
 
   return (
     <DisclosureCard header={header} trailing={trailing}>
-      <p className="mb-2 text-xs text-muted-foreground">{permissionSource()}</p>
-      {catalog && permissions ? (
-        <PermissionMatrix catalog={catalog} permissions={permissions} />
-      ) : (
-        <ListSkeleton rows={3} rowClassName="h-6" />
-      )}
+      <div className="space-y-5">
+        {details}
+        <section>
+          <h4 className="mb-2 text-sm font-medium">{t('accessHeading')}</h4>
+          {catalog && permissions ? (
+            <PermissionMatrix catalog={catalog} permissions={permissions} />
+          ) : (
+            <ListSkeleton rows={3} rowClassName="h-6" />
+          )}
+        </section>
+      </div>
     </DisclosureCard>
   );
 }

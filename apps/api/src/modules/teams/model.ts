@@ -123,6 +123,8 @@ export const TeamProjectMemberPageResponse = t.Object({
       roleName: t.Nullable(t.String()),
       description: t.String(),
       source: t.Union([t.Literal('invite'), t.Literal('scim')]),
+      timezone: t.String(),
+      joinedAt: t.String(),
     }),
   ),
   total: t.Number(),

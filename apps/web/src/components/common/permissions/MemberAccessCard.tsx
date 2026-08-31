@@ -7,6 +7,7 @@ import type { PermissionCatalog, Permissions } from '@/lib/api';
 import Avatar from '@/components/common/Avatar';
 import { Badge } from '@/components/ui/badge';
 import AccessCard from './AccessCard';
+import MemberProfileDetails from './MemberProfileDetails';
 
 // One member of a project, with the access their membership resolves to behind the
 // toggle. Rendered wherever a project's member list is shown: the instance project
@@ -26,7 +27,9 @@ export default function MemberAccessCard({
     isAgent: boolean;
     role: 'owner' | 'member';
     roleName: string | null;
-    description?: string;
+    description: string;
+    timezone: string;
+    joinedAt: string;
   };
   // What the membership resolves to, shown behind the toggle. Undefined renders as a
   // skeleton, for a caller that resolves it from the team's roles as they load.
@@ -48,10 +51,15 @@ export default function MemberAccessCard({
 
   return (
     <AccessCard
-      isOwner={isOwner}
-      roleName={member.roleName}
       permissions={permissions}
       catalog={catalog}
+      details={
+        <MemberProfileDetails
+          description={member.description}
+          timezone={member.timezone}
+          joinedAt={member.joinedAt}
+        />
+      }
       trailing={actions && <div className="flex shrink-0 items-center gap-1 pe-2">{actions}</div>}
       header={
         <>
@@ -68,11 +76,6 @@ export default function MemberAccessCard({
             </span>
             {secondary && (
               <span className="block truncate text-xs text-muted-foreground">{secondary}</span>
-            )}
-            {member.description && (
-              <span className="block truncate text-xs text-muted-foreground">
-                {member.description}
-              </span>
             )}
           </span>
           <Badge

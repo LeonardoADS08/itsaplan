@@ -259,6 +259,8 @@ export const InstanceProjectDetailResponse = t.Composite([
         roleId: t.Nullable(t.Number()),
         roleName: t.Nullable(t.String()),
         permissions: PermissionMatrixSchema,
+        description: t.String(),
+        timezone: t.String(),
         joinedAt: t.String(),
       }),
     ),

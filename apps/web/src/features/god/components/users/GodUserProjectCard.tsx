@@ -20,8 +20,6 @@ export default function GodUserProjectCard({
 
   return (
     <AccessCard
-      isOwner={isOwner}
-      roleName={project.roleName}
       permissions={project.permissions}
       catalog={catalog}
       header={

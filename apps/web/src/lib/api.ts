@@ -200,6 +200,8 @@ export interface TeamProjectMember {
   // both needed by the panel, which edits the membership from there.
   description: string;
   source: 'invite' | 'scim';
+  timezone: string;
+  joinedAt: string;
 }
 
 export interface TeamProjectMemberPage {
@@ -1486,6 +1488,8 @@ export interface InstanceProjectMember {
   roleId: number | null;
   roleName: string | null;
   permissions: Permissions;
+  description: string;
+  timezone: string;
   joinedAt: string;
 }
 

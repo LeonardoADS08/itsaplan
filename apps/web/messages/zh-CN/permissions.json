@@ -42,10 +42,6 @@
   "resourceColumn": "资源",
   "allowed": "允许",
   "notAllowed": "不允许",
-  "source": {
-    "owner": "所有者拥有完整访问权限，不受角色权限矩阵限制。",
-    "role": "根据“{role}”角色确定。",
-    "default": "未分配角色，使用默认成员权限。"
-  },
+  "accessHeading": "对此项目的访问权限",
   "joined": "加入于 {date}"
 }

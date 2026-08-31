@@ -119,6 +119,8 @@ export interface TeamProjectMemberRow {
   // both needed by the panel, which edits the membership from there.
   description: string;
   source: MemberSource;
+  timezone: string;
+  joinedAt: string;
 }
 
 // One project of the team, opened: how it is doing, and where the reader stands in
@@ -515,6 +517,8 @@ export async function listTeamProjectMembers(
         roleName: m.roleName,
         description: m.description,
         source: m.source,
+        timezone: m.timezone,
+        joinedAt: m.createdAt,
       }))
       .sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')),
     total,
