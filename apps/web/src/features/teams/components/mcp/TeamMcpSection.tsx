@@ -33,12 +33,7 @@ export default function TeamMcpSection({ teamId }: { teamId: number }) {
   const busy = update.isPending;
 
   return (
-    <SectionPageView
-      title={t('title')}
-      description={t('description')}
-      wide
-      widthClassName="min-w-[600px] max-w-[60%]"
-    >
+    <SectionPageView title={t('title')} description={t('description')}>
       <div className="space-y-8">
         <div className="flex items-center justify-between gap-6 rounded-lg bg-muted/40 px-4 py-3.5">
           <div className="space-y-0.5">

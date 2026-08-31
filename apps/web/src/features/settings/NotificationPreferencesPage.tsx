@@ -25,13 +25,7 @@ export default function NotificationPreferencesPage() {
 function Chrome({ actions, children }: { actions?: ReactNode; children: ReactNode }) {
   const t = useTranslations('settings.notifications');
   return (
-    <SectionPageView
-      title={t('title')}
-      description={t('description')}
-      wide
-      widthClassName="min-w-[600px] max-w-[60%]"
-      actions={actions}
-    >
+    <SectionPageView title={t('title')} description={t('description')} actions={actions}>
       {children}
     </SectionPageView>
   );

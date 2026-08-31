@@ -19,8 +19,6 @@ export default function TeamNotificationsSection({ teamId }: { teamId: number })
     <SectionPageView
       title={t('sections.notifications.title')}
       description={t('sections.notifications.description')}
-      wide
-      widthClassName="min-w-[600px] max-w-[60%]"
     >
       {team && !canManage ? (
         <p className="text-sm text-muted-foreground">{t('notifications.ownerOnly')}</p>

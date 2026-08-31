@@ -9,7 +9,7 @@ import { useRenameTeam, useTeam } from '@/services/teams.service';
 import SectionPageView from '@/components/common/page/SectionPageView';
 import SettingsCard from '@/components/common/page/SettingsCard';
 import SettingsSection from '@/components/common/page/SettingsSection';
-import PageSkeleton from '@/components/common/skeleton/PageSkeleton';
+import SectionPageSkeleton from '@/components/common/skeleton/SectionPageSkeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ export default function TeamInfoSection({ teamId }: { teamId: number }) {
   const [draft, setDraft] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
 
-  if (!team) return <PageSkeleton rows={3} className="max-w-[60%] min-w-[600px]" />;
+  if (!team) return <SectionPageSkeleton rows={3} />;
 
   const name = draft ?? team.name;
   const isOwner = team.role === 'owner';
@@ -51,8 +51,6 @@ export default function TeamInfoSection({ teamId }: { teamId: number }) {
     <SectionPageView
       title={tSection('title')}
       description={tSection('description')}
-      wide
-      widthClassName="min-w-[600px] max-w-[60%]"
       actions={
         isOwner ? (
           <Button size="sm" className="h-8" disabled={!canSave} onClick={() => void save()}>
