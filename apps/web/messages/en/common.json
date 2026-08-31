@@ -51,7 +51,6 @@
         "toggle": "Open the command palette"
       },
       "project": {
-        "switch": "Switch to project 1–9",
         "new": "New project",
         "settings": "Open project settings"
       },

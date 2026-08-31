@@ -279,15 +279,9 @@ export function AgentSheetForm({
   const countBadge = (selected: number, total: number) =>
     total > 0 ? `${selected} / ${total}` : undefined;
 
-  // The full-width internal editor owns its scroll container (it holds the section
-  // nav's scroll spy). Every other case stacks in a single column here. Once the
-  // agent exists the chat takes the other half of the sheet and the form fills its
-  // column; while creating there is no chat and it stands alone at full width, which
-  // needs a readable cap.
-  const ownsScroll = expanded && value.kind === 'internal';
-  let contentWidth = '';
-  if (ownsScroll) contentWidth = AGENT_EXPANDED_WIDTH;
-  else if (expanded && isCreate) contentWidth = 'max-w-2xl';
+  // In the sheet the form owns its scroll container: it holds the section nav, whose
+  // scroll spy needs that root. The compact side panel stacks in a single column here.
+  const contentWidth = expanded ? AGENT_EXPANDED_WIDTH : '';
 
   const fields = (
     <TeamAiAgentFields
@@ -321,7 +315,7 @@ export function AgentSheetForm({
         void submit();
       }}
     >
-      {ownsScroll ? (
+      {expanded ? (
         fields
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-5 pb-6 sm:px-6">

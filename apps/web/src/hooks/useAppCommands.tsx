@@ -101,14 +101,12 @@ export function useAppCommands({
     run: onNewProject,
   });
 
-  const projectItems: Command[] = projects.map((p, i) => ({
+  const projectItems: Command[] = projects.map((p) => ({
     id: `project.switch.${p.key}`,
     label: p.name,
     icon: <LayoutGrid />,
     keywords: `switch project ${p.key}`,
     checked: p.key === currentProjectKey,
-    // The project switch is positional, so the digit is the row's place in the list.
-    shortcut: (i < 9 ? hotkey('project.switch')?.replace('1–9', String(i + 1)) : null) ?? undefined,
     run: () => onSelectProject(p.key),
   }));
 

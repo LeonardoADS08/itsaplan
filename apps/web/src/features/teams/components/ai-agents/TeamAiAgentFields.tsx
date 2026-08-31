@@ -1,12 +1,15 @@
-import { type ReactNode, useState } from 'react';
+import { Fragment, type ReactNode, useState } from 'react';
 import {
+  type LucideIcon,
   Cpu,
   FolderKanban,
   IdCard,
+  KeyRound,
   ListChecks,
   Shield,
   SlidersHorizontal,
   Sparkles,
+  Terminal,
   Wrench,
   Zap,
 } from 'lucide-react';
@@ -22,6 +25,7 @@ import type {
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { type SectionNavItem } from '@/components/common/page/SectionNav';
+import { AGENT_KIND_ICON } from '../../utils/agentKindIcon';
 import { type AgentFormValue, grantedToolCount } from '../../utils/agentForm';
 import { AgentFormSection } from './AgentFormSection';
 import AgentExpandedLayout from './AgentExpandedLayout';
@@ -41,9 +45,9 @@ import { useTranslations } from 'next-intl';
 // key is in the operator's hands.
 const DEFAULT_OPEN: Record<string, boolean> = { access: true, projects: true, token: true };
 
-// The agent form: the sections an agent of this kind has, in a stacked column or, for
-// a full-width internal agent, beside a section nav. `kindLocked` fixes the kind on
-// edit (the API has no kind change). Controlled by value + onChange(patch).
+// The agent form: the sections an agent of this kind has, in a stacked column or, at
+// full width, beside a section nav. `kindLocked` fixes the kind on edit (the API has
+// no kind change). Controlled by value + onChange(patch).
 export default function TeamAiAgentFields({
   value,
   onChange,
@@ -109,26 +113,34 @@ export default function TeamAiAgentFields({
   // No section header: the name, handle, and instructions are the agent itself, so
   // they open the form as plain fields rather than as one more thing to expand.
   const basicsSection = (
-    <div key="basics" id="basics" className="scroll-mt-4 space-y-4">
+    <div id="basics" className="scroll-mt-4 space-y-4">
       {!kindLocked && (
         <div className="space-y-1.5">
           <span className="text-sm font-medium">{t('kind')}</span>
           <div className="grid grid-cols-2 gap-2">
-            {(['external', 'internal'] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => onChange({ kind: k })}
-                className={`rounded-md px-3 py-2 text-start text-sm transition-colors ${
-                  value.kind === k
-                    ? 'bg-secondary ring-1 ring-foreground/15'
-                    : 'bg-muted/50 hover:bg-accent/60'
-                }`}
-              >
-                <span className="font-medium">{t(`kindLabel.${k}`)}</span>
-                <span className="block text-xs text-muted-foreground">{t(`kindHint.${k}`)}</span>
-              </button>
-            ))}
+            {(['external', 'internal'] as const).map((k) => {
+              const KindIcon = AGENT_KIND_ICON[k];
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => onChange({ kind: k })}
+                  className={`flex items-start gap-2.5 rounded-md px-3 py-2 text-start text-sm transition-colors ${
+                    value.kind === k
+                      ? 'bg-secondary ring-1 ring-foreground/15'
+                      : 'bg-muted/50 hover:bg-accent/60'
+                  }`}
+                >
+                  <KindIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0">
+                    <span className="font-medium">{t(`kindLabel.${k}`)}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {t(`kindHint.${k}`)}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -337,77 +349,65 @@ export default function TeamAiAgentFields({
     </AgentFormSection>
   );
 
-  // Full-width internal agent: a sticky section nav on the left and one readable
-  // column of borderless sections on the right, inside this component's own scroll
-  // container so the nav's scroll spy can track which section is in view.
-  if (expanded && value.kind === 'internal') {
-    const navSections: SectionNavItem[] = [
-      { id: 'basics', label: t('basics'), icon: IdCard },
-      {
-        id: 'projects',
-        label: t('projects'),
-        icon: FolderKanban,
-        badge: projects.length > 0 ? `${value.projectIds.length} / ${projects.length}` : undefined,
-      },
-      { id: 'access', label: t('access'), icon: Shield },
-      { id: 'model', label: t('model'), icon: Cpu },
-      { id: 'advanced', label: t('advanced'), icon: SlidersHorizontal },
-      { id: 'triggers', label: t('triggers'), icon: Zap },
-      {
-        id: 'actions',
-        label: t('actions'),
-        icon: ListChecks,
-        badge: tools.length > 0 ? `${activeCount} / ${tools.length}` : undefined,
-      },
-      ...(skillsSection
-        ? [{ id: 'skills', label: t('skills'), icon: Sparkles, badge: skillsBadge }]
-        : []),
-      ...(toolsSection
-        ? [{ id: 'tools', label: t('tools'), icon: Wrench, badge: toolsBadge }]
-        : []),
-    ];
+  // One section of the form: its nav entry and the fields it lists come from the same
+  // entry, so the two orders cannot drift apart.
+  const section = (
+    id: string,
+    label: string,
+    icon: LucideIcon,
+    node: ReactNode,
+    badge?: string,
+  ): SectionNavItem & { node: ReactNode } => ({ id, label, icon, badge, node });
 
+  const projectsBadge =
+    projects.length > 0 ? `${value.projectIds.length} / ${projects.length}` : undefined;
+
+  const sections =
+    value.kind === 'external'
+      ? [
+          section('basics', t('basics'), IdCard, basicsSection),
+          section('projects', t('projects'), FolderKanban, projectsSection, projectsBadge),
+          section('token', t('apiKey'), KeyRound, tokenSection),
+          section('access', t('access'), Shield, accessSection),
+          section('triggers', t('triggers'), Zap, triggersSection),
+          section('runner', t('runner'), Terminal, runnerSection),
+        ]
+      : [
+          section('basics', t('basics'), IdCard, basicsSection),
+          section('projects', t('projects'), FolderKanban, projectsSection, projectsBadge),
+          section('access', t('access'), Shield, accessSection),
+          section('model', t('model'), Cpu, modelSection),
+          section('advanced', t('advanced'), SlidersHorizontal, advancedSection),
+          section('triggers', t('triggers'), Zap, triggersSection),
+          section(
+            'actions',
+            t('actions'),
+            ListChecks,
+            actionsSection,
+            tools.length > 0 ? `${activeCount} / ${tools.length}` : undefined,
+          ),
+          ...(skillsSection
+            ? [section('skills', t('skills'), Sparkles, skillsSection, skillsBadge)]
+            : []),
+          ...(toolsSection ? [section('tools', t('tools'), Wrench, toolsSection, toolsBadge)] : []),
+        ];
+
+  const stack = sections.map(({ id, node }) => <Fragment key={id}>{node}</Fragment>);
+
+  // Full width: a sticky section nav on the left and one readable column of sections
+  // on the right, inside this component's own scroll container so the nav's scroll spy
+  // can track which section is in view.
+  if (expanded) {
     return (
       <AgentExpandedLayout
-        navSections={navSections}
+        navSections={sections}
         onExpand={(id) => setOpenSections((s) => ({ ...s, [id]: true }))}
       >
-        {basicsSection}
-        {projectsSection}
-        {accessSection}
-        {modelSection}
-        {advancedSection}
-        {triggersSection}
-        {actionsSection}
-        {skillsSection}
-        {toolsSection}
+        {stack}
       </AgentExpandedLayout>
     );
   }
 
-  // Compact side panel (and expanded external agent): a single stacked column.
-  return (
-    <div className="space-y-8">
-      {basicsSection}
-      {projectsSection}
-      {value.kind === 'external' ? (
-        <>
-          {tokenSection}
-          {accessSection}
-          {triggersSection}
-          {runnerSection}
-        </>
-      ) : (
-        <>
-          {accessSection}
-          {modelSection}
-          {advancedSection}
-          {triggersSection}
-          {actionsSection}
-          {skillsSection}
-          {toolsSection}
-        </>
-      )}
-    </div>
-  );
+  // Compact side panel: the same sections stacked in one column.
+  return <div className="space-y-8">{stack}</div>;
 }

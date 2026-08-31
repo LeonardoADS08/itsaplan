@@ -326,6 +326,12 @@ export interface AgentFieldTrigger {
   delaySec: number;
 }
 
+// The same trigger as a read of an agent returns it: the field's name comes along, so
+// a screen can name it without loading the project the field belongs to.
+export interface AgentFieldTriggerRead extends AgentFieldTrigger {
+  name: string;
+}
+
 // A project an agent works in, as its settings list them.
 export interface AgentProject {
   id: number;
@@ -362,7 +368,7 @@ export interface AiAgent {
   triggerOnAssign: boolean;
   // The member custom fields that start a run when the agent is set into one, each
   // with the seconds its run waits before the agent may pick it up.
-  fieldTriggers: AgentFieldTrigger[];
+  fieldTriggers: AgentFieldTriggerRead[];
   // How long a delegation run waits before the agent may pick it up.
   delegationDelaySec: number;
   // The team_role the agent acts under, in every project it works in.

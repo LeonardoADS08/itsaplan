@@ -43,8 +43,8 @@
       "description": "Tools agents can call, each connected to an integration credential."
     },
     "agents": {
-      "title": "Agents",
-      "description": "The AI agents this team owns, and the projects each of them works in."
+      "title": "AI Teammates",
+      "description": "The AI teammates this team owns, and the projects each of them works in."
     }
   },
   "info": {
@@ -307,14 +307,14 @@
     "noAccess": "You do not have access to the tools of this team."
   },
   "agents": {
-    "newAgent": "New agent",
-    "create": "Create agent",
-    "save": "Save agent",
-    "delete": "Delete agent",
-    "edit": "Edit agent",
-    "empty": "No agents yet",
+    "newAgent": "New AI teammate",
+    "create": "Create AI teammate",
+    "save": "Save AI teammate",
+    "delete": "Delete AI teammate",
+    "edit": "Edit AI teammate",
+    "empty": "No AI teammates yet",
     "emptyHint": "An agent runs on the built-in runtime or through the API.",
-    "agent": "Agent",
+    "agent": "AI teammate",
     "sheetSubtitle": "A bot user you can delegate issues to",
     "agentSettings": "Agent settings",
     "basics": "Basics",
@@ -457,17 +457,15 @@
     "queue": "Queue",
     "testChat": "Test chat",
     "moreActions": "More actions",
-    "createdOn": "Created {date}",
     "runsSubtitle": "@{username} · triggered runs",
     "regenerateMessage": "The current key for <v>{name}</v> stops working right away. Update everything that uses it with the new key.",
     "deleteMessage": "<v>{name}</v> and its API key will be removed, and it will be cleared from any issues it was assigned or delegated to. This cannot be undone.",
     "actionCount": "{count, plural, one {# action} other {# actions}}",
     "toolCount": "{count, plural, one {# tool} other {# tools}}",
     "skillCount": "{count, plural, one {# skill} other {# skills}}",
-    "triggersNone": "None",
     "triggerMention": "Mention",
     "triggerDelegation": "Delegation",
-    "triggerFieldCount": "{count, plural, one {# field} other {# fields}}",
+    "triggerFieldCount": "{count, plural, one {# custom field} other {# custom fields}}",
     "noMatch": "No match for “{query}”.",
     "useCustomModel": "Use \"{query}\"",
     "roleRule": "Evaluated against the role {role}: an action works only when the role permits it too.",
@@ -488,7 +486,10 @@
     "noProjectsHint": "This team owns no project for the agent to work in.",
     "searchProjects": "Search projects",
     "noProjectsShort": "No projects",
-    "roleHint": "Caps what the agent may do, in every project it works in."
+    "roleHint": "Caps what the agent may do, in every project it works in.",
+    "chatNeedsAgent": "Create the AI teammate to test it here.",
+    "chatNeedsProject": "Attach the AI teammate to a project to test it here.",
+    "triggerFieldsTitle": "Custom fields that start a run"
   },
   "members": {
     "peopleGroup": "{count, plural, one {# person} other {# people}}",

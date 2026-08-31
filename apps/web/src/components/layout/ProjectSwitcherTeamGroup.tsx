@@ -1,26 +1,28 @@
-import { ChevronRight, SquareKanban, Users } from 'lucide-react';
+import { Check, ChevronRight, SquareKanban, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { Project } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { DropdownMenuItem, DropdownMenuShortcut } from '@/components/ui/dropdown-menu';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 export interface TeamGroup {
   teamId: number;
   teamName: string;
-  projects: { project: Project; shortcut: number | null }[];
+  projects: Project[];
 }
 
 // One team's projects in the project switcher, foldable by its header. The open
 // state is owned by the switcher, which outlives the menu's content.
 export default function ProjectSwitcherTeamGroup({
   group,
+  currentProjectKey,
   open,
   onOpenChange,
   onSelectProject,
 }: {
   group: TeamGroup;
+  currentProjectKey: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelectProject: (key: string) => void;
@@ -50,7 +52,7 @@ export default function ProjectSwitcherTeamGroup({
         {group.projects.length === 0 && (
           <p className="py-2 ps-9 pe-2 text-xs text-muted-foreground">{t('noProjects')}</p>
         )}
-        {group.projects.map(({ project, shortcut }) => (
+        {group.projects.map((project) => (
           <DropdownMenuItem
             key={project.key}
             onClick={() => onSelectProject(project.key)}
@@ -63,7 +65,7 @@ export default function ProjectSwitcherTeamGroup({
               {project.key}
             </Badge>
             <span className="min-w-0 flex-1 truncate">{project.name}</span>
-            {shortcut && <DropdownMenuShortcut>⌘{shortcut}</DropdownMenuShortcut>}
+            {project.key === currentProjectKey && <Check className="size-4 shrink-0" />}
           </DropdownMenuItem>
         ))}
       </CollapsibleContent>

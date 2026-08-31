@@ -30,11 +30,11 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // The sections of the open team, as the page's second rail: the team itself, its
-// projects and members, the roles they assign from, what MCP clients reach, and the
-// AI group — the integration credentials the agents run on, the agents themselves,
-// the skills they load and the tools they can call — with the notification providers
-// last. The counts come with the team list, so each is shown before its section is
-// opened. A section the caller may not read is left out, and the AI group with it
+// projects, the roles they assign from and its members, then the AI group — the
+// integration credentials the agents run on, the agents themselves, the skills they
+// load and the tools they can call — with what MCP clients reach and the notification
+// providers last. The counts come with the team list, so each is shown before its
+// section is opened. A section the caller may not read is left out, and the AI group with it
 // once none of its four is readable.
 export default function TeamSectionNav({ team }: { team: Team }) {
   const t = useTranslations('teams.sections');
@@ -60,12 +60,11 @@ export default function TeamSectionNav({ team }: { team: Team }) {
   const top = [
     section('info', t('info.title'), Info),
     section('projects', t('projects.title'), FolderKanban, team.projectCount),
-    section('members', t('members.title'), Users, team.memberCount),
     // The roles are managed by the team's owner and managers, so the section is theirs.
     ...(team.role === 'owner' || team.role === 'manager'
       ? [section('roles', t('roles.title'), ShieldCheck, team.roleCount)]
       : []),
-    section('mcp', t('mcp.title'), Radio),
+    section('members', t('members.title'), Users, team.memberCount),
   ];
   const ai = [
     ...(permissions?.integrations.read
@@ -82,8 +81,10 @@ export default function TeamSectionNav({ team }: { team: Team }) {
       : []),
   ];
   // The notification providers are the owner's: nobody else reads or writes them.
-  const bottom =
-    team.role === 'owner' ? [section('notifications', t('notifications.title'), Bell)] : [];
+  const bottom = [
+    section('mcp', t('mcp.title'), Radio),
+    ...(team.role === 'owner' ? [section('notifications', t('notifications.title'), Bell)] : []),
+  ];
 
   const activeId = [...top, ...ai, ...bottom].find((entry) => entry.href === pathname)?.id ?? null;
   const aiActive = ai.some((entry) => entry.id === activeId);
@@ -116,9 +117,7 @@ export default function TeamSectionNav({ team }: { team: Team }) {
             </CollapsibleContent>
           </Collapsible>
         )}
-        {bottom.length > 0 && (
-          <SectionNav sections={bottom} activeId={activeId} label={team.name} />
-        )}
+        <SectionNav sections={bottom} activeId={activeId} label={team.name} />
       </div>
     </div>
   );

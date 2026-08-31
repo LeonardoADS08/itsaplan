@@ -517,7 +517,10 @@ export async function copyProject(
         ownerTeam.id,
         {
           projectIds: [...a.projects.map((p) => p.id), newProject.id],
-          fieldTriggers: [...a.fieldTriggers, ...fieldTriggers],
+          fieldTriggers: [
+            ...a.fieldTriggers.map(({ fieldId, delaySec }) => ({ fieldId, delaySec })),
+            ...fieldTriggers,
+          ],
         },
         ownerId,
       );

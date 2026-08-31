@@ -10,6 +10,7 @@ import {
   agentSkillLink,
   agentToolLink,
   agentFieldTrigger,
+  customField,
   integrationCredential,
 } from '@repo/db';
 import { and, eq, inArray, ne, notInArray, sql } from 'drizzle-orm';
@@ -55,6 +56,12 @@ export interface FieldTrigger {
   delaySec: number;
 }
 
+// The same trigger as a read of an agent returns it: the field's name comes along, so
+// a reader can name the field without loading the project it belongs to.
+export interface FieldTriggerRead extends FieldTrigger {
+  name: string;
+}
+
 // A project the agent is a member of, as the settings screen lists them.
 export interface AgentProject {
   id: number;
@@ -88,7 +95,7 @@ export interface AiAgentRow {
   // The member custom fields the agent also reacts to: being set into one of them
   // starts a run the way being made an issue's delegate does. Each field carries its
   // own delay, so a field can start at once while another leaves time to edit.
-  fieldTriggers: FieldTrigger[];
+  fieldTriggers: FieldTriggerRead[];
   // How long a delegation run waits before it can be claimed.
   delegationDelaySec: number;
   // The team_role the bot user acts under, in every project it is a member of.
@@ -133,7 +140,7 @@ function mapAgent(row: {
   memoryLastMessages: number | null;
   triggerOnMention: boolean;
   triggerOnAssign: boolean;
-  fieldTriggers: FieldTrigger[];
+  fieldTriggers: FieldTriggerRead[];
   delegationDelaySec: number;
   roleId: number;
   ownerUserId: string | null;
@@ -202,8 +209,8 @@ const agentColumns = {
   triggerOnMention: aiAgent.triggerOnMention,
   triggerOnAssign: aiAgent.triggerOnAssign,
   fieldTriggers: sql<
-    FieldTrigger[]
-  >`(select coalesce(json_agg(json_build_object('fieldId', ${agentFieldTrigger.fieldId}, 'delaySec', ${agentFieldTrigger.delaySec}) order by ${agentFieldTrigger.fieldId}), '[]'::json) from ${agentFieldTrigger} where ${agentFieldTrigger.agentId} = ${aiAgent.id})`,
+    FieldTriggerRead[]
+  >`(select coalesce(json_agg(json_build_object('fieldId', ${agentFieldTrigger.fieldId}, 'name', ${customField.name}, 'delaySec', ${agentFieldTrigger.delaySec}) order by ${customField.name}), '[]'::json) from ${agentFieldTrigger} join ${customField} on ${customField.id} = ${agentFieldTrigger.fieldId} where ${agentFieldTrigger.agentId} = ${aiAgent.id})`,
   delegationDelaySec: aiAgent.delegationDelaySec,
   roleId: aiAgent.roleId,
   ownerUserId: aiAgent.ownerUserId,

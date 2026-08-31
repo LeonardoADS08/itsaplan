@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Bot, X } from 'lucide-react';
+import { Bot, MessageSquare, X } from 'lucide-react';
+import { AGENT_KIND_ICON } from '../../utils/agentKindIcon';
 import type { AiAgent } from '@/lib/api';
 import { useAiAgentsQuery } from '@/services/aiAgents.service';
 import {
@@ -85,16 +86,17 @@ function SheetBody({
   // create → id 0; the chat is only reachable once the agent exists.
   const chat = useAgentChat(chatProject?.key ?? '', agent?.id ?? 0, agent?.kind === 'external');
 
-  // The sheet is always full width: an agent that works somewhere shows the form and
-  // the chat side by side; while creating one, or before it is attached to a project,
-  // there is nothing to chat in, so the form takes the full width on its own.
-  const split = !!agent && chatProject != null;
+  // The form and the test chat always sit side by side, so the sheet keeps its shape
+  // from create through edit. There is nothing to chat in until the agent exists and
+  // works in a project, and until then the chat side says what is missing.
+  const chatReady = !!agent && chatProject != null;
+  const KindIcon = agent ? AGENT_KIND_ICON[agent.kind] : Bot;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-3 border-b border-border/60 px-5 pt-4 pb-3.5">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border/60">
-          <Bot className="size-4.5" />
+          <KindIcon className="size-4.5" />
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <div className="min-w-0">
@@ -125,9 +127,7 @@ function SheetBody({
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <div
-          className={`flex min-h-0 flex-1 flex-col ${split ? 'basis-0 border-e border-border/60' : ''}`}
-        >
+        <div className="flex min-h-0 flex-1 basis-0 flex-col border-e border-border/60">
           <AgentSheetForm
             agent={agent}
             defaultProjectId={defaultProjectId}
@@ -136,8 +136,8 @@ function SheetBody({
           />
         </div>
 
-        {split && (
-          <div className="flex min-h-0 flex-1 basis-0 flex-col">
+        <div className="flex min-h-0 flex-1 basis-0 flex-col">
+          {chatReady ? (
             <AgentChatPanel
               agent={agent}
               projectKey={chatProject.key}
@@ -150,8 +150,16 @@ function SheetBody({
               onRemovePending={chat.removePending}
               onReset={chat.newChat}
             />
-          </div>
-        )}
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
+              <MessageSquare className="size-5 text-muted-foreground" />
+              <p className="text-sm font-medium">{t('testChat')}</p>
+              <p className="max-w-xs text-xs text-muted-foreground">
+                {agent ? t('chatNeedsProject') : t('chatNeedsAgent')}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

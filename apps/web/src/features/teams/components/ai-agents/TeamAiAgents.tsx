@@ -47,10 +47,10 @@ export default function TeamAiAgents() {
       ) : (
         <Table className="min-w-[1000px] table-fixed">
           <colgroup>
-            <col className="w-[26%]" />
-            <col className="w-[18%]" />
-            <col className="w-[42%]" />
-            <col className="w-[14%]" />
+            <col className="w-[32%]" />
+            <col className="w-[20%]" />
+            <col className="w-[36%]" />
+            <col className="w-[12%]" />
           </colgroup>
           <TableHeader>
             <TableRow className="hover:bg-transparent">

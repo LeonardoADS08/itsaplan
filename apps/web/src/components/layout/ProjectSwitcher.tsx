@@ -26,22 +26,20 @@ import ProjectSwitcherTeamGroup, {
 
 // The projects grouped by the team that owns them. Every team the user belongs to
 // gets a group, so one without projects is still listed; a project whose team the
-// user is not a member of gets a group of its own. `shortcut` is the project's place
-// in the whole list, which is what ⌘1..9 switches by (useKeyboardShortcuts), so
-// grouping does not renumber it.
+// user is not a member of gets a group of its own.
 function groupByTeam(projects: Project[], teams: Team[]): TeamGroup[] {
   const groups: TeamGroup[] = teams.map((team) => ({
     teamId: team.id,
     teamName: team.name,
     projects: [],
   }));
-  projects.forEach((project, i) => {
+  projects.forEach((project) => {
     let group = groups.find((g) => g.teamId === project.teamId);
     if (!group) {
       group = { teamId: project.teamId, teamName: project.teamName, projects: [] };
       groups.push(group);
     }
-    group.projects.push({ project, shortcut: i < 9 ? i + 1 : null });
+    group.projects.push(project);
   });
   return groups;
 }
@@ -63,9 +61,10 @@ export default function ProjectSwitcher({
   const teams = useTeamsQuery().data ?? [];
   const current = projects.find((b) => b.key === currentProjectKey);
   const groups = groupByTeam(projects, teams);
-  // Which teams the user folded away. Held here rather than in each group: the menu
+  // Which teams the user unfolded or folded away, over the default of only the
+  // current project's team being open. Held here rather than in each group: the menu
   // unmounts its content when it closes, so the choice would not survive reopening.
-  const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
+  const [openTeams, setOpenTeams] = useState<Record<number, boolean>>({});
 
   return (
     <SidebarMenu>
@@ -108,10 +107,9 @@ export default function ProjectSwitcher({
               <ProjectSwitcherTeamGroup
                 key={group.teamId}
                 group={group}
-                open={!collapsed[group.teamId]}
-                onOpenChange={(open) =>
-                  setCollapsed((prev) => ({ ...prev, [group.teamId]: !open }))
-                }
+                currentProjectKey={currentProjectKey}
+                open={openTeams[group.teamId] ?? group.teamId === current?.teamId}
+                onOpenChange={(open) => setOpenTeams((prev) => ({ ...prev, [group.teamId]: open }))}
                 onSelectProject={onSelectProject}
               />
             ))}

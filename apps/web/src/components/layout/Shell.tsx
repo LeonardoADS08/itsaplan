@@ -100,10 +100,8 @@ export default function Shell({
   useKeyboardShortcuts({
     hasProject: !!project,
     hasChat: chatAvailable,
-    projects,
     overlayOpen: overlays.anyOpen,
     onToggleCommand: () => overlays.setShowCommand((v) => !v),
-    onSelectProject: (key) => router.push(projectPath(key)),
     onChangeView: editor.changeView,
     onNewIssue: () => canCreateIssue && openNewIssue(),
     onNewProject: () => overlays.setShowNewProject(true),

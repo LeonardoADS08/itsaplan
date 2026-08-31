@@ -123,7 +123,7 @@ export const AiAgentResponse = t.Object({
   memoryLastMessages: t.Nullable(t.Number()),
   triggerOnMention: t.Boolean(),
   triggerOnAssign: t.Boolean(),
-  fieldTriggers: t.Array(t.Object({ fieldId: t.Number(), delaySec: t.Number() })),
+  fieldTriggers: t.Array(t.Object({ fieldId: t.Number(), name: t.String(), delaySec: t.Number() })),
   delegationDelaySec: t.Number(),
   roleId: t.Number(),
   ownerUserId: t.Nullable(t.String()),

@@ -5,12 +5,12 @@ import { SectionNav, type SectionNavItem } from '@/components/common/page/Sectio
 import { useSectionScrollSpy } from '@/hooks/useSectionScrollSpy';
 import { useTranslations } from 'next-intl';
 
-// Content width of the full-width internal editor. The sheet sizes its footer to
-// match, so the two must stay in sync.
+// Content width of the full-width editor. The sheet sizes its footer to match, so the
+// two must stay in sync.
 export const AGENT_EXPANDED_WIDTH = 'max-w-[860px]';
 
-// The scroll container + section nav for the full-width internal editor. It owns the
-// scroll root so the nav can spy on which section is in view and jump to one on click.
+// The scroll container + section nav for the full-width editor. It owns the scroll
+// root so the nav can spy on which section is in view and jump to one on click.
 export default function AgentExpandedLayout({
   navSections,
   onExpand,

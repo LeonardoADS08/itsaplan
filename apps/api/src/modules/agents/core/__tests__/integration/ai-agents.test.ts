@@ -513,7 +513,9 @@ describe('ai agents', () => {
       ],
     });
     expect(res.status).toBe(200);
-    expect(res.data?.fieldTriggers).toEqual([{ fieldId: reviewer.id, delaySec: 300 }]);
+    expect(res.data?.fieldTriggers).toEqual([
+      { fieldId: reviewer.id, name: 'Reviewer', delaySec: 300 },
+    ]);
 
     const cleared = await agents(asOwner, teamId)({ agentId }).patch({ fieldTriggers: [] });
     expect(cleared.data?.fieldTriggers).toEqual([]);
