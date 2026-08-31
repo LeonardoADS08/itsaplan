@@ -23,7 +23,7 @@ export default function McpServerPage() {
             teamMcpEnabled={detail.teamMcpEnabled}
           />
         )}
-        <McpConnectionGuide />
+        {reachable && <McpConnectionGuide />}
       </div>
     </SectionPageView>
   );
