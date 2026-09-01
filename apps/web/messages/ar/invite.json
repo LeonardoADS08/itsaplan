@@ -12,6 +12,8 @@
   "projectLabel": "المشروع",
   "alreadyHandled": "هذه الدعوة {status, select, accepted {مقبولة} rejected {مرفوضة} other {مُغلقة}} بالفعل.",
   "goToApp": "الانتقال إلى التطبيق",
+  "alreadyMember": "أنت عضو في هذا المشروع بالفعل، فلا شيء لقبوله.",
+  "goToProject": "فتح المشروع",
   "wrongAccount": "الدعوة دي اتبعتت لـ <invited>{email}</invited>، بس إنت داخل بـ <current>{sessionEmail}</current>. سجّل خروج عشان تقبلها بالبريد المدعوّ.",
   "accept": "قبول الدعوة",
   "accepting": "جارٍ الانضمام…",

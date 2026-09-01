@@ -12,6 +12,8 @@
   "projectLabel": "Project",
   "alreadyHandled": "This invite has already been {status, select, accepted {accepted} rejected {declined} other {closed}}.",
   "goToApp": "Go to the app",
+  "alreadyMember": "You are already a member of this project, so there is nothing to accept.",
+  "goToProject": "Open the project",
   "wrongAccount": "This invite was sent to <invited>{email}</invited>, but you are signed in as <current>{sessionEmail}</current>. Sign out to accept it with the invited email.",
   "accept": "Accept invitation",
   "accepting": "Joining…",

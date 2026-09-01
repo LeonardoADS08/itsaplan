@@ -12,6 +12,8 @@
   "projectLabel": "Проект",
   "alreadyHandled": "Это приглашение уже {status, select, accepted {принято} rejected {отклонено} other {закрыто}}.",
   "goToApp": "Перейти в приложение",
+  "alreadyMember": "Вы уже участник этого проекта — принимать нечего.",
+  "goToProject": "Открыть проект",
   "wrongAccount": "Это приглашение отправлено на <invited>{email}</invited>, но вы вошли как <current>{sessionEmail}</current>. Выйдите, чтобы принять его с приглашённого адреса.",
   "accept": "Принять приглашение",
   "accepting": "Присоединение…",

@@ -12,6 +12,8 @@
   "projectLabel": "项目",
   "alreadyHandled": "此邀请已{status, select, accepted {接受} rejected {拒绝} other {关闭}}。",
   "goToApp": "打开应用",
+  "alreadyMember": "你已经是该项目的成员，无需接受。",
+  "goToProject": "打开项目",
   "wrongAccount": "此邀请发送至 <invited>{email}</invited>，但你当前以 <current>{sessionEmail}</current> 登录。请退出登录，再使用受邀邮箱接受邀请。",
   "accept": "接受邀请",
   "accepting": "正在接受…",

@@ -254,7 +254,9 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
       response: { 200: AcceptInviteResponse, ...commonErrors, ...errors(409) },
       detail: {
         summary: 'Accept an invite',
-        description: 'Accept an invite (email must match your session).',
+        description:
+          'Accept an invite (email must match your session). An invite into a project you are ' +
+          'already a member of is refused: accepting it would rewrite the membership you hold.',
         ...mcpTool('accept_invite'),
       },
     },

@@ -326,6 +326,15 @@ export async function acceptInvite(
   },
   userId: string,
 ): Promise<AcceptedInvite> {
+  // The invitee can join the project between the invite and this accept — from its
+  // member list, once they are in the team. Writing the invite's role over that
+  // membership would put an owner back on a member role, past the last-owner check
+  // the member routes make, so the link is refused instead. The invite stays pending
+  // and can still be rejected.
+  if (invite.projectId != null && (await getMembership(invite.projectId, userId))) {
+    throw new HttpError(409, 'You are already a member of this project', 'ALREADY_PROJECT_MEMBER');
+  }
+
   return db.transaction(async (tx) => {
     // An invite is refused for an address already in the team, so a conflict here is
     // someone who joined between the invite and this accept. setWhere keeps an owner

@@ -12,6 +12,8 @@
   "projectLabel": "Проєкт",
   "alreadyHandled": "Це запрошення вже {status, select, accepted {прийнято} rejected {відхилено} other {закрито}}.",
   "goToApp": "Перейти до застосунку",
+  "alreadyMember": "Ви вже учасник цього проєкту — приймати нічого.",
+  "goToProject": "Відкрити проєкт",
   "wrongAccount": "Це запрошення надіслали на <invited>{email}</invited>, але ви увійшли як <current>{sessionEmail}</current>. Вийдіть, щоб прийняти його з запрошеної адреси.",
   "accept": "Прийняти запрошення",
   "accepting": "Приєднання…",

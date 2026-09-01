@@ -505,6 +505,43 @@ describe('invites', () => {
         .accept.post();
       expect(res.status).toBe(404);
     });
+
+    // A project invite is refused for an address already in the project, but the
+    // invitee can join it between the invite and the accept: through a team invite,
+    // and then from the project's member list. Accepting the older link afterwards
+    // would write the invite's role over the membership they hold — an owner would
+    // be demoted past the last-owner check, leaving the project with none.
+    it('refuses a project invite the invitee already holds a membership for', async () => {
+      const owner = await setupOwner();
+      const invitee = await signUpTestUser();
+      const inviteeApi = authedApi(invitee.cookie);
+      const projectInvite = await owner.api
+        .projects({ projectKey: 'MKT' })
+        .invites.post({ email: invitee.email, role: 'member' });
+
+      // They join the team by another invite, and the project as an owner from its
+      // member list, while the project invite above is still pending.
+      const teamId = await ownTeamId(owner.api);
+      const teamInvite = await owner.api
+        .teams({ teamId })
+        .invites.post({ email: invitee.email, role: 'member' });
+      await inviteeApi.invites({ token: teamInvite.data!.token }).accept.post();
+      const added = await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: invitee.userId, role: 'owner' });
+      expect(added.status).toBe(204);
+
+      const accept = await inviteeApi.invites({ token: projectInvite.data!.token }).accept.post();
+      expect(accept.status).toBe(409);
+      expect(accept.error?.value).toMatchObject({ code: 'ALREADY_PROJECT_MEMBER' });
+
+      // The membership they held is untouched, so the project keeps its owners.
+      const members = await owner.api.projects({ projectKey: 'MKT' }).members.get();
+      expect(members.data?.items.find((m) => m.userId === invitee.userId)).toMatchObject({
+        role: 'owner',
+      });
+      expect(members.data?.ownerCount).toBe(2);
+    });
   });
 
   describe('reject — POST /invites/:token/reject', () => {
