@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-// An icon button for a table row's actions cell. The label is both the tooltip
-// and the accessible name, so the cell carries no visible text.
+// An icon button for a row's or a section header's actions. The label is both the
+// tooltip and the accessible name, so the button carries no visible text.
 export default function RowAction({
   icon: Icon,
   label,

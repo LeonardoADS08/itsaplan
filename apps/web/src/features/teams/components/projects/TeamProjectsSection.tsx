@@ -63,6 +63,7 @@ export default function TeamProjectsSection({ teamId }: { teamId: number }) {
       {selected && team && (
         <TeamProjectPanel
           teamId={teamId}
+          teamName={team.name}
           teamRole={team.role}
           project={selected}
           onClose={() => setSelectedId(null)}

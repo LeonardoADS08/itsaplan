@@ -19,11 +19,13 @@ import TeamProjectStats from './TeamProjectStats';
 // closes it.
 export default function TeamProjectPanel({
   teamId,
+  teamName,
   teamRole,
   project,
   onClose,
 }: {
   teamId: number;
+  teamName: string;
   teamRole: TeamRole;
   project: TeamProject;
   onClose: () => void;
@@ -43,6 +45,9 @@ export default function TeamProjectPanel({
   const runsProject = teamRole === 'owner' || teamRole === 'manager' || viewer?.role === 'owner';
   const canEdit = runsProject || viewer?.permissions.members_manage.edit === true;
   const canDelete = runsProject || viewer?.permissions.members_manage.delete === true;
+  const canAdd = runsProject || viewer?.permissions.members_manage.create === true;
+  const canInvite = runsProject || viewer?.permissions.members_invite.create === true;
+  const canReadInvites = runsProject || viewer?.permissions.members_invite.read === true;
 
   return (
     <div
@@ -106,8 +111,13 @@ export default function TeamProjectPanel({
                 projectKey={project.key}
                 ownerCount={project.owners.length}
                 viewerId={session?.user.id}
+                projectName={project.name}
+                teamName={teamName}
                 canEdit={canEdit}
                 canDelete={canDelete}
+                canAdd={canAdd}
+                canInvite={canInvite}
+                canReadInvites={canReadInvites}
               />
             </>
           )}

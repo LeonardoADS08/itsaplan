@@ -19,7 +19,6 @@ import {
   useMemberCandidatesQuery,
 } from '@/services/members.service';
 import { useTeamRolesQuery } from '@/services/roles.service';
-import { usePermissions } from '@/hooks/usePermissions';
 import MemberPicker, { type MemberOption } from './MemberPicker';
 
 // Owner is not a custom role, so it sits outside the roles list under this value.
@@ -37,6 +36,7 @@ export default function MemberAddDialog({
   teamName,
   canAdd,
   canInvite,
+  canReadInvites,
   onClose,
 }: {
   projectKey: string;
@@ -45,11 +45,13 @@ export default function MemberAddDialog({
   teamName: string;
   canAdd: boolean;
   canInvite: boolean;
+  // Reading the pending invites is a permission of its own: whoever may invite
+  // without it goes without the "already invited" marker.
+  canReadInvites: boolean;
   onClose: () => void;
 }) {
   const t = useTranslations('members.add');
   const tCommon = useTranslations('common');
-  const { can, isAdmin } = usePermissions();
   const [query, setQuery] = useState('');
   const [target, setTarget] = useState<MemberOption | null>(null);
   const [roleValue, setRoleValue] = useState('');
@@ -57,9 +59,6 @@ export default function MemberAddDialog({
   const rolesQuery = useTeamRolesQuery(teamId);
   const addMember = useAddMember(projectKey);
   const createInvite = useCreateInvite(projectKey);
-  // The pending invites only mark an address as already invited, and reading them is
-  // a permission of its own: whoever may invite without it goes without the marker.
-  const canReadInvites = can('members_invite', 'read') || isAdmin;
   const invitesQuery = useInvitesQuery(projectKey, canInvite && canReadInvites);
 
   const candidates = candidatesQuery.data ?? [];

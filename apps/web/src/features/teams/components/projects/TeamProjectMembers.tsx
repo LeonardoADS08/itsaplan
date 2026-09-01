@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { MemberKind } from '@/lib/api';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -8,6 +9,7 @@ import { useTeamProjectMembersQuery } from '@/services/teams.service';
 import { usePermissionCatalogQuery, useTeamRolesQuery } from '@/services/roles.service';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
 import { EmptyState } from '@/components/common/page/EmptyState';
+import RowAction from '@/components/common/RowAction';
 import SearchInput from '@/components/common/SearchInput';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import MemberAddDialog from '@/features/members/components/members/MemberAddDialog';
 import TeamProjectMemberCard from './TeamProjectMemberCard';
 
 const PAGE_SIZE = 25;
@@ -30,18 +33,28 @@ export default function TeamProjectMembers({
   teamId,
   projectId,
   projectKey,
+  projectName,
+  teamName,
   ownerCount,
   viewerId,
   canEdit,
   canDelete,
+  canAdd,
+  canInvite,
+  canReadInvites,
 }: {
   teamId: number;
   projectId: number;
   projectKey: string;
+  projectName: string;
+  teamName: string;
   ownerCount: number;
   viewerId: string | undefined;
   canEdit: boolean;
   canDelete: boolean;
+  canAdd: boolean;
+  canInvite: boolean;
+  canReadInvites: boolean;
 }) {
   const t = useTranslations('teams.panel');
   const tMembers = useTranslations('members');
@@ -49,6 +62,7 @@ export default function TeamProjectMembers({
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState<MemberKind>('all');
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const [adding, setAdding] = useState(false);
 
   const debounced = useDebouncedValue(search.trim(), 300);
   const term = debounced.length >= MIN_SEARCH ? debounced : undefined;
@@ -79,9 +93,14 @@ export default function TeamProjectMembers({
 
   return (
     <section className="space-y-3">
-      <div className="flex items-baseline gap-2">
+      <div className="flex items-center gap-2">
         <h3 className="text-sm font-medium">{t('projectMembers')}</h3>
         {total > 0 && <span className="text-xs text-muted-foreground">{total}</span>}
+        {(canAdd || canInvite) && (
+          <span className="ms-auto">
+            <RowAction icon={Plus} label={tMembers('add.action')} onClick={() => setAdding(true)} />
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -138,6 +157,19 @@ export default function TeamProjectMembers({
             </Button>
           )}
         </>
+      )}
+
+      {adding && (
+        <MemberAddDialog
+          projectKey={projectKey}
+          projectName={projectName}
+          teamId={teamId}
+          teamName={teamName}
+          canAdd={canAdd}
+          canInvite={canInvite}
+          canReadInvites={canReadInvites}
+          onClose={() => setAdding(false)}
+        />
       )}
     </section>
   );

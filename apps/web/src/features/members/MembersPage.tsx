@@ -21,10 +21,11 @@ export default function MembersPage() {
   const [adding, setAdding] = useState(false);
   if (!project) return null;
 
-  // Both mirror the memberAdmin guard on the API: the matrix, or the standing of an
+  // Each mirrors the memberAdmin guard on the API: the matrix, or the standing of an
   // owner or manager of the team that runs the project.
   const canAdd = can('members_manage', 'create') || isAdmin;
   const canInvite = can('members_invite', 'create') || isAdmin;
+  const canReadInvites = can('members_invite', 'read') || isAdmin;
 
   return (
     <SectionPageView
@@ -51,6 +52,7 @@ export default function MembersPage() {
           teamName={project.project.teamName}
           canAdd={canAdd}
           canInvite={canInvite}
+          canReadInvites={canReadInvites}
           onClose={() => setAdding(false)}
         />
       )}
