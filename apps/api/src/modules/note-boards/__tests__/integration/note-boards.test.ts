@@ -106,6 +106,22 @@ describe('note boards', () => {
     });
   });
 
+  describe('list', () => {
+    it('answers with every board the caller can see, and narrows it by name', async () => {
+      const owner = await setupOwnerProject();
+      for (let i = 1; i <= 12; i += 1) {
+        await boards(owner.api).post({ name: `Board ${i}` });
+      }
+      await boards(owner.api).post({ name: 'Roadmap' });
+
+      const all = await boards(owner.api).get();
+      expect(all.data).toHaveLength(13);
+
+      const found = await boards(owner.api).get({ query: { q: 'Roadmap' } });
+      expect(found.data?.map((b) => b.name)).toEqual(['Roadmap']);
+    });
+  });
+
   describe('restricted access', () => {
     it('gives a granted member the board, and hides it from everyone else', async () => {
       const owner = await setupOwnerProject();

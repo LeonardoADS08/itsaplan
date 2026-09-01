@@ -1,4 +1,5 @@
 import { t } from 'elysia';
+import { pageQueryFields, pageResponse } from '#shared/pagination';
 
 export { agentParams } from '../model';
 
@@ -33,6 +34,10 @@ export const SkillResponse = t.Object({
 });
 
 export const SkillListResponse = t.Array(SkillResponse);
+
+export const SkillPageResponse = pageResponse(SkillResponse);
+
+export const skillListQuery = t.Object(pageQueryFields);
 
 export const SkillMarkdownResponse = t.Object({ markdown: t.String() });
 

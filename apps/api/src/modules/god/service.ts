@@ -41,7 +41,7 @@ import {
   normalizePermissions,
   type Permissions,
 } from '#shared/permissions';
-import { listMemberContexts, listMembers } from '#modules/members/service';
+import { listAllMembers, listMemberContexts } from '#modules/members/service';
 import { listRoles } from '#modules/roles/service';
 
 // Data access for the instance directories (god mode): every account and every
@@ -511,6 +511,17 @@ export async function listInstanceProjects(options: {
   return { items, total: totals[0]?.count ?? 0 };
 }
 
+// Every project on the instance as a picker entry, by key. What the SCIM group
+// mapping form fills its project select from.
+export async function listInstanceProjectOptions(): Promise<
+  { id: number; key: string; name: string }[]
+> {
+  return db
+    .select({ id: project.id, key: project.key, name: project.name })
+    .from(project)
+    .orderBy(project.key);
+}
+
 // One project with its members and the access each membership resolves to. Returns
 // null for an unknown id.
 export async function getInstanceProject(projectId: number): Promise<InstanceProjectDetail | null> {
@@ -520,7 +531,7 @@ export async function getInstanceProject(projectId: number): Promise<InstancePro
 
   const [facts, memberships, contexts, roles] = await Promise.all([
     loadProjectFacts([row.id]),
-    listMembers(projectId),
+    listAllMembers(projectId),
     listMemberContexts(projectId),
     listRoles(row.teamId),
   ]);

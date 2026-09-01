@@ -73,13 +73,7 @@ export const noteBoardRoutes = new Elysia({
   .use(guards)
   .get(
     '/projects/:projectKey/note-boards',
-    async ({ project, user, query }) => {
-      return listNoteBoards(project.id, requireUser(user).id, {
-        q: query.q,
-        limit: query.limit ?? 10,
-        offset: query.offset ?? 0,
-      });
-    },
+    ({ project, user, query }) => listNoteBoards(project.id, requireUser(user).id, { q: query.q }),
     {
       permission: ['note_boards', 'read'],
       query: listNoteBoardsQuery,
@@ -87,7 +81,7 @@ export const noteBoardRoutes = new Elysia({
       detail: {
         summary: "List a project's note boards",
         description:
-          "The boards the caller can see: the project's public boards, the caller's own private ones, and the boards they were granted access to. `q` filters by name; `limit` (10 by default, 50 at most) and `offset` page the result. Cards are omitted — read a board to get them.",
+          "The boards the caller can see: the project's public boards, the caller's own private ones, and the boards they were granted access to, most recently updated first. `q` filters by name. Cards are omitted — read a board to get them.",
         ...mcpTool('list_note_boards'),
       },
     },

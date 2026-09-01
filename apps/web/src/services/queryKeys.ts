@@ -6,8 +6,9 @@ export const qk = {
   teams: ['teams'] as const,
   // One team: its counters and what the caller may do with what it holds.
   team: (teamId: number) => ['team', teamId] as const,
-  // The members of a team and the projects it owns, each read by its own section.
-  teamMembers: (teamId: number) => ['team', teamId, 'members'] as const,
+  // The members of a team and the projects it owns, each read by its own section. A
+  // member page is scoped by the search term and the window it was read with.
+  teamMembers: (teamId: number, params: unknown) => ['team', teamId, 'members', params] as const,
   teamProjects: (teamId: number) => ['team', teamId, 'projects'] as const,
   // One project the team owns, loaded when its row is opened, and one page of its
   // members (the search term and the window scope the entry).
@@ -98,6 +99,9 @@ export const qk = {
   // An agent's triggered run history (the runs sidebar).
   agentRuns: (teamId: number, agentId: number) => ['aiAgents', teamId, agentId, 'runs'] as const,
   agentSchedules: (projectKey: string) => ['agentSchedules', projectKey] as const,
+  // One page of them: the window scopes the entry.
+  agentSchedulePage: (projectKey: string, params: unknown) =>
+    ['agentSchedules', projectKey, 'page', params] as const,
   agentScheduleRuns: (projectKey: string, scheduleId: number) =>
     ['agentSchedules', projectKey, scheduleId, 'runs'] as const,
   // The caller's chat threads with one agent (the AI Chat history rail) and the
@@ -116,9 +120,11 @@ export const qk = {
   // Everything integration-scoped. A credential belongs to the team, so changing one
   // is invalidated at this prefix: the pickers its projects fill from go stale too.
   integrations: ['integrations'] as const,
-  // The team's stored credentials, the integration catalog and an LLM provider's
-  // models (the agent model select and the tool forms).
-  teamCredentials: (teamId: number) => ['integrations', 'team', teamId] as const,
+  // One page of the team's stored credentials (its Integrations tab); the window
+  // scopes the entry. The integration catalog and an LLM provider's models sit beside
+  // it, under the same team prefix.
+  teamCredentialPage: (teamId: number, params: unknown) =>
+    ['integrations', 'team', teamId, 'page', params] as const,
   integrationCatalog: (teamId: number) => ['integrations', 'team', teamId, 'catalog'] as const,
   integrationModels: (teamId: number, provider: string) =>
     ['integrations', 'team', teamId, 'models', provider] as const,
@@ -126,11 +132,21 @@ export const qk = {
   // credential mutation refreshes them too.
   integrationOptions: (teamId: number, kind?: string) =>
     ['integrations', 'team', teamId, 'options', kind ?? 'all'] as const,
-  // The team skill library (the team's Skills section).
+  // Everything skill-scoped in one team. A write invalidates at this prefix, so the
+  // page the section shows, the whole library the picker reads and the skill the
+  // editor has open all refresh together.
   agentSkills: (teamId: number) => ['agentSkills', teamId] as const,
+  agentSkillPage: (teamId: number, params: unknown) =>
+    ['agentSkills', teamId, 'page', params] as const,
+  agentSkillOptions: (teamId: number) => ['agentSkills', teamId, 'options'] as const,
+  agentSkill: (teamId: number, skillId: number) =>
+    ['agentSkills', teamId, 'skill', skillId] as const,
   // The team's configured tools (its Tools section) and the tools enabled on one agent
   // (the agent editor's Tools section).
   configuredTools: (teamId: number) => ['configuredTools', teamId] as const,
+  configuredToolPage: (teamId: number, params: unknown) =>
+    ['configuredTools', teamId, 'page', params] as const,
+  configuredToolOptions: (teamId: number) => ['configuredTools', teamId, 'options'] as const,
   agentToolLinks: (teamId: number, agentId: number) =>
     ['aiAgents', teamId, agentId, 'tool-configs'] as const,
   issue: (id: number) => ['issue', id] as const,
@@ -150,8 +166,8 @@ export const qk = {
     ['feed', id, 'timelineItems', from, to] as const,
   // Initiatives: a project's list (params narrow, sort and page it), the per-status
   // tab counts, one initiative, and one initiative's activity feed.
-  initiatives: (projectKey: string, params?: Record<string, unknown>) =>
-    ['initiatives', projectKey, params ?? {}] as const,
+  initiatives: (projectKey: string, params: unknown) =>
+    ['initiatives', projectKey, params] as const,
   initiativesForProject: (projectKey: string) => ['initiatives', projectKey] as const,
   // The linkable initiatives behind the issue picker, narrowed by the typed search.
   initiativeOptions: (projectKey: string, params: Record<string, unknown>) =>
@@ -224,5 +240,6 @@ export const qk = {
   // The instance project directory: the list (scoped by the active filters) and one
   // project with its members.
   instanceProjects: (filters: unknown) => ['instanceProjects', filters] as const,
+  instanceProjectOptions: ['instanceProjectOptions'] as const,
   instanceProject: (projectId: number) => ['instanceProject', projectId] as const,
 };

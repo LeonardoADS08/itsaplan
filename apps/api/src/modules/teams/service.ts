@@ -14,15 +14,15 @@ import {
   teamRole,
   user,
 } from '@repo/db';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { HttpError, iso } from '#shared/lib';
 import { defaultMemberPermissions, fullPermissions, type Permissions } from '#shared/permissions';
 import {
-  countMembers,
   getMemberContext,
   getMembership,
   getTeamPermissions,
-  listMembers,
+  listMembersPage,
+  matchesFilters,
   type MemberFilters,
   type MemberRole,
   type MemberSource,
@@ -135,6 +135,12 @@ export interface TeamProjectDetail {
   viewer: { role: MemberRole; permissions: Permissions } | null;
 }
 
+// One page of the team's members, with how many match the search.
+export interface TeamMemberPage {
+  items: TeamMemberRow[];
+  total: number;
+}
+
 // One page of a project's members, with how many match the search.
 export interface TeamProjectMemberPage {
   items: TeamProjectMemberRow[];
@@ -146,6 +152,17 @@ export interface TeamDetail extends TeamRow {
   // Owners and managers run the team, so they get the full matrix; a member gets the
   // permissions of their project roles in it, merged.
   permissions: Permissions;
+  // The people who run the team, owners first. Bounded by the standing they hold, so
+  // it comes with the team rather than out of the paged member list.
+  leads: TeamLeadRow[];
+}
+
+export interface TeamLeadRow {
+  userId: string;
+  name: string;
+  email: string;
+  image: string | null;
+  role: 'owner' | 'manager';
 }
 
 // The caller's teams as DTOs, optionally narrowed to one. Membership is the join,
@@ -337,14 +354,16 @@ export async function getTeam(teamId: number, userId: string): Promise<TeamDetai
   const [row] = await loadTeamRows(userId, teamId);
   if (!row) return null;
 
-  const permissions = runsTeam(row.role)
-    ? fullPermissions()
-    : await getTeamPermissions(teamId, userId);
-  return { ...row, permissions };
+  const [permissions, leads] = await Promise.all([
+    runsTeam(row.role) ? fullPermissions() : getTeamPermissions(teamId, userId),
+    listTeamLeads(teamId),
+  ]);
+  return { ...row, permissions, leads };
 }
 
-// The members of the team, people and agents alike, by name.
-export async function listTeamMembers(teamId: number): Promise<TeamMemberRow[]> {
+// The owners and the managers of the team, owners first, then by name. Agents are left
+// out: an agent's standing grants nothing, so it runs no team.
+async function listTeamLeads(teamId: number): Promise<TeamLeadRow[]> {
   const rows = await db
     .select({
       userId: user.id,
@@ -352,26 +371,68 @@ export async function listTeamMembers(teamId: number): Promise<TeamMemberRow[]> 
       email: user.email,
       image: user.image,
       role: teamMember.role,
-      agentId: aiAgent.id,
-      username: aiAgent.username,
-      joinedAt: teamMember.createdAt,
     })
     .from(teamMember)
     .innerJoin(user, eq(user.id, teamMember.userId))
     .leftJoin(aiAgent, eq(aiAgent.userId, teamMember.userId))
-    .where(eq(teamMember.teamId, teamId))
-    .orderBy(user.name);
+    .where(
+      and(
+        eq(teamMember.teamId, teamId),
+        inArray(teamMember.role, ['owner', 'manager']),
+        isNull(aiAgent.id),
+      ),
+    )
+    .orderBy(desc(eq(teamMember.role, 'owner')), user.name);
+  return rows.map((r) => ({ ...r, role: r.role as 'owner' | 'manager' }));
+}
 
-  return rows.map((m) => ({
-    userId: m.userId,
-    name: m.name,
-    email: m.email,
-    image: m.image,
-    role: m.role as TeamStanding,
-    agentId: m.agentId,
-    username: m.username,
-    joinedAt: iso(m.joinedAt),
-  }));
+// One page of the team's members, people and agents alike, by name. The search and the
+// window run in the database, so a team with many members is never loaded whole.
+export async function listTeamMembers(
+  teamId: number,
+  options: MemberFilters & { limit: number; offset: number },
+): Promise<TeamMemberPage> {
+  const where = and(eq(teamMember.teamId, teamId), matchesFilters(options));
+  const [rows, counted] = await Promise.all([
+    db
+      .select({
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        role: teamMember.role,
+        agentId: aiAgent.id,
+        username: aiAgent.username,
+        joinedAt: teamMember.createdAt,
+      })
+      .from(teamMember)
+      .innerJoin(user, eq(user.id, teamMember.userId))
+      .leftJoin(aiAgent, eq(aiAgent.userId, teamMember.userId))
+      .where(where)
+      .orderBy(user.name)
+      .limit(options.limit)
+      .offset(options.offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(teamMember)
+      .innerJoin(user, eq(user.id, teamMember.userId))
+      .leftJoin(aiAgent, eq(aiAgent.userId, teamMember.userId))
+      .where(where),
+  ]);
+
+  return {
+    items: rows.map((m) => ({
+      userId: m.userId,
+      name: m.name,
+      email: m.email,
+      image: m.image,
+      role: m.role as TeamStanding,
+      agentId: m.agentId,
+      username: m.username,
+      joinedAt: iso(m.joinedAt),
+    })),
+    total: counted[0]?.count ?? 0,
+  };
 }
 
 // The projects the team owns, with the caller's own access to each. Owners and
@@ -494,13 +555,10 @@ export async function listTeamProjectMembers(
   if (!(await teamOwnsProject(teamId, projectId))) return null;
   if (!runsTeam(standing) && !(await getMembership(projectId, userId))) return null;
 
-  const [members, total] = await Promise.all([
-    listMembers(projectId, options),
-    countMembers(projectId, { search: options.search, kind: options.kind }),
-  ]);
+  const { items, total } = await listMembersPage(projectId, options);
 
   return {
-    items: members
+    items: items
       .map((m) => ({
         userId: m.userId,
         name: m.name,

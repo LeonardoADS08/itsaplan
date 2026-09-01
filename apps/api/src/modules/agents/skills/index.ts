@@ -5,12 +5,15 @@ import { authContext } from '#shared/auth-context';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
+import { paginate } from '#shared/pagination';
 import { teamParams } from '#modules/teams/model';
 import { MAX_SKILL_BYTES, importGithubSkill, discoverGithubSkills } from './skill-format';
 import {
   DiscoveredSkillListResponse,
   RefContentResponse,
   SkillListResponse,
+  SkillPageResponse,
+  skillListQuery,
   SkillMarkdownResponse,
   SkillResponse,
   agentParams,
@@ -25,6 +28,7 @@ import {
 } from './model';
 import {
   listSkills,
+  listSkillOptions,
   getSkill,
   getSkillMarkdown,
   getSkillRefContent,
@@ -57,16 +61,40 @@ export const agentSkillRoutes = new Elysia({
   .use(authContext)
   .use(guards)
 
-  .get('/teams/:teamId/agent-skills', ({ membership }) => listSkills(membership.teamId), {
-    params: teamParams,
-    teamPermission: ['agent_skills', 'read'],
-    response: { 200: SkillListResponse, ...accessErrors },
-    detail: {
-      summary: 'List agent skills',
-      description: "List the team's skill library, each skill with its reference files.",
-      ...mcpTool('list_agent_skills'),
+  .get(
+    '/teams/:teamId/agent-skills',
+    ({ membership, query }) => paginate(query, (window) => listSkills(membership.teamId, window)),
+    {
+      params: teamParams,
+      query: skillListQuery,
+      teamPermission: ['agent_skills', 'read'],
+      response: { 200: SkillPageResponse, ...accessErrors },
+      detail: {
+        summary: 'List agent skills',
+        description:
+          "One page of the team's skill library, each skill with its reference files. The " +
+          'whole library, for a picker, comes from list_agent_skill_options.',
+        ...mcpTool('list_agent_skills'),
+      },
     },
-  })
+  )
+
+  .get(
+    '/teams/:teamId/agent-skills/options',
+    ({ membership }) => listSkillOptions(membership.teamId),
+    {
+      params: teamParams,
+      teamPermission: ['agent_skills', 'read'],
+      response: { 200: SkillListResponse, ...accessErrors },
+      detail: {
+        summary: 'List every agent skill',
+        description:
+          "The team's whole skill library, for the picker that enables skills on an agent. " +
+          'Use list_agent_skills to read it a page at a time.',
+        ...mcpTool('list_agent_skill_options'),
+      },
+    },
+  )
 
   .get(
     '/teams/:teamId/agent-skills/:skillId',

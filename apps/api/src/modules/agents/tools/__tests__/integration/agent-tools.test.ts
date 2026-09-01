@@ -49,7 +49,7 @@ describe('agent tools', () => {
     });
 
     const list = await tools(asOwner, teamId).get();
-    expect(list.data).toHaveLength(1);
+    expect(list.data?.items).toHaveLength(1);
   });
 
   it('rejects an unknown tool', async () => {
@@ -94,7 +94,29 @@ describe('agent tools', () => {
     expect(
       (await tools(asOwner, teamId).post({ toolKey: 'jina_search', credentialId: keyB })).status,
     ).toBe(201);
-    expect((await tools(asOwner, teamId).get()).data).toHaveLength(2);
+    expect((await tools(asOwner, teamId).get()).data?.items).toHaveLength(2);
+  });
+
+  it('pages the list, while the options route answers with all of it', async () => {
+    const { asOwner, teamId } = await setup();
+    const keyA = await jinaCredential(asOwner);
+    const keyB = await createCredential(asOwner, 'MKT', {
+      integrationKey: 'jina',
+      label: 'B',
+      credential: { apiKey: 'jina-b' },
+    });
+    await tools(asOwner, teamId).post({ toolKey: 'jina_reader', credentialId: keyA });
+    await tools(asOwner, teamId).post({ toolKey: 'jina_search', credentialId: keyB });
+
+    const first = await tools(asOwner, teamId).get({ query: { page: 1, pageSize: 1 } });
+    expect(first.data).toMatchObject({ total: 2, page: 1, pageSize: 1 });
+    expect(first.data?.items).toHaveLength(1);
+
+    const second = await tools(asOwner, teamId).get({ query: { page: 2, pageSize: 1 } });
+    expect(second.data?.items).toHaveLength(1);
+    expect(second.data?.items[0].id).not.toBe(first.data!.items[0].id);
+
+    expect((await tools(asOwner, teamId).options.get()).data).toHaveLength(2);
   });
 
   it('serves one configured tool to every project of the team', async () => {
@@ -121,7 +143,7 @@ describe('agent tools', () => {
     const created = await tools(asOwner, teamId).post({ toolKey: 'jina_reader', credentialId });
     const del = await tools(asOwner, teamId)({ agentToolId: created.data!.id }).delete();
     expect(del.status).toBe(204);
-    expect((await tools(asOwner, teamId).get()).data).toHaveLength(0);
+    expect((await tools(asOwner, teamId).get()).data?.items).toHaveLength(0);
   });
 
   it('enables tools on an internal agent and lists them', async () => {
@@ -210,7 +232,7 @@ describe('agent tools', () => {
 
     const list = await tools(asMember, teamId).get();
     expect(list.status).toBe(200);
-    expect(list.data).toHaveLength(1);
+    expect(list.data?.items).toHaveLength(1);
     // Reading is all that role grants.
     expect(
       (await tools(asMember, teamId).post({ toolKey: 'jina_search', credentialId })).status,

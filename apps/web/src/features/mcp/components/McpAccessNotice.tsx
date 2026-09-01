@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { TeamRole } from '@/lib/api';
 import { teamSectionPath } from '@/utils/paths';
-import { useTeamMembersQuery } from '@/services/teams.service';
+import { useTeamQuery } from '@/services/teams.service';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Why the project cannot be reached over MCP, and who can change it. Reachability is
@@ -24,9 +24,9 @@ export default function McpAccessNotice({
   teamMcpEnabled: boolean;
 }) {
   const t = useTranslations('mcp');
-  const { data: members } = useTeamMembersQuery(teamId);
+  const { data: team } = useTeamQuery(teamId);
   const canManage = teamRole === 'owner' || teamRole === 'manager';
-  const managers = (members ?? []).filter((m) => m.role === 'owner' || m.role === 'manager');
+  const managers = team?.leads ?? [];
 
   let action: ReactNode = null;
   if (canManage) {
@@ -38,7 +38,7 @@ export default function McpAccessNotice({
         {t('openTeamSettings')}
       </Link>
     );
-  } else if (!members) {
+  } else if (!team) {
     action = <Skeleton className="h-4 w-48" />;
   } else if (managers.length > 0) {
     action = (

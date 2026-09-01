@@ -1,11 +1,4 @@
 {
-  "pager": {
-    "perPage": "Per page",
-    "rowsPerPage": "Rows per page",
-    "range": "{first}-{last} of {total}",
-    "previous": "Previous page",
-    "next": "Next page"
-  },
   "providers": {
     "credential": "Password",
     "google": "Google",

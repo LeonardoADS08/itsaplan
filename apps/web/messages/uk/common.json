@@ -179,6 +179,8 @@
   "pager": {
     "previous": "Попередня сторінка",
     "next": "Наступна сторінка",
-    "page": "Сторінка {number}"
+    "page": "Сторінка {number}",
+    "perPage": "на сторінці",
+    "range": "{first}-{last} з {total}"
   }
 }

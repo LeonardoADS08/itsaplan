@@ -106,6 +106,42 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+// Paging. A list route either pages or answers with the whole list, never both, so a
+// paged read always names its window and a whole-list read is a call of its own
+// (listSkillOptions, listConfiguredToolOptions, listNoteBoards, ...).
+export interface PageParams {
+  page: number;
+  pageSize: number;
+}
+
+// One page of a list, with how many rows match in total.
+export interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+// The next page of a list read as "show more": there is one while the pages loaded so
+// far do not cover the total. What every useInfiniteQuery over a paged route passes as
+// getNextPageParam.
+export function nextPageParam<T>(last: Page<T>): number | undefined {
+  return last.page * last.pageSize < last.total ? last.page + 1 : undefined;
+}
+
+// The query string a paged read takes: the window, plus whatever filters the list
+// narrows by. A filter left empty is left out.
+function pageQuery(params: PageParams, filters: Record<string, string | undefined> = {}): string {
+  const qs = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) qs.set(key, value);
+  }
+  return `?${qs}`;
+}
+
 // A team the caller belongs to. It owns projects and holds its own member list.
 export interface Team {
   id: number;
@@ -169,6 +205,16 @@ export interface TeamDetail extends Team {
   // Owners and managers get the full matrix; a member gets the permissions of their
   // project roles in the team, merged.
   permissions: Permissions;
+  // The people who run the team, owners first.
+  leads: TeamLead[];
+}
+
+export interface TeamLead {
+  userId: string;
+  name: string;
+  email: string;
+  image: string | null;
+  role: 'owner' | 'manager';
 }
 
 // One project the team owns, as its row in the team panel opens it: how its issues
@@ -201,11 +247,6 @@ export interface TeamProjectMember {
   source: 'invite' | 'scim';
   timezone: string;
   joinedAt: string;
-}
-
-export interface TeamProjectMemberPage {
-  items: TeamProjectMember[];
-  total: number;
 }
 
 export interface Project {
@@ -1441,13 +1482,6 @@ export interface InstanceUserDetail extends InstanceUser {
 // or both.
 export type InstanceUserKind = 'human' | 'agent' | 'all';
 
-// One page of the directory. `total` counts every account matching the filters, so
-// the pager can show the range and know whether there is a next page.
-export interface InstanceUserPage {
-  items: InstanceUser[];
-  total: number;
-}
-
 // One project in the instance project directory, with what it holds counted across
 // its dependent tables. `lastActivityAt` is the most recent entry in its issue feed.
 export interface InstanceProject {
@@ -1494,9 +1528,11 @@ export interface InstanceProjectDetail extends InstanceProject {
   roles: { id: number; name: string; isDefault: boolean }[];
 }
 
-export interface InstanceProjectPage {
-  items: InstanceProject[];
-  total: number;
+// One instance project as a picker entry: what the SCIM mapping form needs to name it.
+export interface InstanceProjectOption {
+  id: number;
+  key: string;
+  name: string;
 }
 
 // What the sign-in and sign-up screens read before there is a session. magicLink,
@@ -1725,12 +1761,6 @@ export interface NoteBoardAccessCandidate {
   image: string | null;
   kind: 'member' | 'agent';
   canAccess: boolean;
-}
-
-export interface NoteBoardListParams {
-  q?: string;
-  limit?: number;
-  offset?: number;
 }
 
 // --- Analytics DTOs (project metrics behind the dashboard widgets) ---------------
@@ -2471,15 +2501,6 @@ export interface Cycle {
   progress: CycleProgress;
 }
 
-// One page of the finished cycles. `total` counts all of them, so the archive can
-// say how many there are without loading them.
-export interface CyclePage {
-  items: Cycle[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
-
 export interface NewCycleInput {
   name: string;
   goal?: string;
@@ -2500,20 +2521,11 @@ export const INITIATIVE_SORTS = ['title', 'priority', 'targetDate', 'owner'] as 
 
 export type InitiativeSort = (typeof INITIATIVE_SORTS)[number];
 
-export interface InitiativeListParams {
+export interface InitiativeListParams extends PageParams {
   statuses?: string[];
   search?: string;
   sort?: InitiativeSort;
   dir?: 'asc' | 'desc';
-  page?: number;
-  pageSize?: number;
-}
-
-export interface InitiativePage {
-  items: Initiative[];
-  total: number;
-  page: number;
-  pageSize: number;
 }
 
 // Per-status initiative counts for the list's status tabs.
@@ -2687,31 +2699,19 @@ export interface MemberRow {
 // Which members a list asks for: everyone, the people, or the AI agents.
 export type MemberKind = 'all' | 'human' | 'agent';
 
-export interface MemberPage {
-  items: MemberRow[];
-  total: number;
-  // How many of them own the project. A page window cannot answer it, and the last
-  // owner's row is the one that may not be removed.
-  ownerCount: number;
-}
+// How many members own the project is what a page window cannot answer, and the last
+// owner's row is the one that may not be removed.
+export type MemberPage = Page<MemberRow> & { ownerCount: number };
 
-export interface MemberListParams {
+// The filters every member list takes, on top of the page window. The search runs on
+// the server, so the page and the total agree.
+export interface MemberListParams extends PageParams {
   search?: string;
   kind: MemberKind;
-  limit: number;
-  offset: number;
 }
 
-// The query string both member lists take. The search runs on the server, so the
-// page and the total agree.
 function memberListQuery(params: MemberListParams): string {
-  const qs = new URLSearchParams({
-    kind: params.kind,
-    limit: String(params.limit),
-    offset: String(params.offset),
-  });
-  if (params.search) qs.set('search', params.search);
-  return `?${qs}`;
+  return pageQuery(params, { kind: params.kind, search: params.search });
 }
 
 // Someone who can be added to a project without an invite: a member of the team that
@@ -2865,14 +2865,17 @@ function subtaskQuery(disposition?: SubtaskDisposition): string {
 export const api = {
   listTeams: () => request<Team[]>('/teams'),
   getTeam: (teamId: number) => request<TeamDetail>(`/teams/${teamId}`),
-  listTeamMembers: (teamId: number) => request<TeamMember[]>(`/teams/${teamId}/members`),
+  // One page of the team's members. `search` matches the name, the address or the
+  // handle.
+  listTeamMembers: (teamId: number, params: MemberListParams) =>
+    request<Page<TeamMember>>(`/teams/${teamId}/members${memberListQuery(params)}`),
   listTeamProjects: (teamId: number) => request<TeamProject[]>(`/teams/${teamId}/projects`),
   getTeamProject: (teamId: number, projectId: number) =>
     request<TeamProjectDetail>(`/teams/${teamId}/projects/${projectId}`),
   // One page of a project's members. `search` matches the name, the address or the
   // handle.
   listTeamProjectMembers: (teamId: number, projectId: number, params: MemberListParams) =>
-    request<TeamProjectMemberPage>(
+    request<Page<TeamProjectMember>>(
       `/teams/${teamId}/projects/${projectId}/members${memberListQuery(params)}`,
     ),
   createTeam: (input: { name: string }) =>
@@ -3252,17 +3255,15 @@ export const api = {
 
   // Initiatives — collection ops take projectKey; ops on one initiative take its
   // own id and hit /initiatives/:id (like issues).
-  listInitiatives: (projectKey: string, params: InitiativeListParams = {}) => {
-    const q = new URLSearchParams();
-    if (params.statuses && params.statuses.length) q.set('status', params.statuses.join(','));
-    if (params.search) q.set('search', params.search);
-    if (params.sort) q.set('sort', params.sort);
-    if (params.dir) q.set('dir', params.dir);
-    if (params.page) q.set('page', String(params.page));
-    if (params.pageSize) q.set('pageSize', String(params.pageSize));
-    const qs = q.toString();
-    return request<InitiativePage>(`/projects/${projectKey}/initiatives${qs ? `?${qs}` : ''}`);
-  },
+  listInitiatives: (projectKey: string, params: InitiativeListParams) =>
+    request<Page<Initiative>>(
+      `/projects/${projectKey}/initiatives${pageQuery(params, {
+        status: params.statuses?.join(','),
+        search: params.search,
+        sort: params.sort,
+        dir: params.dir,
+      })}`,
+    ),
   listInitiativeOptions: (projectKey: string, params: { search?: string; include?: number }) => {
     const q = new URLSearchParams();
     if (params.search) q.set('search', params.search);
@@ -3298,10 +3299,8 @@ export const api = {
     request<Cycle[]>(`/projects/${projectKey}/cycles?status=planned`),
   listCycleOptions: (projectKey: string) =>
     request<CycleOption[]>(`/projects/${projectKey}/cycles/options`),
-  listCompletedCycles: (projectKey: string, params: { page: number; pageSize: number }) =>
-    request<CyclePage>(
-      `/projects/${projectKey}/cycles/completed?page=${params.page}&pageSize=${params.pageSize}`,
-    ),
+  listCompletedCycles: (projectKey: string, params: PageParams) =>
+    request<Page<Cycle>>(`/projects/${projectKey}/cycles/completed${pageQuery(params)}`),
   getCycle: (id: number) => request<Cycle>(`/cycles/${id}`),
   createCycle: (projectKey: string, input: NewCycleInput) =>
     request<Cycle>(`/projects/${projectKey}/cycles`, {
@@ -3358,16 +3357,12 @@ export const api = {
 
   // Note boards — all ops are project-scoped (a board that is not public is
   // filtered to who may see it server-side), so board ops take projectKey plus the
-  // board id. The list is paged and searchable (switcher); a single board carries
-  // its canvas.
-  listNoteBoards: (projectKey: string, params: NoteBoardListParams = {}) => {
-    const qs = new URLSearchParams();
-    if (params.q) qs.set('q', params.q);
-    if (params.limit != null) qs.set('limit', String(params.limit));
-    if (params.offset != null) qs.set('offset', String(params.offset));
-    const suffix = qs.toString() ? `?${qs}` : '';
-    return request<NoteBoardSummary[]>(`/projects/${projectKey}/note-boards${suffix}`);
-  },
+  // board id. The list feeds the switcher, which shows every board, so it comes whole
+  // with `q` narrowing it; a single board carries its canvas.
+  listNoteBoards: (projectKey: string, params: { q?: string } = {}) =>
+    request<NoteBoardSummary[]>(
+      `/projects/${projectKey}/note-boards${params.q ? `?q=${encodeURIComponent(params.q)}` : ''}`,
+    ),
   getNoteBoard: (projectKey: string, boardId: number) =>
     request<NoteBoard>(`/projects/${projectKey}/note-boards/${boardId}`),
   listNoteBoardAccessCandidates: (projectKey: string) =>
@@ -3434,9 +3429,9 @@ export const api = {
   // Members: list who is on a project, add someone from its team, and revoke access
   // (an owner removes anyone; a member removes only themselves — leaving the
   // project).
-  // One page of the project's members, or all of them when no window is asked for.
-  listMembers: (projectKey: string, params?: MemberListParams) =>
-    request<MemberPage>(`/projects/${projectKey}/members${params ? memberListQuery(params) : ''}`),
+  // One page of the project's members.
+  listMembers: (projectKey: string, params: MemberListParams) =>
+    request<MemberPage>(`/projects/${projectKey}/members${memberListQuery(params)}`),
   listMemberCandidates: (projectKey: string) =>
     request<MemberCandidate[]>(`/projects/${projectKey}/members/candidates`),
   addMember: (
@@ -3499,8 +3494,8 @@ export const api = {
     request<AgentRunPage>(
       `/teams/${teamId}/ai-agents/${agentId}/runs?limit=25${before ? `&before=${before}` : ''}`,
     ),
-  listAgentSchedules: (projectKey: string) =>
-    request<AgentSchedule[]>(`/projects/${projectKey}/agent-schedules`),
+  listAgentSchedules: (projectKey: string, params: PageParams) =>
+    request<Page<AgentSchedule>>(`/projects/${projectKey}/agent-schedules${pageQuery(params)}`),
   createAgentSchedule: (projectKey: string, input: AgentScheduleInput) =>
     request<AgentSchedule>(`/projects/${projectKey}/agent-schedules`, {
       method: 'POST',
@@ -3578,8 +3573,8 @@ export const api = {
     request<ProviderModel[]>(
       `/teams/${teamId}/integrations/models/${encodeURIComponent(provider)}`,
     ),
-  listCredentials: (teamId: number) =>
-    request<IntegrationCredential[]>(`/teams/${teamId}/integrations`),
+  listCredentials: (teamId: number, params: PageParams) =>
+    request<Page<IntegrationCredential>>(`/teams/${teamId}/integrations${pageQuery(params)}`),
   listIntegrationOptions: (teamId: number, kind?: IntegrationKind) =>
     request<IntegrationOption[]>(
       `/teams/${teamId}/integrations/options${kind ? `?kind=${kind}` : ''}`,
@@ -3598,7 +3593,13 @@ export const api = {
     request<void>(`/teams/${teamId}/integrations/${credentialId}`, { method: 'DELETE' }),
 
   // Agent skills: the team skill library and the skills enabled on an agent.
-  listSkills: (teamId: number) => request<AgentSkill[]>(`/teams/${teamId}/agent-skills`),
+  listSkills: (teamId: number, params: PageParams) =>
+    request<Page<AgentSkill>>(`/teams/${teamId}/agent-skills${pageQuery(params)}`),
+  // The whole library, which the agent editor's skill picker needs entire.
+  listSkillOptions: (teamId: number) =>
+    request<AgentSkill[]>(`/teams/${teamId}/agent-skills/options`),
+  getSkill: (teamId: number, skillId: number) =>
+    request<AgentSkill>(`/teams/${teamId}/agent-skills/${skillId}`),
   getSkillMarkdown: (teamId: number, skillId: number) =>
     request<{ markdown: string }>(`/teams/${teamId}/agent-skills/${skillId}/markdown`),
   getSkillReferenceContent: (teamId: number, skillId: number, path: string) =>
@@ -3655,8 +3656,12 @@ export const api = {
 
   // Configured tools: a team's tools bound to a credential, and the tools enabled on
   // one agent. The tool catalog itself comes from the integrations catalog.
-  listConfiguredTools: (teamId: number) =>
-    request<ConfiguredTool[]>(`/teams/${teamId}/agent-tools`),
+  listConfiguredTools: (teamId: number, params: PageParams) =>
+    request<Page<ConfiguredTool>>(`/teams/${teamId}/agent-tools${pageQuery(params)}`),
+  // The whole list, which the agent editor's tool picker and the tool dialog need
+  // entire.
+  listConfiguredToolOptions: (teamId: number) =>
+    request<ConfiguredTool[]>(`/teams/${teamId}/agent-tools/options`),
   createConfiguredTool: (teamId: number, input: NewConfiguredToolInput) =>
     request<ConfiguredTool>(`/teams/${teamId}/agent-tools`, {
       method: 'POST',
@@ -4032,20 +4037,10 @@ export const api = {
 
   // The instance user directory: one page of accounts, and one account with the
   // projects it can reach. Search, the kind filter and paging all run on the server.
-  listInstanceUsers: (params: {
-    search?: string;
-    kind: InstanceUserKind;
-    limit: number;
-    offset: number;
-  }) => {
-    const query = new URLSearchParams({
-      kind: params.kind,
-      limit: String(params.limit),
-      offset: String(params.offset),
-    });
-    if (params.search) query.set('search', params.search);
-    return request<InstanceUserPage>(`/god/users?${query.toString()}`);
-  },
+  listInstanceUsers: (params: PageParams & { search?: string; kind: InstanceUserKind }) =>
+    request<Page<InstanceUser>>(
+      `/god/users${pageQuery(params, { kind: params.kind, search: params.search })}`,
+    ),
   getInstanceUser: (userId: string) => request<InstanceUserDetail>(`/god/users/${userId}`),
   verifyInstanceUserEmail: (userId: string) =>
     request<InstanceUserDetail>(`/god/users/${userId}/verify-email`, { method: 'POST' }),
@@ -4057,14 +4052,10 @@ export const api = {
     }),
   // The instance project directory: one page of projects, and one project with its
   // members. Search and paging run on the server.
-  listInstanceProjects: (params: { search?: string; limit: number; offset: number }) => {
-    const query = new URLSearchParams({
-      limit: String(params.limit),
-      offset: String(params.offset),
-    });
-    if (params.search) query.set('search', params.search);
-    return request<InstanceProjectPage>(`/god/projects?${query.toString()}`);
-  },
+  listInstanceProjects: (params: PageParams & { search?: string }) =>
+    request<Page<InstanceProject>>(`/god/projects${pageQuery(params, { search: params.search })}`),
+  // Every project, for the SCIM mapping picker; the directory above is paged.
+  listInstanceProjectOptions: () => request<InstanceProjectOption[]>('/god/projects/options'),
   getInstanceProject: (projectId: number) =>
     request<InstanceProjectDetail>(`/god/projects/${projectId}`),
   // The instance's own sign-in policy, readable without a session: the sign-up

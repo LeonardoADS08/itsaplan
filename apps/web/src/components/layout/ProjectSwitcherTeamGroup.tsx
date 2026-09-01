@@ -58,10 +58,7 @@ export default function ProjectSwitcherTeamGroup({
             onClick={() => onSelectProject(project.key)}
             className="gap-2 p-2"
           >
-            <Badge
-              variant="outline"
-              className="w-12 shrink-0 rounded px-1 py-0 font-mono text-[10px] text-muted-foreground"
-            >
+            <Badge className="w-12 shrink-0 rounded px-1 py-0 font-mono text-[10px]">
               {project.key}
             </Badge>
             <span className="min-w-0 flex-1 truncate">{project.name}</span>

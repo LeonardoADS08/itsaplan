@@ -1,11 +1,4 @@
 {
-  "pager": {
-    "perPage": "На странице",
-    "rowsPerPage": "Строк на странице",
-    "range": "{first}-{last} из {total}",
-    "previous": "Предыдущая страница",
-    "next": "Следующая страница"
-  },
   "providers": {
     "credential": "Пароль",
     "google": "Google",

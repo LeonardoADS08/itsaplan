@@ -6,10 +6,12 @@ import { noContent } from '#shared/http';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
+import { paginate } from '#shared/pagination';
 import { nextCronRun } from './cron';
 import {
   AgentScheduleResponse,
-  AgentScheduleListResponse,
+  AgentSchedulePageResponse,
+  agentSchedulePageQuery,
   CanceledRunsResponse,
   QueuedRunResponse,
   ScheduleRunListResponse,
@@ -43,13 +45,17 @@ export const agentScheduleRoutes = new Elysia({
   .use(guards)
   .get(
     '/projects/:projectKey/agent-schedules',
-    ({ project, user }) => listAgentSchedules(project.id, requireUser(user).id),
+    ({ project, user, query }) =>
+      paginate(query, (window) => listAgentSchedules(project.id, requireUser(user).id, window)),
     {
       permission: ['ai_agents', 'read'],
-      response: { 200: AgentScheduleListResponse, ...accessErrors },
+      query: agentSchedulePageQuery,
+      response: { 200: AgentSchedulePageResponse, ...accessErrors },
       detail: {
         summary: 'List agent schedules',
-        description: "List the project's agent schedules with their cron, next run, and last run.",
+        description:
+          "One page of the project's agent schedules with their cron, next run, and last " +
+          'run, newest first.',
         ...mcpTool('list_agent_schedules'),
       },
     },

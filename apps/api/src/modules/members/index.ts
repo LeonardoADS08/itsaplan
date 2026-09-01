@@ -1,5 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { mcpTool } from '#mcp/generate';
+import { paginate } from '#shared/pagination';
 import { noContent } from '#shared/http';
 import { authContext } from '#shared/auth-context';
 import { guards } from '#shared/guards';
@@ -11,7 +12,7 @@ import { getTeamMembership } from '#modules/teams/service';
 import { isAgentUser } from '#modules/agents/core/service';
 import {
   MemberCandidateListResponse,
-  MemberListResponse,
+  MemberPageResponse,
   addMemberBody,
   memberListQuery,
   memberParams,
@@ -20,8 +21,7 @@ import {
 } from './model';
 import {
   addMember,
-  countMembers,
-  listMembers,
+  listMembersPage,
   listMemberCandidates,
   getMembership,
   getMembershipSource,
@@ -55,23 +55,22 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
     '/projects/:projectKey/members',
     async ({ project, query }) => {
       const filters = { search: query.search, kind: query.kind };
-      const [items, total, ownerCount] = await Promise.all([
-        listMembers(project.id, { ...filters, limit: query.limit, offset: query.offset }),
-        countMembers(project.id, filters),
+      const [page, ownerCount] = await Promise.all([
+        paginate(query, (window) => listMembersPage(project.id, { ...filters, ...window })),
         countOwners(project.id),
       ]);
-      return { items, total, ownerCount };
+      return { ...page, ownerCount };
     },
     {
       memberAdmin: ['members_manage', 'read'],
       query: memberListQuery,
-      response: { 200: MemberListResponse, ...accessErrors },
+      response: { 200: MemberPageResponse, ...accessErrors },
       detail: {
         summary: 'List project members',
         description:
-          'The members of the project, the newest membership first. `search` matches the ' +
-          'name, the address or the handle, `kind` narrows the list to the people or to the ' +
-          'AI agents, and without `limit` the whole list is returned.',
+          'One page of the project members, the newest membership first. `search` matches ' +
+          'the name, the address or the handle, and `kind` narrows the list to the people or ' +
+          'to the AI agents.',
         ...mcpTool('list_members'),
       },
     },

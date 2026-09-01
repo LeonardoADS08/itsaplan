@@ -1,11 +1,4 @@
 {
-  "pager": {
-    "perPage": "На сторінці",
-    "rowsPerPage": "Рядків на сторінці",
-    "range": "{first}-{last} з {total}",
-    "previous": "Попередня сторінка",
-    "next": "Наступна сторінка"
-  },
   "providers": {
     "credential": "Пароль",
     "google": "Google",

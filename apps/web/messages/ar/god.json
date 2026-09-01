@@ -1,11 +1,4 @@
 {
-  "pager": {
-    "perPage": "لكل صفحة",
-    "rowsPerPage": "الصفوف لكل صفحة",
-    "range": "{first}-{last} من {total}",
-    "previous": "الصفحة السابقة",
-    "next": "الصفحة التالية"
-  },
   "providers": {
     "credential": "كلمة المرور",
     "google": "Google",

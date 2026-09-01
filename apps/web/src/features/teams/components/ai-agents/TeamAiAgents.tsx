@@ -6,6 +6,8 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components
 import { EmptyState } from '@/components/common/page/EmptyState';
 import ListSkeleton from '@/components/common/skeleton/ListSkeleton';
 import ConfirmDialog from '@/components/common/overlay/ConfirmDialog';
+import ListPager from '@/components/common/ListPager';
+import { usePaging } from '@/hooks/usePaging';
 import { useAgentSection } from '../../context/agentSection';
 import { TeamAiAgentRow } from './TeamAiAgentRow';
 import { TeamAiAgentSheet } from './TeamAiAgentSheet';
@@ -35,8 +37,12 @@ export default function TeamAiAgents() {
   // The agent whose run history sidebar is open.
   const [runsAgent, setRunsAgent] = useState<AiAgent | null>(null);
   const [deleting, setDeleting] = useState<AiAgent | null>(null);
+  const paging = usePaging();
 
   const editing = agents.find((a) => a.id === editingId) ?? null;
+  // The team's agents come in one list — the sheets and the project screens read it
+  // whole — so the page is cut here rather than asked for.
+  const shown = paging.slice(agents);
 
   return (
     <>
@@ -45,43 +51,46 @@ export default function TeamAiAgents() {
       ) : agents.length === 0 ? (
         <EmptyState title={t('empty')} description={t('emptyHint')} />
       ) : (
-        <Table className="min-w-[1000px] table-fixed">
-          <colgroup>
-            <col className="w-[32%]" />
-            <col className="w-[20%]" />
-            <col className="w-[36%]" />
-            <col className="w-[12%]" />
-          </colgroup>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="text-xs font-medium text-muted-foreground">
-                {t('agent')}
-              </TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">
-                {t('columns.triggers')}
-              </TableHead>
-              <TableHead className="text-xs font-medium text-muted-foreground">
-                {t('columns.configuration')}
-              </TableHead>
-              <TableHead className="text-end text-xs font-medium text-muted-foreground">
-                {tCommon('actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {agents.map((a) => (
-              <TeamAiAgentRow
-                key={a.id}
-                agent={a}
-                providerLabel={(key: string) => integrationLabel(catalog, key)}
-                onChat={() => setEditingId(a.id)}
-                onRuns={() => setRunsAgent(a)}
-                onEdit={() => setEditingId(a.id)}
-                onDelete={() => setDeleting(a)}
-              />
-            ))}
-          </TableBody>
-        </Table>
+        <div className="space-y-4">
+          <Table className="min-w-[1000px] table-fixed">
+            <colgroup>
+              <col className="w-[32%]" />
+              <col className="w-[20%]" />
+              <col className="w-[36%]" />
+              <col className="w-[12%]" />
+            </colgroup>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-xs font-medium text-muted-foreground">
+                  {t('agent')}
+                </TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground">
+                  {t('columns.triggers')}
+                </TableHead>
+                <TableHead className="text-xs font-medium text-muted-foreground">
+                  {t('columns.configuration')}
+                </TableHead>
+                <TableHead className="text-end text-xs font-medium text-muted-foreground">
+                  {tCommon('actions')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shown.map((a) => (
+                <TeamAiAgentRow
+                  key={a.id}
+                  agent={a}
+                  providerLabel={(key: string) => integrationLabel(catalog, key)}
+                  onChat={() => setEditingId(a.id)}
+                  onRuns={() => setRunsAgent(a)}
+                  onEdit={() => setEditingId(a.id)}
+                  onDelete={() => setDeleting(a)}
+                />
+              ))}
+            </TableBody>
+          </Table>
+          <ListPager paging={paging} total={agents.length} />
+        </div>
       )}
 
       <TeamAiAgentSheet

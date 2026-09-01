@@ -118,8 +118,8 @@ export interface ListInitiativesOpts {
   search?: string;
   sort?: InitiativeSort;
   dir?: 'asc' | 'desc';
-  limit?: number;
-  offset?: number;
+  limit: number;
+  offset: number;
 }
 
 export interface InitiativeListPage {
@@ -148,7 +148,7 @@ function orderExpr(sort: InitiativeSort) {
 
 export async function listInitiatives(
   projectId: number,
-  opts: ListInitiativesOpts = {},
+  opts: ListInitiativesOpts,
 ): Promise<InitiativeListPage> {
   const conds = [eq(initiative.projectId, projectId)];
   if (opts.statuses && opts.statuses.length) {
@@ -173,8 +173,7 @@ export async function listInitiatives(
     .from(initiative)
     .where(where)
     .orderBy(...orderBy);
-  const rows =
-    opts.limit !== undefined ? await q.limit(opts.limit).offset(opts.offset ?? 0) : await q;
+  const rows = await q.limit(opts.limit).offset(opts.offset);
 
   const [{ total }] = await db
     .select({ total: sql<number>`count(*)` })

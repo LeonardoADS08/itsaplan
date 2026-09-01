@@ -1,4 +1,5 @@
 import { t } from 'elysia';
+import { pageQueryFields, pageResponse } from '#shared/pagination';
 
 const memberRole = t.Union([t.Literal('owner'), t.Literal('member')]);
 
@@ -23,15 +24,12 @@ const MemberResponse = t.Object({
   createdAt: t.String(),
 });
 
-// One page of members, with how many the project has in total. Without limit and
-// offset the page is the whole list.
-export const MemberListResponse = t.Object({
-  items: t.Array(MemberResponse),
-  total: t.Number(),
-  // How many of them own the project, which a page window cannot answer: the last
-  // owner is protected, and the list marks their row for it.
-  ownerCount: t.Number(),
-});
+// One page of members. `ownerCount` is what a page window cannot answer: the last
+// owner is protected, and the list marks their row for it.
+export const MemberPageResponse = t.Composite([
+  pageResponse(MemberResponse),
+  t.Object({ ownerCount: t.Number() }),
+]);
 
 export const memberListQuery = t.Object({
   search: t.Optional(t.String({ description: 'Matches the name, the address or the handle.' })),
@@ -40,8 +38,7 @@ export const memberListQuery = t.Object({
       description: "Everyone, the people, or the AI agents' bot users. Defaults to everyone.",
     }),
   ),
-  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
-  offset: t.Optional(t.Numeric({ minimum: 0, default: 0 })),
+  ...pageQueryFields,
 });
 
 // Someone who can be added to the project straight away (MemberCandidate).

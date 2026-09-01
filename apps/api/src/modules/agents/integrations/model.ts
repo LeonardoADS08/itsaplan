@@ -1,4 +1,5 @@
 import { t } from 'elysia';
+import { pageQueryFields, pageResponse } from '#shared/pagination';
 
 export const credentialParams = t.Object({
   teamId: t.Numeric(),
@@ -28,7 +29,9 @@ export const CredentialResponse = t.Object({
   createdAt: t.String(),
 });
 
-export const CredentialListResponse = t.Array(CredentialResponse);
+export const CredentialPageResponse = pageResponse(CredentialResponse);
+
+export const credentialListQuery = t.Object(pageQueryFields);
 
 const ConfigFieldResponse = t.Object({
   key: t.String(),

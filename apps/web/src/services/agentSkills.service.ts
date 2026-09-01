@@ -1,15 +1,35 @@
 // The team's skill library, and the skills enabled on one of its agents. Both belong to
 // the team, so every hook here is keyed by it.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type NewSkillInput, type SkillPatch } from '@/lib/api';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api, type NewSkillInput, type PageParams, type SkillPatch } from '@/lib/api';
 import { qk } from '@/services/queryKeys';
 
-export function useSkillsQuery(teamId: number | null) {
+// The whole library, which the agent editor's skill picker needs entire.
+export function useSkillOptionsQuery(teamId: number | null) {
   return useQuery({
-    queryKey: qk.agentSkills(teamId ?? 0),
-    queryFn: () => api.listSkills(teamId!),
+    queryKey: qk.agentSkillOptions(teamId ?? 0),
+    queryFn: () => api.listSkillOptions(teamId!),
     enabled: teamId != null,
+  });
+}
+
+// One skill, live: the editor reads it back so adding or deleting a reference file
+// shows up in its file list.
+export function useSkillQuery(teamId: number, skillId: number) {
+  return useQuery({
+    queryKey: qk.agentSkill(teamId, skillId),
+    queryFn: () => api.getSkill(teamId, skillId),
+  });
+}
+
+// One page of the library, for the section that lists it.
+export function useSkillsPageQuery(teamId: number | null, params: PageParams) {
+  return useQuery({
+    queryKey: qk.agentSkillPage(teamId ?? 0, params),
+    queryFn: () => api.listSkills(teamId!, params),
+    enabled: teamId != null,
+    placeholderData: keepPreviousData,
   });
 }
 

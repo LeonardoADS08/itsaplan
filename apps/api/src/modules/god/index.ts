@@ -23,6 +23,7 @@ import { authContext } from '#shared/auth-context';
 import { requireGod } from '#shared/access';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
+import { paginate } from '#shared/pagination';
 import { noContent } from '#shared/http';
 import { deleteProject } from '#modules/projects/service';
 import {
@@ -30,6 +31,7 @@ import {
   getInstanceProject,
   getInstanceUser,
   listInstanceProjects,
+  listInstanceProjectOptions,
   listInstanceUsers,
   listScimGroups,
   setScimGroupMappings,
@@ -44,9 +46,10 @@ import {
   GoogleSettingsBody,
   GoogleSettingsResponse,
   InstanceProjectDetailResponse,
-  InstanceProjectListResponse,
+  InstanceProjectOptionListResponse,
+  InstanceProjectPageResponse,
   InstanceUserDetailResponse,
-  InstanceUserListResponse,
+  InstanceUserPageResponse,
   OidcSettingsBody,
   OidcSettingsResponse,
   ScimGroupMappingsBody,
@@ -486,19 +489,16 @@ export const godRoutes = new Elysia({ name: 'god', detail: { tags: ['God'] } })
   .get(
     '/god/users',
     ({ query }) =>
-      listInstanceUsers({
-        search: query.search,
-        kind: query.kind ?? 'human',
-        limit: query.limit ?? 50,
-        offset: query.offset ?? 0,
-      }),
+      paginate(query, (window) =>
+        listInstanceUsers({ search: query.search, kind: query.kind ?? 'human', ...window }),
+      ),
     {
       query: listUsersQuery,
-      response: { 200: InstanceUserListResponse, ...errors(400, 401, 403) },
+      response: { 200: InstanceUserPageResponse, ...errors(400, 401, 403) },
       detail: {
         summary: 'List instance users',
         description:
-          'List one page of accounts, with the global role and sign-in state of each, plus how many match the filters.',
+          'One page of accounts, with the global role and sign-in state of each, plus how many match the filters.',
       },
     },
   )
@@ -583,21 +583,24 @@ export const godRoutes = new Elysia({ name: 'god', detail: { tags: ['God'] } })
   .get(
     '/god/projects',
     ({ query }) =>
-      listInstanceProjects({
-        search: query.search,
-        limit: query.limit ?? 50,
-        offset: query.offset ?? 0,
-      }),
+      paginate(query, (window) => listInstanceProjects({ search: query.search, ...window })),
     {
       query: listProjectsQuery,
-      response: { 200: InstanceProjectListResponse, ...errors(400, 401, 403) },
+      response: { 200: InstanceProjectPageResponse, ...errors(400, 401, 403) },
       detail: {
         summary: 'List instance projects',
-        description:
-          'List one page of projects with what each holds, plus how many match the search.',
+        description: 'One page of projects with what each holds, plus how many match the search.',
       },
     },
   )
+
+  .get('/god/projects/options', () => listInstanceProjectOptions(), {
+    response: { 200: InstanceProjectOptionListResponse, ...errors(401, 403) },
+    detail: {
+      summary: 'List every instance project',
+      description: 'Every project on the instance as id, key and name, for a picker.',
+    },
+  })
 
   .get(
     '/god/projects/:projectId',

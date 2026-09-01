@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import TeamLeadsSection from './TeamLeadsSection';
 import TeamLeaveDialog from './TeamLeaveDialog';
 
 // The last owner of a team has nobody to hand it over to, so leaving it is not
@@ -85,6 +86,8 @@ export default function TeamInfoSection({ teamId }: { teamId: number }) {
             </div>
           </SettingsCard>
         </SettingsSection>
+
+        <TeamLeadsSection teamId={teamId} />
 
         {!isLastOwner(team) && (
           <SettingsSection

@@ -6,6 +6,7 @@ import { authContext } from '#shared/auth-context';
 import { requireUser } from '#shared/access';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors } from '#shared/responses';
+import { paginate } from '#shared/pagination';
 import { transferCycleIssues } from '#modules/issues/service';
 import {
   CycleListResponse,
@@ -83,15 +84,7 @@ export const cycleRoutes = new Elysia({
 
   .get(
     '/projects/:projectKey/cycles/completed',
-    async ({ project, query }) => {
-      const page = query.page ?? 1;
-      const pageSize = query.pageSize ?? 25;
-      const { items, total } = await listCompletedCycles(project.id, {
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-      });
-      return { items, total, page, pageSize };
-    },
+    ({ project, query }) => paginate(query, (window) => listCompletedCycles(project.id, window)),
     {
       query: completedCyclesQuery,
       permission: ['cycles', 'read'],

@@ -4,6 +4,7 @@ import { authContext } from '#shared/auth-context';
 import { guards } from '#shared/guards';
 import { noContent } from '#shared/http';
 import { HttpError } from '#shared/lib';
+import { paginate } from '#shared/pagination';
 import { errors } from '#shared/responses';
 import { isMcpRequest } from '#shared/mcp-request';
 import { mcpTool } from '#mcp/generate';
@@ -19,7 +20,7 @@ import {
   TeamDetailResponse,
   TeamListResponse,
   TeamMcpResponse,
-  TeamMemberListResponse,
+  TeamMemberPageResponse,
   TeamProjectDetailResponse,
   TeamProjectMemberPageResponse,
   TeamProjectListResponse,
@@ -29,7 +30,7 @@ import {
   teamMemberParams,
   teamParams,
   teamProjectParams,
-  teamProjectMembersQuery,
+  memberListQuery,
   updateTeamBody,
   updateTeamMcpBody,
 } from './model';
@@ -100,15 +101,30 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
     },
   )
 
-  .get('/teams/:teamId/members', ({ membership }) => listTeamMembers(membership.teamId), {
-    teamMember: true,
-    params: teamParams,
-    response: { 200: TeamMemberListResponse, ...errors(401, 404) },
-    detail: {
-      summary: 'List team members',
-      description: 'The members of a team you belong to.',
+  .get(
+    '/teams/:teamId/members',
+    ({ membership, query }) =>
+      paginate(query, (window) =>
+        listTeamMembers(membership.teamId, {
+          search: query.search,
+          kind: query.kind,
+          ...window,
+        }),
+      ),
+    {
+      teamMember: true,
+      params: teamParams,
+      query: memberListQuery,
+      response: { 200: TeamMemberPageResponse, ...errors(401, 404) },
+      detail: {
+        summary: 'List team members',
+        description:
+          'One page of the members of a team you belong to, by name. `search` matches the ' +
+          'name, the address or the handle, and `kind` narrows the list to the people or to ' +
+          'the AI agents.',
+      },
     },
-  })
+  )
 
   .get(
     '/teams/:teamId/projects',
@@ -152,34 +168,30 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
 
   .get(
     '/teams/:teamId/projects/:projectId/members',
-    async ({ membership, params, query }) => {
-      const page = await listTeamProjectMembers(
-        membership.teamId,
-        params.projectId,
-        membership.userId,
-        membership.role,
-        {
-          search: query.search,
-          kind: query.kind,
-          limit: query.limit ?? 25,
-          offset: query.offset ?? 0,
-        },
-      );
-      if (!page) throw new HttpError(404, 'Project not found');
-      return page;
-    },
+    ({ membership, params, query }) =>
+      paginate(query, async (window) => {
+        const page = await listTeamProjectMembers(
+          membership.teamId,
+          params.projectId,
+          membership.userId,
+          membership.role,
+          { search: query.search, kind: query.kind, ...window },
+        );
+        if (!page) throw new HttpError(404, 'Project not found');
+        return page;
+      }),
     {
       teamMember: true,
       params: teamProjectParams,
-      query: teamProjectMembersQuery,
+      query: memberListQuery,
       response: { 200: TeamProjectMemberPageResponse, ...errors(401, 404) },
       detail: {
-        summary: "List a project's members, one page at a time",
+        summary: "List a project's members",
         description:
-          'The members of one project of the team, owners first. `search` matches the name, ' +
-          'the address or the handle, and `kind` narrows the list to the people or to the AI ' +
-          'agents. An owner or a manager may read it for any project of the team; anyone ' +
-          'else only for one they belong to.',
+          'One page of the members of one project of the team, owners first. `search` ' +
+          'matches the name, the address or the handle, and `kind` narrows the list to the ' +
+          'people or to the AI agents. An owner or a manager may read it for any project of ' +
+          'the team; anyone else only for one they belong to.',
       },
     },
   )

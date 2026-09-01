@@ -2,15 +2,27 @@
 // to the team, so every hook here is keyed by it. The tool catalog they are built from
 // lives in integrations.service.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, type NewConfiguredToolInput } from '@/lib/api';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api, type NewConfiguredToolInput, type PageParams } from '@/lib/api';
 import { qk } from '@/services/queryKeys';
 
-export function useConfiguredToolsQuery(teamId: number | null) {
+// The whole list, which the agent editor's tool picker and the tool dialog need
+// entire.
+export function useConfiguredToolOptionsQuery(teamId: number | null) {
   return useQuery({
-    queryKey: qk.configuredTools(teamId ?? 0),
-    queryFn: () => api.listConfiguredTools(teamId!),
+    queryKey: qk.configuredToolOptions(teamId ?? 0),
+    queryFn: () => api.listConfiguredToolOptions(teamId!),
     enabled: teamId != null,
+  });
+}
+
+// One page of the list, for the section that shows it.
+export function useConfiguredToolsPageQuery(teamId: number | null, params: PageParams) {
+  return useQuery({
+    queryKey: qk.configuredToolPage(teamId ?? 0, params),
+    queryFn: () => api.listConfiguredTools(teamId!, params),
+    enabled: teamId != null,
+    placeholderData: keepPreviousData,
   });
 }
 

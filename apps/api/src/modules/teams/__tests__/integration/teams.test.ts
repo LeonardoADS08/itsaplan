@@ -28,7 +28,7 @@ async function addTeamMember(
 
 async function memberRole(api: Api, teamId: number, userId: string) {
   const list = await api.teams({ teamId }).members.get();
-  return list.data?.find((one) => one.userId === userId)?.role;
+  return list.data?.items.find((one) => one.userId === userId)?.role;
 }
 
 describe('teams', () => {
@@ -140,11 +140,45 @@ describe('teams', () => {
       const teamId = (await api.teams.get()).data![0].id;
 
       const members = await api.teams({ teamId }).members.get();
-      expect(members.data).toMatchObject([{ email: user.email, role: 'owner' }]);
+      expect(members.data?.items).toMatchObject([{ email: user.email, role: 'owner' }]);
 
       const projects = await api.teams({ teamId }).projects.get();
       expect(projects.data).toMatchObject([
         { key: 'MKT', name: 'Marketing', memberCount: 1, isMember: true },
+      ]);
+    });
+
+    it('windows the member list, searches it and narrows it to the people', async () => {
+      const { user, api } = await signUpClient();
+      const teamId = (await api.teams.get()).data![0].id;
+      await addTeamMember({ api }, teamId);
+      await addTeamMember({ api }, teamId);
+      const members = api.teams({ teamId }).members;
+
+      const first = await members.get({ query: { page: 1, pageSize: 2 } });
+      expect(first.data?.items).toHaveLength(2);
+      expect(first.data?.total).toBe(3);
+
+      const second = await members.get({ query: { page: 2, pageSize: 2 } });
+      expect(second.data?.items).toHaveLength(1);
+
+      const found = await members.get({ query: { search: user.email } });
+      expect(found.data?.items).toMatchObject([{ email: user.email }]);
+
+      expect((await members.get({ query: { kind: 'human' } })).data?.total).toBe(3);
+      expect((await members.get({ query: { kind: 'agent' } })).data?.total).toBe(0);
+    });
+
+    it('carries the owners and the managers of the team on its detail', async () => {
+      const { user, api } = await signUpClient();
+      const teamId = (await api.teams.get()).data![0].id;
+      const manager = await addTeamMember({ api }, teamId, 'manager');
+      await addTeamMember({ api }, teamId);
+
+      const detail = await api.teams({ teamId }).get();
+      expect(detail.data?.leads).toMatchObject([
+        { email: user.email, role: 'owner' },
+        { email: manager.user.email, role: 'manager' },
       ]);
     });
 
@@ -309,11 +343,11 @@ describe('teams', () => {
       const teamId = (await api.teams.get()).data![0].id;
       const members = api.teams({ teamId }).projects({ projectId: project.data!.id }).members;
 
-      const first = await members.get({ query: { limit: 2, offset: 0 } });
+      const first = await members.get({ query: { page: 1, pageSize: 2 } });
       expect(first.data?.items).toHaveLength(2);
       expect(first.data?.total).toBe(3);
 
-      const second = await members.get({ query: { limit: 2, offset: 2 } });
+      const second = await members.get({ query: { page: 2, pageSize: 2 } });
       expect(second.data?.items).toHaveLength(1);
       expect(second.data?.total).toBe(3);
     });
@@ -777,7 +811,7 @@ describe('teams', () => {
       expect(removed.status).toBe(204);
 
       const members = await owner.api.teams({ teamId }).members.get();
-      expect(members.data?.some((one) => one.userId === member.user.userId)).toBe(false);
+      expect(members.data?.items.some((one) => one.userId === member.user.userId)).toBe(false);
       expect((await member.api.projects({ projectKey: 'MKT' }).get()).status).toBe(403);
       expect((await member.api.teams.get()).data?.some((one) => one.id === teamId)).toBe(false);
     });

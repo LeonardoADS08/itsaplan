@@ -5,11 +5,13 @@ import { authContext } from '#shared/auth-context';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
+import { paginate } from '#shared/pagination';
 import { teamParams } from '#modules/teams/model';
 import { INTEGRATION_CATALOG, integrationKind } from './catalog';
 import { listModelsForProvider } from './provider-models';
 import {
-  CredentialListResponse,
+  CredentialPageResponse,
+  credentialListQuery,
   CredentialResponse,
   IntegrationCatalogResponse,
   IntegrationOptionListResponse,
@@ -20,7 +22,13 @@ import {
   providerParams,
   updateCredentialBody,
 } from './model';
-import { listCredentials, createCredential, updateCredential, deleteCredential } from './service';
+import {
+  listCredentials,
+  listAllCredentials,
+  createCredential,
+  updateCredential,
+  deleteCredential,
+} from './service';
 
 // The credential store belongs to the team and serves every project it owns, so every
 // route sits under :teamId, gated by the integrations resource on the team: its owner
@@ -79,7 +87,7 @@ export const integrationRoutes = new Elysia({
   .get(
     '/teams/:teamId/integrations/options',
     async ({ membership, query }) => {
-      const credentials = await listCredentials(membership.teamId);
+      const credentials = await listAllCredentials(membership.teamId);
       return credentials.flatMap((c) => {
         const kind = integrationKind(c.integrationKey);
         if (!kind || (query.kind && kind !== query.kind)) return [];
@@ -99,19 +107,25 @@ export const integrationRoutes = new Elysia({
     },
   )
 
-  .get('/teams/:teamId/integrations', ({ membership }) => listCredentials(membership.teamId), {
-    params: teamParams,
-    teamPermission: ['integrations', 'read'],
-    response: { 200: CredentialListResponse, ...accessErrors },
-    detail: {
-      summary: 'List credentials',
-      description:
-        "List a team's integration credentials, secrets redacted. The id of a credential on " +
-        'an LLM provider is what modelCredentialId on create_ai_agent / update_ai_agent takes. ' +
-        'A credential is added in the UI, not here.',
-      ...mcpTool('list_integration_credentials'),
+  .get(
+    '/teams/:teamId/integrations',
+    ({ membership, query }) =>
+      paginate(query, (window) => listCredentials(membership.teamId, window)),
+    {
+      params: teamParams,
+      query: credentialListQuery,
+      teamPermission: ['integrations', 'read'],
+      response: { 200: CredentialPageResponse, ...accessErrors },
+      detail: {
+        summary: 'List credentials',
+        description:
+          "One page of a team's integration credentials, secrets redacted. The id of a " +
+          'credential on an LLM provider is what modelCredentialId on create_ai_agent / ' +
+          'update_ai_agent takes. A credential is added in the UI, not here.',
+        ...mcpTool('list_integration_credentials'),
+      },
     },
-  })
+  )
 
   .post(
     '/teams/:teamId/integrations',

@@ -1,6 +1,11 @@
 import { t } from 'elysia';
+import { pageResponse } from '#shared/pagination';
 import { PermissionMatrixSchema } from '#shared/permissions';
 import { StatsDto } from '#modules/analytics/model';
+
+// Both member lists here take the filters and the window the project member list
+// defines, so a reader learns one query and it holds everywhere.
+export { memberListQuery } from '#modules/members/model';
 
 export const teamParams = t.Object({ teamId: t.Numeric() });
 
@@ -47,10 +52,22 @@ export const TeamListResponse = t.Array(TeamResponse);
 
 export const TeamDetailResponse = t.Composite([
   TeamResponse,
-  t.Object({ permissions: PermissionMatrixSchema }),
+  t.Object({
+    permissions: PermissionMatrixSchema,
+    leads: t.Array(
+      t.Object({
+        userId: t.String(),
+        name: t.String(),
+        email: t.String(),
+        image: t.Nullable(t.String()),
+        role: t.Union([t.Literal('owner'), t.Literal('manager')]),
+      }),
+      { description: 'The people who run the team, owners first.' },
+    ),
+  }),
 ]);
 
-export const TeamMemberListResponse = t.Array(
+export const TeamMemberPageResponse = pageResponse(
   t.Object({
     userId: t.String(),
     name: t.String(),
@@ -106,37 +123,23 @@ export const TeamProjectDetailResponse = t.Object({
 
 // One page of the project's members. The access a membership resolves to is the
 // matrix of the role it names, which the caller reads from the team's roles.
-export const TeamProjectMemberPageResponse = t.Object({
-  items: t.Array(
-    t.Object({
-      userId: t.String(),
-      name: t.String(),
-      email: t.String(),
-      username: t.Nullable(t.String()),
-      image: t.Nullable(t.String()),
-      isAgent: t.Boolean(),
-      role: t.Union([t.Literal('owner'), t.Literal('member')]),
-      roleId: t.Nullable(t.Number()),
-      roleName: t.Nullable(t.String()),
-      description: t.String(),
-      source: t.Union([t.Literal('invite'), t.Literal('scim')]),
-      timezone: t.String(),
-      joinedAt: t.String(),
-    }),
-  ),
-  total: t.Number(),
-});
-
-export const teamProjectMembersQuery = t.Object({
-  search: t.Optional(t.String({ description: 'Matches the name, the address or the handle.' })),
-  kind: t.Optional(
-    t.UnionEnum(['all', 'human', 'agent'], {
-      description: "Everyone, the people, or the AI agents' bot users. Defaults to everyone.",
-    }),
-  ),
-  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100, default: 25 })),
-  offset: t.Optional(t.Numeric({ minimum: 0, default: 0 })),
-});
+export const TeamProjectMemberPageResponse = pageResponse(
+  t.Object({
+    userId: t.String(),
+    name: t.String(),
+    email: t.String(),
+    username: t.Nullable(t.String()),
+    image: t.Nullable(t.String()),
+    isAgent: t.Boolean(),
+    role: t.Union([t.Literal('owner'), t.Literal('member')]),
+    roleId: t.Nullable(t.Number()),
+    roleName: t.Nullable(t.String()),
+    description: t.String(),
+    source: t.Union([t.Literal('invite'), t.Literal('scim')]),
+    timezone: t.String(),
+    joinedAt: t.String(),
+  }),
+);
 
 // The team's MCP settings: the switch, and the projects its reach covers.
 export const TeamMcpResponse = t.Object({

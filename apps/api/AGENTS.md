@@ -74,6 +74,19 @@ Rules and invariants for this package below; read the code for the walkthrough.
   `deleteIssue` still reads attachment rows first to purge their objects.
 - **Object-store deletes are best-effort** — log a failed `deleteObject`, do not fail
   the request.
+- **A list route either pages or answers with the whole list, never both.** A paged
+  route takes `...pageQueryFields` (`page`/`pageSize`, 25 by default), answers with
+  `pageResponse(...)` and wraps its service in `paginate` (`shared/pagination.ts`); its
+  service takes a required `{ limit, offset }` and returns `{ items, total }`, counted
+  beside the window so a page past the end still reports how many there are. A list a
+  picker needs entire gets an `/options` route of its own returning a plain array
+  (`/teams/:teamId/agent-skills/options`), and a whole-list read only the server needs
+  is a service function of its own (`listAllAgentSchedules`). A query flag that
+  switches one route between the two makes every caller check which it got.
+- **A feed pages by cursor, not by offset**: `limit` + `cursor`/`before` →
+  `{ items, nextCursor }`. Rows arrive at its head while a reader is paging, which
+  makes an offset skip or repeat them. Everything else uses `page`/`pageSize`, whether
+  the screen shows numbered pages or a "show more" button.
 
 ## Auth and access
 

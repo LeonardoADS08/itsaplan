@@ -1,5 +1,5 @@
 import { db, agentTool, agentToolLink, integrationCredential } from '@repo/db';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { getTool, type ToolConfig } from '@repo/agent-tools';
 import { iso, HttpError, rethrowDuplicate } from '#shared/lib';
 import { decryptSecret } from '@repo/crypto';
@@ -35,22 +35,39 @@ function mapRow(row: Omit<AgentToolRow, 'createdAt'> & { createdAt: Date }): Age
   return { ...row, createdAt: iso(row.createdAt) };
 }
 
-export async function listAgentTools(teamId: number): Promise<AgentToolRow[]> {
-  const rows = await db
+function selectTools() {
+  return db
     .select(dtoColumns)
     .from(agentTool)
-    .innerJoin(integrationCredential, eq(integrationCredential.id, agentTool.credentialId))
-    .where(eq(agentTool.teamId, teamId))
-    .orderBy(agentTool.toolKey);
+    .innerJoin(integrationCredential, eq(integrationCredential.id, agentTool.credentialId));
+}
+
+// One page of the team's configured tools, by tool key, with how many it holds in
+// total.
+export async function listAgentTools(
+  teamId: number,
+  window: { limit: number; offset: number },
+): Promise<{ items: AgentToolRow[]; total: number }> {
+  const where = eq(agentTool.teamId, teamId);
+  const [rows, counted] = await Promise.all([
+    selectTools().where(where).orderBy(agentTool.toolKey).limit(window.limit).offset(window.offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(agentTool)
+      .where(where),
+  ]);
+  return { items: rows.map(mapRow), total: counted[0]?.count ?? 0 };
+}
+
+// The whole list, by tool key. What the picker that enables tools on an agent and the
+// dialog that adds one read.
+export async function listAgentToolOptions(teamId: number): Promise<AgentToolRow[]> {
+  const rows = await selectTools().where(eq(agentTool.teamId, teamId)).orderBy(agentTool.toolKey);
   return rows.map(mapRow);
 }
 
 async function getAgentToolById(id: number, teamId: number): Promise<AgentToolRow | null> {
-  const rows = await db
-    .select(dtoColumns)
-    .from(agentTool)
-    .innerJoin(integrationCredential, eq(integrationCredential.id, agentTool.credentialId))
-    .where(and(eq(agentTool.id, id), eq(agentTool.teamId, teamId)));
+  const rows = await selectTools().where(and(eq(agentTool.id, id), eq(agentTool.teamId, teamId)));
   return rows[0] ? mapRow(rows[0]) : null;
 }
 

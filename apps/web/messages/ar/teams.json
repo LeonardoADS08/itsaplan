@@ -52,6 +52,8 @@
     "teamHint": "الاسم الذي تُجمَع تحته مشاريع الفريق.",
     "role": "دورك",
     "created": "أُنشئ",
+    "leads": "المالكون والمديرون",
+    "leadsHint": "الأشخاص الذين يمكنهم إدارة هذا الفريق ومشاريعه.",
     "saved": "تم حفظ اسم الفريق",
     "leaveHint": "تحتفظ بالمشاريع التي أنت عضو فيها. للانضمام مجددًا يجب أن يضيفك أحد المالكين."
   },
@@ -485,8 +487,6 @@
     "triggerFieldsTitle": "الحقول المخصصة التي تبدأ تشغيلاً"
   },
   "members": {
-    "peopleGroup": "{count, plural, zero {# أشخاص} one {شخص واحد} two {شخصان} few {# أشخاص} many {# شخصًا} other {# شخص}}",
-    "agentGroup": "{count, plural, zero {# وكلاء} one {وكيل واحد} two {وكيلان} few {# وكلاء} many {# وكيلًا} other {# وكيل}}",
     "roleSaved": "{name} الآن {role}",
     "removeAction": "إزالة من الفريق",
     "removeTitle": "إزالة {name} من الفريق؟",

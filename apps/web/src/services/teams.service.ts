@@ -1,12 +1,21 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import {
   api,
+  nextPageParam,
   type InviteTeamRole,
+  type MemberKind,
   type MemberListParams,
   type NotificationSettingsPatch,
   type Team,
   type TeamRole,
 } from '@/lib/api';
+import { DEFAULT_PAGE_SIZE } from '@/hooks/usePaging';
 import { qk } from '@/services/queryKeys';
 
 export function useTeamsQuery() {
@@ -26,10 +35,15 @@ export function useTeamQuery(teamId: number) {
   return useQuery({ queryKey: qk.team(teamId), queryFn: () => api.getTeam(teamId) });
 }
 
-// The members of a team, and the projects it owns. Each section of the team page
-// reads one of them, so opening a section fetches nothing the others show.
-export function useTeamMembersQuery(teamId: number) {
-  return useQuery({ queryKey: qk.teamMembers(teamId), queryFn: () => api.listTeamMembers(teamId) });
+// One page of a team's members. The search and the window run on the server, so the
+// section holds a page rather than every member of the team. The previous page stays
+// on screen while the next one loads.
+export function useTeamMembersQuery(teamId: number, params: MemberListParams) {
+  return useQuery({
+    queryKey: qk.teamMembers(teamId, params),
+    queryFn: () => api.listTeamMembers(teamId, params),
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useTeamProjectsQuery(teamId: number) {
@@ -48,18 +62,21 @@ export function useTeamProjectQuery(teamId: number, projectId: number) {
   });
 }
 
-// One page of that project's members. The search and the window run on the server,
-// so the panel holds a page rather than every member of the project. The previous
-// page stays on screen while the next one loads.
+// That project's members, a page at a time, read as "show more": the panel appends
+// each page to the ones before it. The search and the window run on the server, so
+// the panel never loads every member of the project.
 export function useTeamProjectMembersQuery(
   teamId: number,
   projectId: number,
-  params: MemberListParams,
+  filters: { search?: string; kind: MemberKind },
+  pageSize = DEFAULT_PAGE_SIZE,
 ) {
-  return useQuery({
-    queryKey: qk.teamProjectMembers(teamId, projectId, params),
-    queryFn: () => api.listTeamProjectMembers(teamId, projectId, params),
-    placeholderData: keepPreviousData,
+  return useInfiniteQuery({
+    queryKey: qk.teamProjectMembers(teamId, projectId, { ...filters, pageSize }),
+    queryFn: ({ pageParam }) =>
+      api.listTeamProjectMembers(teamId, projectId, { ...filters, page: pageParam, pageSize }),
+    initialPageParam: 1,
+    getNextPageParam: nextPageParam,
   });
 }
 
@@ -108,15 +125,16 @@ export function useRenameTeam() {
   });
 }
 
-// The rank a member holds in the team, written by an owner or a manager. The team
-// list carries how many owners it has, so it is invalidated with the member list.
+// The rank a member holds in the team, written by an owner or a manager. The whole
+// team subtree carries it — its member pages and the leads on its detail — and the
+// team list carries how many owners it has.
 export function useSetTeamMemberRole(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { userId: string; role: TeamRole }) =>
       api.setTeamMemberRole(teamId, input.userId, input.role),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: qk.teamMembers(teamId) });
+      void qc.invalidateQueries({ queryKey: qk.team(teamId) });
       void qc.invalidateQueries({ queryKey: qk.teams });
     },
   });

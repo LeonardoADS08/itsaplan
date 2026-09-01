@@ -52,6 +52,8 @@
     "teamHint": "The name the team's projects are grouped under.",
     "role": "Your role",
     "created": "Created",
+    "leads": "Owners and managers",
+    "leadsHint": "People who can manage this team and its projects.",
     "saved": "Team name saved",
     "leaveHint": "You keep the projects you are a member of. To join again an owner has to add you back."
   },
@@ -485,8 +487,6 @@
     "triggerFieldsTitle": "Custom fields that start a run"
   },
   "members": {
-    "peopleGroup": "{count, plural, one {# person} other {# people}}",
-    "agentGroup": "{count, plural, one {# agent} other {# agents}}",
     "roleSaved": "{name} is now {role}",
     "removeAction": "Remove from team",
     "removeTitle": "Remove {name} from the team?",

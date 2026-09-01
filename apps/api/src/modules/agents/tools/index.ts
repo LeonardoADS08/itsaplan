@@ -5,11 +5,14 @@ import { authContext } from '#shared/auth-context';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
+import { paginate } from '#shared/pagination';
 import { teamParams } from '#modules/teams/model';
 import { agentInTeam, agentScopeOf } from '../core/service';
 import { actionCatalog } from '../core/runtime/tools/route-tools';
 import {
   AgentToolListResponse,
+  AgentToolPageResponse,
+  agentToolListQuery,
   AgentToolResponse,
   ToolMetaListResponse,
   agentParams,
@@ -19,6 +22,7 @@ import {
 } from './model';
 import {
   listAgentTools,
+  listAgentToolOptions,
   createAgentTool,
   deleteAgentTool,
   listAgentToolLinks,
@@ -56,19 +60,43 @@ export const agentToolRoutes = new Elysia({
     },
   })
 
-  .get('/teams/:teamId/agent-tools', ({ membership }) => listAgentTools(membership.teamId), {
-    params: teamParams,
-    teamPermission: ['agent_tools', 'read'],
-    response: { 200: AgentToolListResponse, ...accessErrors },
-    detail: {
-      summary: 'List configured tools',
-      description:
-        "List a team's tools configured on integration credentials. An id here is what " +
-        'set_ai_agent_configured_tools takes to enable a tool on an agent. Separate from the ' +
-        'built-in actions in list_ai_agent_tools.',
-      ...mcpTool('list_configured_tools'),
+  .get(
+    '/teams/:teamId/agent-tools',
+    ({ membership, query }) =>
+      paginate(query, (window) => listAgentTools(membership.teamId, window)),
+    {
+      params: teamParams,
+      query: agentToolListQuery,
+      teamPermission: ['agent_tools', 'read'],
+      response: { 200: AgentToolPageResponse, ...accessErrors },
+      detail: {
+        summary: 'List configured tools',
+        description:
+          "One page of a team's tools configured on integration credentials. An id here is " +
+          'what set_ai_agent_configured_tools takes to enable a tool on an agent. Separate ' +
+          'from the built-in actions in list_ai_agent_tools. The whole list, for a picker, ' +
+          'comes from list_configured_tool_options.',
+        ...mcpTool('list_configured_tools'),
+      },
     },
-  })
+  )
+
+  .get(
+    '/teams/:teamId/agent-tools/options',
+    ({ membership }) => listAgentToolOptions(membership.teamId),
+    {
+      params: teamParams,
+      teamPermission: ['agent_tools', 'read'],
+      response: { 200: AgentToolListResponse, ...accessErrors },
+      detail: {
+        summary: 'List every configured tool',
+        description:
+          "A team's whole list of configured tools, for the picker that enables them on an " +
+          'agent. Use list_configured_tools to read it a page at a time.',
+        ...mcpTool('list_configured_tool_options'),
+      },
+    },
+  )
 
   .post(
     '/teams/:teamId/agent-tools',

@@ -56,7 +56,7 @@ describe('integrations', () => {
     expect(JSON.stringify(res.data)).not.toContain('sk-secret-1234');
 
     const list = await integrations(asOwner, teamId).get();
-    expect(list.data).toHaveLength(1);
+    expect(list.data?.items).toHaveLength(1);
     expect(JSON.stringify(list.data)).not.toContain('sk-secret');
   });
 
@@ -114,7 +114,32 @@ describe('integrations', () => {
       credential: { apiKey: 'jina-b' },
     });
     expect(second.status).toBe(201);
-    expect((await integrations(asOwner, teamId).get()).data).toHaveLength(2);
+    expect((await integrations(asOwner, teamId).get()).data?.items).toHaveLength(2);
+  });
+
+  it('pages the credential list', async () => {
+    const { asOwner, teamId } = await setup();
+    for (const label of ['A', 'B', 'C']) {
+      await integrations(asOwner, teamId).post({
+        integrationKey: 'jina',
+        label,
+        credential: { apiKey: `jina-${label}` },
+      });
+    }
+
+    const first = await integrations(asOwner, teamId).get({ query: { page: 1, pageSize: 2 } });
+    expect(first.data).toMatchObject({ total: 3, page: 1, pageSize: 2 });
+    expect(first.data?.items).toHaveLength(2);
+
+    const second = await integrations(asOwner, teamId).get({ query: { page: 2, pageSize: 2 } });
+    expect(second.data?.items).toHaveLength(1);
+
+    // No window asked for: the default page, not the whole list.
+    expect((await integrations(asOwner, teamId).get()).data).toMatchObject({
+      page: 1,
+      pageSize: 25,
+      total: 3,
+    });
   });
 
   it('keeps the stored secret when an update omits it', async () => {
@@ -142,7 +167,7 @@ describe('integrations', () => {
     });
     const del = await integrations(asOwner, teamId)({ credentialId: created.data!.id }).delete();
     expect(del.status).toBe(204);
-    expect((await integrations(asOwner, teamId).get()).data).toHaveLength(0);
+    expect((await integrations(asOwner, teamId).get()).data?.items).toHaveLength(0);
   });
 
   // An agent's provider and model are picked over MCP, so the reads are tagged. The

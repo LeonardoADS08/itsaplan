@@ -1,5 +1,5 @@
 import { db, agentSkill, agentSkillLink } from '@repo/db';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { iso, rethrowDuplicate, HttpError } from '#shared/lib';
 import { putObject, getObjectText, deleteObjects } from '#shared/s3';
 import { parseFrontmatter, isDisallowedRef } from './skill-format';
@@ -66,7 +66,30 @@ function skillMdKey(prefix: string): string {
   return `${prefix}/SKILL.md`;
 }
 
-export async function listSkills(teamId: number): Promise<SkillRow[]> {
+// One page of the team's skill library, by name, with how many it holds in total.
+export async function listSkills(
+  teamId: number,
+  window: { limit: number; offset: number },
+): Promise<{ items: SkillRow[]; total: number }> {
+  const where = eq(agentSkill.teamId, teamId);
+  const [rows, counted] = await Promise.all([
+    db
+      .select(dtoColumns)
+      .from(agentSkill)
+      .where(where)
+      .orderBy(agentSkill.name)
+      .limit(window.limit)
+      .offset(window.offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(agentSkill)
+      .where(where),
+  ]);
+  return { items: rows.map(mapRow), total: counted[0]?.count ?? 0 };
+}
+
+// The whole library, by name. What the pickers that let an agent load a skill read.
+export async function listSkillOptions(teamId: number): Promise<SkillRow[]> {
   const rows = await db
     .select(dtoColumns)
     .from(agentSkill)

@@ -258,10 +258,6 @@ export async function listAssigneeCandidates(projectId: number): Promise<Assigne
   return [...members, ...agents].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-// The whole member list where no window is asked for. A project is not expected to
-// hold more members than this; the paginated callers pass their own limit.
-const MAX_MEMBER_PAGE = 1000;
-
 // Which members a list asks for: everyone, the people, or the AI agents' bot users.
 export type MemberKind = 'all' | 'human' | 'agent';
 
@@ -272,7 +268,9 @@ export interface MemberFilters {
   kind?: MemberKind;
 }
 
-function matchesFilters({ search, kind }: MemberFilters) {
+// Filters on the joined user and agent rows alone, so any member query that joins both
+// can reuse it.
+export function matchesFilters({ search, kind }: MemberFilters) {
   const term = search?.trim();
   return and(
     term
@@ -289,10 +287,7 @@ function matchesFilters({ search, kind }: MemberFilters) {
 }
 
 // How many members match, ignoring the page window, so the two agree.
-export async function countMembers(
-  projectId: number,
-  filters: MemberFilters = {},
-): Promise<number> {
+async function countMembers(projectId: number, filters: MemberFilters = {}): Promise<number> {
   const rows = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(projectMember)
@@ -302,38 +297,40 @@ export async function countMembers(
   return rows[0]?.count ?? 0;
 }
 
-export async function listMembers(
-  projectId: number,
-  options: MemberFilters & { limit?: number; offset?: number } = {},
-): Promise<MemberRow[]> {
-  const rows = await db
-    .select({
-      userId: projectMember.userId,
-      name: user.name,
-      email: user.email,
-      username: user.username,
-      image: user.image,
-      timezone: userPreference.timezone,
-      role: projectMember.role,
-      roleId: projectMember.roleId,
-      roleName: teamRole.name,
-      description: projectMember.description,
-      source: projectMember.source,
-      agentId: aiAgent.id,
-      agentUsername: aiAgent.username,
-      createdAt: projectMember.createdAt,
-    })
-    .from(projectMember)
-    .innerJoin(user, eq(user.id, projectMember.userId))
-    .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
-    .leftJoin(aiAgent, eq(aiAgent.userId, projectMember.userId))
-    .leftJoin(userPreference, eq(userPreference.userId, projectMember.userId))
-    .where(and(eq(projectMember.projectId, projectId), matchesFilters(options)))
-    // The newest membership first: who joined last is what a reader checks after
-    // filling a project.
-    .orderBy(desc(projectMember.createdAt))
-    .limit(options.limit ?? MAX_MEMBER_PAGE)
-    .offset(options.offset ?? 0);
+function selectMembers(projectId: number, filters: MemberFilters) {
+  return (
+    db
+      .select({
+        userId: projectMember.userId,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        image: user.image,
+        timezone: userPreference.timezone,
+        role: projectMember.role,
+        roleId: projectMember.roleId,
+        roleName: teamRole.name,
+        description: projectMember.description,
+        source: projectMember.source,
+        agentId: aiAgent.id,
+        agentUsername: aiAgent.username,
+        createdAt: projectMember.createdAt,
+      })
+      .from(projectMember)
+      .innerJoin(user, eq(user.id, projectMember.userId))
+      .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
+      .leftJoin(aiAgent, eq(aiAgent.userId, projectMember.userId))
+      .leftJoin(userPreference, eq(userPreference.userId, projectMember.userId))
+      .where(and(eq(projectMember.projectId, projectId), matchesFilters(filters)))
+      // The newest membership first: who joined last is what a reader checks after
+      // filling a project.
+      .orderBy(desc(projectMember.createdAt))
+  );
+}
+
+type SelectedMember = Awaited<ReturnType<typeof selectMembers>>[number];
+
+function mapMembers(rows: SelectedMember[]): MemberRow[] {
   return rows.map((r) => ({
     userId: r.userId,
     name: r.name,
@@ -349,6 +346,26 @@ export async function listMembers(
     source: r.source as MemberSource,
     createdAt: iso(r.createdAt),
   }));
+}
+
+// One page of the project's members, with how many match the filters. The count is
+// taken beside the window, not from it: a page past the end still has to say how many
+// there are.
+export async function listMembersPage(
+  projectId: number,
+  options: MemberFilters & { limit: number; offset: number },
+): Promise<{ items: MemberRow[]; total: number }> {
+  const [rows, total] = await Promise.all([
+    selectMembers(projectId, options).limit(options.limit).offset(options.offset),
+    countMembers(projectId, options),
+  ]);
+  return { items: mapMembers(rows), total };
+}
+
+// Every member of the project. Not exposed over HTTP — god mode's project detail
+// reads them all to pair each with the context it shows.
+export async function listAllMembers(projectId: number): Promise<MemberRow[]> {
+  return mapMembers(await selectMembers(projectId, {}));
 }
 
 // Sets a member's project description (what they do). Returns false when the user is

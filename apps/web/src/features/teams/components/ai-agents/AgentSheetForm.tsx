@@ -14,12 +14,12 @@ import {
 } from '@/services/integrations.service';
 import { useTeamProjectsQuery, useTeamQuery } from '@/services/teams.service';
 import {
-  useSkillsQuery,
+  useSkillOptionsQuery,
   useAgentSkillsQuery,
   useSetAgentSkills,
 } from '@/services/agentSkills.service';
 import {
-  useConfiguredToolsQuery,
+  useConfiguredToolOptionsQuery,
   useAgentToolLinksQuery,
   useSetAgentTools,
 } from '@/services/customTools.service';
@@ -88,14 +88,14 @@ export function AgentSheetForm({
     teamId,
     value.kind === 'internal' ? selectedProvider : null,
   );
-  const skillsLibraryQuery = useSkillsQuery(
+  const skillsLibraryQuery = useSkillOptionsQuery(
     value.kind === 'internal' && canManageSkills ? teamId : null,
   );
   const agentSkillsQuery = useAgentSkillsQuery(
     teamId,
     agent && agent.kind === 'internal' && canManageSkills ? agent.id : null,
   );
-  const toolsLibraryQuery = useConfiguredToolsQuery(
+  const toolsLibraryQuery = useConfiguredToolOptionsQuery(
     value.kind === 'internal' && canManageTools ? teamId : null,
   );
   const agentToolsQuery = useAgentToolLinksQuery(

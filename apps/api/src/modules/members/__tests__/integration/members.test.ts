@@ -247,11 +247,11 @@ describe('members', () => {
       await addMember(owner);
       const members = owner.api.projects({ projectKey: 'MKT' }).members;
 
-      const first = await members.get({ query: { limit: 2, offset: 0 } });
+      const first = await members.get({ query: { page: 1, pageSize: 2 } });
       expect(first.data?.items).toHaveLength(2);
       expect(first.data).toMatchObject({ total: 3, ownerCount: 1 });
 
-      const second = await members.get({ query: { limit: 2, offset: 2 } });
+      const second = await members.get({ query: { page: 2, pageSize: 2 } });
       expect(second.data?.items).toHaveLength(1);
       expect(second.data?.total).toBe(3);
     });

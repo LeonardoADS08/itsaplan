@@ -11,7 +11,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useConfiguredToolsQuery, useCreateConfiguredTool } from '@/services/customTools.service';
+import {
+  useConfiguredToolOptionsQuery,
+  useCreateConfiguredTool,
+} from '@/services/customTools.service';
 import { useIntegrationOptionsQuery } from '@/services/integrations.service';
 import { IntegrationIcon } from '@/components/common/IntegrationIcon';
 import type { ToolOption } from './ToolConfigDialog';
@@ -49,7 +52,7 @@ export function ToolCredentialStep({
   const credentialId = picked ?? matching[0]?.id ?? null;
   const [busy, setBusy] = useState(false);
 
-  const configured = useConfiguredToolsQuery(teamId).data ?? [];
+  const configured = useConfiguredToolOptionsQuery(teamId).data ?? [];
   const pending = tools.filter(
     (tool) =>
       !configured.some((c) => c.toolKey === tool.toolKey && c.credentialId === credentialId),

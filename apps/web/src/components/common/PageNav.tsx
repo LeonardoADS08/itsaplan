@@ -20,22 +20,23 @@ function pageItems(page: number, count: number): (number | 'gap')[] {
   return pages.flatMap((p, i) => (i > 0 && p - pages[i - 1] > 1 ? ['gap' as const, p] : [p]));
 }
 
-// The pages of a server-paged list, as numbered steps. Renders nothing while the
-// list fits on one page.
+// The pages of a server-paged list, as numbered steps. A list that fits on one page
+// still gets the nav, so the controls under it do not move as it grows.
 export default function PageNav({
   page,
   pageCount,
   onPageChange,
+  className,
 }: {
   page: number;
   pageCount: number;
   onPageChange: (page: number) => void;
+  className?: string;
 }) {
   const t = useTranslations('common.pager');
-  if (pageCount <= 1) return null;
 
   return (
-    <Pagination>
+    <Pagination className={className}>
       <PaginationContent>
         <PaginationItem>
           <PaginationPrevious

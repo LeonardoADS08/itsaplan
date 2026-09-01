@@ -1,17 +1,20 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   api,
   type CredentialPatch,
   type IntegrationKind,
   type NewCredentialInput,
+  type PageParams,
 } from '@/lib/api';
 import { qk } from '@/services/queryKeys';
 
-// The team's stored credentials, secrets redacted. Backs the team's Integrations tab.
-export function useCredentialsQuery(teamId: number) {
+// One page of the team's stored credentials, secrets redacted. Backs the team's
+// Integrations tab.
+export function useCredentialsPageQuery(teamId: number, params: PageParams) {
   return useQuery({
-    queryKey: qk.teamCredentials(teamId),
-    queryFn: () => api.listCredentials(teamId),
+    queryKey: qk.teamCredentialPage(teamId, params),
+    queryFn: () => api.listCredentials(teamId, params),
+    placeholderData: keepPreviousData,
   });
 }
 

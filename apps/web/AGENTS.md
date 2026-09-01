@@ -85,6 +85,14 @@ next-intl, language from the `NEXT_LOCALE` cookie — no `[locale]` route segmen
 - A screen that has to stay live calls `useLiveRefresh({ scope, targets })` with a scope from
   `@/utils/revScopes` — never its own polling. `SyncProvider` polls every registered scope in one
   request and invalidates the targets of the ones that moved.
+- **A paged list holds its window in `usePaging()` and renders `ListPager`.** The hook owns
+  `page`/`pageSize`; a filter change calls its `reset()`, and `ListPager` pulls the page back
+  when deleting rows leaves the reader past the end. Spread `paging.params` straight into the
+  query — the API takes `page`/`pageSize` and answers `{ items, total, page, pageSize }`.
+  A "show more" list reads the same route through `useInfiniteQuery` with
+  `getNextPageParam: nextPageParam` (`useCompletedCyclesQuery` is the shape to copy); a feed
+  reads a cursor route instead. A picker that needs every row calls the list's `/options`
+  endpoint — never a paged one with a large `pageSize`.
 - Call the backend over HTTP at the API origin. `lib/api.ts` takes it from
   `utils/runtimeEnv`, which reads `API_URL` in the server process and hands it to the
   browser through the inline script in `components/runtime-env-script.tsx`. A per-instance

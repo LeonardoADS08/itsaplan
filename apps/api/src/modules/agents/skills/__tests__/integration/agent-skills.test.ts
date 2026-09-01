@@ -169,12 +169,36 @@ describe('agent skills', () => {
     expect(write.status).toBe(404);
   });
 
+  it('pages the library, while the options route answers with all of it', async () => {
+    const { asOwner, teamId } = await setup();
+    for (const name of ['Alpha', 'Beta', 'Gamma']) {
+      await skills(asOwner, teamId).post({
+        source: 'inline',
+        markdown: `---\nname: ${name}\ndescription: d\n---\n\nbody`,
+      });
+    }
+
+    const first = await skills(asOwner, teamId).get({ query: { page: 1, pageSize: 2 } });
+    expect(first.data).toMatchObject({ total: 3, page: 1, pageSize: 2 });
+    expect(first.data?.items.map((s) => s.name)).toEqual(['Alpha', 'Beta']);
+
+    const second = await skills(asOwner, teamId).get({ query: { page: 2, pageSize: 2 } });
+    expect(second.data?.items.map((s) => s.name)).toEqual(['Gamma']);
+
+    // No window asked for: the default page, not the whole library.
+    const fallback = await skills(asOwner, teamId).get();
+    expect(fallback.data).toMatchObject({ page: 1, pageSize: 25, total: 3 });
+
+    const options = await skills(asOwner, teamId).options.get();
+    expect(options.data?.map((s) => s.name)).toEqual(['Alpha', 'Beta', 'Gamma']);
+  });
+
   it('deletes a skill', async () => {
     const { asOwner, teamId } = await setup();
     const created = await skills(asOwner, teamId).post({ source: 'inline', markdown: SKILL_MD });
     const del = await skills(asOwner, teamId)({ skillId: created.data!.id }).delete();
     expect(del.status).toBe(204);
-    expect((await skills(asOwner, teamId).get()).data).toHaveLength(0);
+    expect((await skills(asOwner, teamId).get()).data?.items).toHaveLength(0);
   });
 
   it('enables skills on an internal agent and lists them', async () => {
@@ -245,7 +269,7 @@ describe('agent skills', () => {
 
     const list = await skills(asMember, teamId).get();
     expect(list.status).toBe(200);
-    expect(list.data).toHaveLength(1);
+    expect(list.data?.items).toHaveLength(1);
     // Reading is all that role grants.
     expect(
       (await skills(asMember, teamId).post({ source: 'inline', markdown: 'body' })).status,

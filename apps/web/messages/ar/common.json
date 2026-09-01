@@ -179,6 +179,8 @@
   "pager": {
     "previous": "الصفحة السابقة",
     "next": "الصفحة التالية",
-    "page": "الصفحة {number}"
+    "page": "الصفحة {number}",
+    "perPage": "لكل صفحة",
+    "range": "{first}-{last} من {total}"
   }
 }

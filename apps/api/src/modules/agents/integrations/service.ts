@@ -1,5 +1,5 @@
 import { db, integrationCredential } from '@repo/db';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import {
   coerceConfig,
   redactConfig,
@@ -68,7 +68,32 @@ function coerce(fields: ConfigField[], input: unknown): ToolConfig {
   }
 }
 
-export async function listCredentials(teamId: number): Promise<CredentialRow[]> {
+// One page of the team's credentials, by integration key, with how many it holds in
+// total.
+export async function listCredentials(
+  teamId: number,
+  window: { limit: number; offset: number },
+): Promise<{ items: CredentialRow[]; total: number }> {
+  const where = eq(integrationCredential.teamId, teamId);
+  const [rows, counted] = await Promise.all([
+    db
+      .select(dtoColumns)
+      .from(integrationCredential)
+      .where(where)
+      .orderBy(integrationCredential.integrationKey)
+      .limit(window.limit)
+      .offset(window.offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(integrationCredential)
+      .where(where),
+  ]);
+  return { items: rows.map(mapRow), total: counted[0]?.count ?? 0 };
+}
+
+// Every credential of the team, by integration key. What the options route narrows
+// into picker entries.
+export async function listAllCredentials(teamId: number): Promise<CredentialRow[]> {
   const rows = await db
     .select(dtoColumns)
     .from(integrationCredential)

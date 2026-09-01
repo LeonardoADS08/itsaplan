@@ -6,6 +6,7 @@ import { authContext } from '#shared/auth-context';
 import { requireUser } from '#shared/access';
 import { HttpError } from '#shared/lib';
 import { commonErrors } from '#shared/responses';
+import { paginate } from '#shared/pagination';
 import {
   FeedPageResponse,
   InitiativeCountsResponse,
@@ -47,24 +48,22 @@ export const initiativeRoutes = new Elysia({
 
   .get(
     '/projects/:projectKey/initiatives',
-    async ({ project, query }) => {
+    ({ project, query }) => {
       const statuses = query.status
         ? query.status
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean)
         : undefined;
-      const page = query.page ?? 1;
-      const pageSize = query.pageSize ?? 25;
-      const { items, total } = await listInitiatives(project.id, {
-        statuses,
-        search: query.search,
-        sort: query.sort,
-        dir: query.dir,
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-      });
-      return { items, total, page, pageSize };
+      return paginate(query, (window) =>
+        listInitiatives(project.id, {
+          statuses,
+          search: query.search,
+          sort: query.sort,
+          dir: query.dir,
+          ...window,
+        }),
+      );
     },
     {
       query: listInitiativesQuery,

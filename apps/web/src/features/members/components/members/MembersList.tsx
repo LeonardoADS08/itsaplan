@@ -12,16 +12,12 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMembersQuery, useRemoveMember } from '@/services/members.service';
 import { useTeamRolesQuery } from '@/services/roles.service';
-import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useSearchTerm } from '@/hooks/useSearchTerm';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSession } from '@/lib/auth-client';
-import PageNav from '@/components/common/PageNav';
+import ListPager from '@/components/common/ListPager';
+import { usePaging } from '@/hooks/usePaging';
 import MemberRow from './MemberRow';
-
-const PAGE_SIZE = 25;
-// A shorter term matches most of the project, so the list stays unfiltered until the
-// reader has typed enough for the result to mean something.
-const MIN_SEARCH = 3;
 
 // The project's members, newest membership first, a page at a time. People and AI
 // agents share one list and are told apart by the tabs, so neither is pushed off the
@@ -37,8 +33,8 @@ export default function MembersList({
 }) {
   const t = useTranslations('members');
   const [kind, setKind] = useState<MemberKind>('all');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const { search, setSearch, term } = useSearchTerm();
+  const paging = usePaging();
   const { can, isAdmin } = usePermissions();
   const { data: session } = useSession();
   const currentUserId = session?.user.id ?? null;
@@ -50,13 +46,7 @@ export default function MembersList({
   const router = useRouter();
   const [target, setTarget] = useState<Member | null>(null);
 
-  const debounced = useDebouncedValue(search.trim(), 300);
-  const membersQuery = useMembersQuery(projectKey, {
-    search: debounced.length >= MIN_SEARCH ? debounced : undefined,
-    kind,
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
-  });
+  const membersQuery = useMembersQuery(projectKey, { search: term, kind, ...paging.params });
 
   const members = membersQuery.data?.items ?? [];
   const roles = rolesQuery.data ?? [];
@@ -65,12 +55,12 @@ export default function MembersList({
 
   function onKindChange(next: string) {
     setKind(next as MemberKind);
-    setPage(1);
+    paging.reset();
   }
 
   function onSearchChange(next: string) {
     setSearch(next);
-    setPage(1);
+    paging.reset();
   }
 
   // The placeholder names what the open tab holds, so the search says what it covers.
@@ -89,8 +79,6 @@ export default function MembersList({
     if (!target) return;
     await removeMember.mutateAsync(target.userId);
     setTarget(null);
-    // The removed row was the last one on this page, which no longer exists.
-    if (members.length === 1 && page > 1) setPage(page - 1);
     // Leaving the project revokes your own access; return to the app root, which
     // reopens a project you still belong to.
     if (targetIsSelf) {
@@ -162,7 +150,7 @@ export default function MembersList({
         </Table>
       )}
 
-      <PageNav page={page} pageCount={Math.ceil(total / PAGE_SIZE)} onPageChange={setPage} />
+      <ListPager paging={paging} total={total} />
 
       {target && (
         <ConfirmDialog

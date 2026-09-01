@@ -179,6 +179,8 @@
   "pager": {
     "previous": "Previous page",
     "next": "Next page",
-    "page": "Page {number}"
+    "page": "Page {number}",
+    "perPage": "per page",
+    "range": "{first}-{last} of {total}"
   }
 }

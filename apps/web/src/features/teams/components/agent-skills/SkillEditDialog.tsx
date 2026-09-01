@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  useSkillsQuery,
+  useSkillQuery,
   useUpdateSkill,
   useUpdateSkillReference,
   useAddSkillReference,
@@ -42,10 +42,9 @@ export function SkillEditDialog({
   const t = useTranslations('teams.skills');
   const tCommon = useTranslations('common');
   const skillId = initialSkill.id;
-  // Read the live skill from the list so the file explorer reflects add/delete
-  // immediately; fall back to the snapshot passed in.
-  const skillsQuery = useSkillsQuery(teamId);
-  const skill = skillsQuery.data?.find((s) => s.id === skillId) ?? initialSkill;
+  // Read the skill back so the file explorer reflects add/delete immediately; fall
+  // back to the snapshot the row passed in until it lands.
+  const skill = useSkillQuery(teamId, skillId).data ?? initialSkill;
 
   const [name, setName] = useState(skill.name);
   const [description, setDescription] = useState(skill.description);

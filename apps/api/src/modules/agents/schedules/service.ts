@@ -80,7 +80,32 @@ function mapSchedule(row: SelectedSchedule, actorUserId: string): AgentScheduleR
   };
 }
 
+// One page of the project's schedules, newest first, with how many it holds in total.
 export async function listAgentSchedules(
+  projectId: number,
+  actorUserId: string,
+  window: { limit: number; offset: number },
+): Promise<{ items: AgentScheduleRow[]; total: number }> {
+  const [rows, counted] = await Promise.all([
+    baseQuery()
+      .where(eq(agentSchedule.projectId, projectId))
+      .orderBy(desc(agentSchedule.id))
+      .limit(window.limit)
+      .offset(window.offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(agentSchedule)
+      .where(eq(agentSchedule.projectId, projectId)),
+  ]);
+  return {
+    items: rows.map((row) => mapSchedule(row, actorUserId)),
+    total: counted[0]?.count ?? 0,
+  };
+}
+
+// Every schedule of the project, newest first. Not exposed over HTTP — a project copy
+// carries all of them over.
+export async function listAllAgentSchedules(
   projectId: number,
   actorUserId: string,
 ): Promise<AgentScheduleRow[]> {

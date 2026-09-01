@@ -26,7 +26,7 @@ import {
 import { GIT_SETTING_KEY } from '#modules/git/service';
 import { getProjectDefaults } from '#modules/settings/service';
 import { listAgents, updateAgent } from '#modules/agents/core/service';
-import { listAgentSchedules, createAgentSchedule } from '#modules/agents/schedules/service';
+import { listAllAgentSchedules, createAgentSchedule } from '#modules/agents/schedules/service';
 import { nextCronRun } from '#modules/agents/schedules/cron';
 
 // Which parts of a source project the copy carries over. A key set false skips that
@@ -531,7 +531,7 @@ export async function copyProject(
   // stayed in the team. next_run_at is recomputed from the cron so the copy starts on
   // its own cadence rather than inheriting a past due time.
   if (inc.schedules && sameTeam) {
-    for (const s of await listAgentSchedules(sourceProjectId, ownerId)) {
+    for (const s of await listAllAgentSchedules(sourceProjectId, ownerId)) {
       await createAgentSchedule({
         projectId: newProject.id,
         agentId: s.agentId,

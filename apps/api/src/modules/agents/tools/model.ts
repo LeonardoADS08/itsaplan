@@ -1,4 +1,5 @@
 import { t } from 'elysia';
+import { pageQueryFields, pageResponse } from '#shared/pagination';
 
 export { agentParams } from '../model';
 
@@ -35,6 +36,10 @@ export const AgentToolResponse = t.Object({
 });
 
 export const AgentToolListResponse = t.Array(AgentToolResponse);
+
+export const AgentToolPageResponse = pageResponse(AgentToolResponse);
+
+export const agentToolListQuery = t.Object(pageQueryFields);
 
 export const createAgentToolBody = t.Object({
   toolKey: t.String({ minLength: 1 }),

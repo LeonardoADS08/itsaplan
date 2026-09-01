@@ -1,5 +1,6 @@
 import { t } from 'elysia';
 import { REGISTRATION_MODES } from '@repo/auth';
+import { pageQueryFields, pageResponse } from '#shared/pagination';
 import { PermissionMatrixSchema } from '#shared/permissions';
 import { USER_KINDS } from './service';
 
@@ -14,14 +15,12 @@ export const listUsersQuery = t.Object({
   // Agent bot users are accounts too, but they are managed on a project's AI
   // Agents screen, so the directory lists people unless asked otherwise.
   kind: t.Optional(t.UnionEnum([...USER_KINDS])),
-  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 200 })),
-  offset: t.Optional(t.Numeric({ minimum: 0 })),
+  ...pageQueryFields,
 });
 
 export const listProjectsQuery = t.Object({
   search: t.Optional(t.String()),
-  limit: t.Optional(t.Numeric({ minimum: 1, maximum: 200 })),
-  offset: t.Optional(t.Numeric({ minimum: 0 })),
+  ...pageQueryFields,
 });
 
 export const deleteUserQuery = t.Object({
@@ -220,10 +219,7 @@ export const InstanceUserDetailResponse = t.Composite([
   }),
 ]);
 
-export const InstanceUserListResponse = t.Object({
-  items: t.Array(InstanceUserResponse),
-  total: t.Number(),
-});
+export const InstanceUserPageResponse = pageResponse(InstanceUserResponse);
 
 const InstanceProjectResponse = t.Object({
   id: t.Number(),
@@ -268,7 +264,8 @@ export const InstanceProjectDetailResponse = t.Composite([
   }),
 ]);
 
-export const InstanceProjectListResponse = t.Object({
-  items: t.Array(InstanceProjectResponse),
-  total: t.Number(),
-});
+export const InstanceProjectPageResponse = pageResponse(InstanceProjectResponse);
+
+export const InstanceProjectOptionListResponse = t.Array(
+  t.Object({ id: t.Number(), key: t.String(), name: t.String() }),
+);

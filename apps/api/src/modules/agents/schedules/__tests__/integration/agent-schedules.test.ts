@@ -86,8 +86,27 @@ describe('agent schedules', () => {
 
     const list = await schedules(asOwner).get();
     expect(list.status).toBe(200);
-    expect(list.data).toHaveLength(1);
-    expect(list.data?.[0].id).toBe(created.data!.id);
+    expect(list.data?.items).toHaveLength(1);
+    expect(list.data?.items[0].id).toBe(created.data!.id);
+  });
+
+  it('pages the schedule list, newest first', async () => {
+    const { asOwner } = await setup();
+    const agentId = await makeAgent(asOwner);
+    const made = [];
+    for (const name of ['One', 'Two', 'Three']) {
+      made.push(
+        await schedules(asOwner).post({ agentId, name, prompt: 'Triage.', cron: '0 9 * * *' }),
+      );
+    }
+    const [first, , newest] = made;
+
+    const page = await schedules(asOwner).get({ query: { page: 1, pageSize: 2 } });
+    expect(page.data).toMatchObject({ total: 3, page: 1, pageSize: 2 });
+    expect(page.data?.items[0].id).toBe(newest.data!.id);
+
+    const last = await schedules(asOwner).get({ query: { page: 2, pageSize: 2 } });
+    expect(last.data?.items.map((s) => s.id)).toEqual([first.data!.id]);
   });
 
   it('rejects an invalid cron expression', async () => {
@@ -133,8 +152,8 @@ describe('agent schedules', () => {
     expect(
       (await schedules(asSecond)({ scheduleId: own.data!.id }).runs.cancel.post()).status,
     ).toBe(403);
-    expect((await schedules(asSecond).get()).data?.[0]).toMatchObject({ canTrigger: false });
-    expect((await schedules(asOwner).get()).data?.[0]).toMatchObject({ canTrigger: true });
+    expect((await schedules(asSecond).get()).data?.items[0]).toMatchObject({ canTrigger: false });
+    expect((await schedules(asOwner).get()).data?.items[0]).toMatchObject({ canTrigger: true });
   });
 
   it('rejects an agent of another project', async () => {
@@ -252,7 +271,7 @@ describe('agent schedules', () => {
     const scheduleId = (await createSchedule(asOwner, agentId)).data!.id;
     await schedules(asOwner)({ scheduleId }).run.post();
     await schedules(asOwner)({ scheduleId }).run.post();
-    expect((await schedules(asOwner).get()).data?.[0]).toMatchObject({ pendingRuns: 2 });
+    expect((await schedules(asOwner).get()).data?.items[0]).toMatchObject({ pendingRuns: 2 });
 
     const canceled = await schedules(asOwner)({ scheduleId }).runs.cancel.post();
     expect(canceled.status).toBe(200);
@@ -261,7 +280,7 @@ describe('agent schedules', () => {
     const runs = await schedules(asOwner)({ scheduleId }).runs.get();
     expect(runs.data?.map((run) => run.status)).toEqual(['canceled', 'canceled']);
     expect(runs.data?.[0].finishedAt).not.toBeNull();
-    expect((await schedules(asOwner).get()).data?.[0]).toMatchObject({
+    expect((await schedules(asOwner).get()).data?.items[0]).toMatchObject({
       pendingRuns: 0,
       lastRunStatus: 'canceled',
     });
@@ -298,7 +317,7 @@ describe('agent schedules', () => {
     await schedules(asOwner)({ scheduleId }).run.post();
     const runId = (await asRunner['agent-runs'].claim.post()).data!.run!.id;
 
-    expect((await schedules(asOwner).get()).data?.[0]).toMatchObject({ pendingRuns: 0 });
+    expect((await schedules(asOwner).get()).data?.items[0]).toMatchObject({ pendingRuns: 0 });
     expect((await schedules(asOwner)({ scheduleId }).runs.cancel.post()).data).toMatchObject({
       canceled: 0,
     });
@@ -321,7 +340,7 @@ describe('agent schedules', () => {
     expect((await agentRuns()).data?.items).toHaveLength(1);
 
     expect((await schedules(asOwner)({ scheduleId }).delete()).status).toBe(204);
-    expect((await schedules(asOwner).get()).data).toEqual([]);
+    expect((await schedules(asOwner).get()).data?.items).toEqual([]);
     expect((await schedules(asOwner)({ scheduleId }).delete()).status).toBe(404);
     expect((await agentRuns()).data?.items).toEqual([]);
   });
