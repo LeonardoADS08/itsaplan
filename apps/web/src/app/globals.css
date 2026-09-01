@@ -628,7 +628,11 @@
   stroke: var(--muted-foreground);
   stroke-width: 1.5;
 }
+/* Tailwind's preflight makes every image a block, which stacks a row of them — the
+   contributor avatars in the release notes — one per line. */
 .md-content img {
+  display: inline-block;
+  vertical-align: middle;
   max-width: 100%;
   height: auto;
   border-radius: var(--radius-md);

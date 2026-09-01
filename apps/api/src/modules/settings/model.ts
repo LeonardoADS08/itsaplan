@@ -66,7 +66,7 @@ const BackupSchema = t.Object({
 export const WhatsNewSchema = t.Object({
   version: t.String(),
   pending: t.Boolean(),
-  notes: t.Nullable(t.String()),
+  releases: t.Array(ReleaseSchema),
   backup: t.Nullable(BackupSchema),
   migration: t.Nullable(TeamsMigrationSchema),
 });

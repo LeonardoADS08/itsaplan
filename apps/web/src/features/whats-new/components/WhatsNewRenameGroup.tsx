@@ -15,12 +15,12 @@ export default function WhatsNewRenameGroup({
   if (items.length === 0) return null;
   return (
     <div>
-      <h3 className="mb-1.5 text-sm font-medium">{title}</h3>
-      <ul className="space-y-1 text-sm text-muted-foreground">
+      <h3 className="mb-2 text-sm font-medium">{title}</h3>
+      <ul className="grid grid-cols-[minmax(0,auto)_auto_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1.5 text-sm text-muted-foreground">
         {items.map((item) => (
-          <li key={`${item.from}-${item.to}`} className="flex items-center gap-2">
+          <li key={`${item.from}-${item.to}`} className="contents">
             <span className="line-through">{item.from}</span>
-            <ArrowRight className="size-3.5 shrink-0 rtl:rotate-180" />
+            <ArrowRight className="size-3.5 shrink-0 translate-y-0.5 rtl:rotate-180" />
             <span className="text-foreground">{item.to}</span>
           </li>
         ))}

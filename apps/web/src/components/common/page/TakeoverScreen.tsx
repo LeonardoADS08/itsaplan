@@ -1,12 +1,20 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export interface TakeoverSection {
   id: string;
   title: string;
+  // Turns the heading into a link to the source of the section.
+  href?: string;
   icon?: ReactNode;
+  badge?: string;
+  // What the section is to the reader: the one they are on, or one they have not
+  // reached yet. Colors the index entry and the badge.
+  tone?: 'current' | 'new';
   description?: ReactNode;
   body: ReactNode;
 }
@@ -19,12 +27,18 @@ export default function TakeoverScreen({
   eyebrow,
   title,
   sections,
+  navFooter,
+  aside,
   actionLabel,
   onAction,
 }: {
   eyebrow: string;
   title: string;
   sections: TakeoverSection[];
+  // Closes the index, where the sections it does not carry are reached from.
+  navFooter?: ReactNode;
+  // Anything the screen offers besides reading: a re-check, a link out.
+  aside?: ReactNode;
   actionLabel: string;
   onAction: () => void;
 }) {
@@ -33,7 +47,7 @@ export default function TakeoverScreen({
       <div className="grid min-h-full w-full lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[24rem_minmax(0,1fr)]">
         <aside className="flex flex-col gap-10 bg-muted/40 px-6 py-10 lg:sticky lg:top-0 lg:h-dvh lg:px-10 lg:py-14">
           <div>
-            <p className="text-xs font-medium tracking-[0.12em] text-muted-foreground uppercase">
+            <p className="text-xs font-medium tracking-[0.12em] text-balance text-muted-foreground uppercase">
               {eyebrow}
             </p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-balance lg:text-4xl">
@@ -48,7 +62,12 @@ export default function TakeoverScreen({
                   <li key={section.id}>
                     <a
                       href={`#${section.id}`}
-                      className="flex gap-3 text-muted-foreground transition-colors hover:text-foreground"
+                      className={cn(
+                        'flex gap-3 transition-colors',
+                        section.tone === 'current'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
                     >
                       <span className="tabular-nums">{String(index + 1).padStart(2, '0')}</span>
                       <span>{section.title}</span>
@@ -56,10 +75,16 @@ export default function TakeoverScreen({
                   </li>
                 ))}
               </ol>
+              {navFooter && <div className="mt-3 text-sm">{navFooter}</div>}
             </nav>
           )}
 
-          <Button onClick={onAction} className="mt-auto hidden w-full lg:inline-flex">
+          {aside && <div className="mt-auto space-y-3 text-sm">{aside}</div>}
+
+          <Button
+            onClick={onAction}
+            className={cn('hidden w-full lg:inline-flex', !aside && 'mt-auto')}
+          >
             {actionLabel}
           </Button>
         </aside>
@@ -74,7 +99,29 @@ export default function TakeoverScreen({
               >
                 <h2 className="flex items-center gap-2 text-lg font-semibold">
                   {section.icon}
-                  {section.title}
+                  {section.href ? (
+                    <a
+                      href={section.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:underline"
+                    >
+                      {section.title}
+                    </a>
+                  ) : (
+                    section.title
+                  )}
+                  {section.badge && (
+                    <Badge
+                      variant={section.tone === 'new' ? 'destructive' : 'secondary'}
+                      className={cn(
+                        section.tone === 'current' &&
+                          'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+                      )}
+                    >
+                      {section.badge}
+                    </Badge>
+                  )}
                 </h2>
                 {section.description && (
                   <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">

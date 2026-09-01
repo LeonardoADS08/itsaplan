@@ -13,7 +13,7 @@ export default function WhatsNew() {
   if (!data?.pending) return null;
   // Nothing to say: a build whose version is missing from the changelog and an
   // account that sees neither the backup nor the report.
-  if (!data.notes && !data.backup && !data.migration) return null;
+  if (data.releases.length === 0 && !data.backup && !data.migration) return null;
 
   return <WhatsNewOverlay data={data} onClose={() => markSeen.mutate()} />;
 }

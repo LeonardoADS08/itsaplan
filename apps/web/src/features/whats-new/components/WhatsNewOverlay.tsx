@@ -1,16 +1,16 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { DatabaseBackup } from 'lucide-react';
 import type { WhatsNew } from '@/lib/api';
-import { renderMarkdown } from '@/lib/markdown';
 import TakeoverScreen, { type TakeoverSection } from '@/components/common/page/TakeoverScreen';
+import { releaseSections } from './ReleaseSections';
 import WhatsNewBackup from './WhatsNewBackup';
 import WhatsNewMigrationReport from './WhatsNewMigrationReport';
 
-// What the release brought, then — for an administrator — the backup taken before its
-// migrations and what those migrations changed.
+// What the releases since the reader's last visit brought, then — for an
+// administrator — the backup taken before this one's migrations and what those
+// migrations changed.
 export default function WhatsNewOverlay({
   data,
   onClose,
@@ -19,19 +19,11 @@ export default function WhatsNewOverlay({
   onClose: () => void;
 }) {
   const t = useTranslations('whatsNew');
-  const notes = useMemo(
-    () => (data.notes ? renderMarkdown(data.notes, { newTabLinks: true }) : ''),
-    [data.notes],
-  );
+  const tUpdates = useTranslations('updates');
 
-  const sections: TakeoverSection[] = [];
-  if (notes) {
-    sections.push({
-      id: 'notes',
-      title: t('notesHeading'),
-      body: <div className="md-content max-w-[68ch]" dangerouslySetInnerHTML={{ __html: notes }} />,
-    });
-  }
+  const sections: TakeoverSection[] = releaseSections(data.releases, {
+    empty: tUpdates('noNotes'),
+  });
   if (data.backup) {
     sections.push({
       id: 'backup',

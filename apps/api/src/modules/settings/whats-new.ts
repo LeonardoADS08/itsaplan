@@ -1,7 +1,7 @@
 import { db, appSetting, userPreference } from '@repo/db';
 import { eq, sql } from 'drizzle-orm';
 import type { AuthUser } from '#shared/access';
-import { getAppVersion, localRelease } from './updates';
+import { getAppVersion, releasesSince, type Release } from './updates';
 
 // The screen shown once after an upgrade: what the release brought, where the
 // database dump taken before its migrations is, and what the migrations did to this
@@ -36,7 +36,8 @@ export interface WhatsNew {
   version: string;
   // False once the user closes the screen for this version.
   pending: boolean;
-  notes: string | null;
+  // Every release this user has not seen yet, newest first.
+  releases: Release[];
   backup: BackupInfo | null;
   migration: TeamsMigrationReport | null;
 }
@@ -56,7 +57,7 @@ export async function getWhatsNew(user: AuthUser): Promise<WhatsNew> {
     .from(userPreference)
     .where(eq(userPreference.userId, user.id));
   const admin = user.role === 'god';
-  const release = await localRelease(version);
+  const releases = await releasesSince(preference?.seenVersion ?? null);
   const [backup, migration] = admin
     ? await Promise.all([
         readSetting<BackupInfo>(BACKUP_KEY),
@@ -66,7 +67,7 @@ export async function getWhatsNew(user: AuthUser): Promise<WhatsNew> {
   return {
     version,
     pending: preference?.seenVersion !== version,
-    notes: release?.notes ?? null,
+    releases,
     backup,
     migration,
   };

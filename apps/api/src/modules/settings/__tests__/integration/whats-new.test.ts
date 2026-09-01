@@ -41,6 +41,16 @@ describe('whats-new', () => {
     expect(second.data?.pending).toBe(false);
   });
 
+  it('carries the running release, from the changelog when the feed is unreachable', async () => {
+    const { api } = await signUpClient();
+
+    const res = await api.settings['whats-new'].get();
+    const running = res.data!.version;
+    // The suite never reads the release feed, so the notes come from CHANGELOG.md.
+    expect(res.data?.releases.map((r) => r.version)).toEqual([running]);
+    expect(res.data?.releases[0]?.notesFormat).toBe('markdown');
+  });
+
   it('gives the instance owner the migration report', async () => {
     const { api } = await signUpClient();
     await setSetting('migration.0115_teams', REPORT);

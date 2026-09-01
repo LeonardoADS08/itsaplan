@@ -440,7 +440,7 @@ export const godRoutes = new Elysia({ name: 'god', detail: { tags: ['God'] } })
     },
   })
 
-  .post('/god/updates/check', () => getUpdateStatus(), {
+  .post('/god/updates/check', () => getUpdateStatus(true), {
     response: { 200: UpdateStatusSchema, ...errors(401, 403) },
     detail: {
       summary: 'Check for updates now',

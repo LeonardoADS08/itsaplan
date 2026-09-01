@@ -28,7 +28,7 @@ export default function WhatsNewMigrationReport({ report }: { report: TeamsMigra
         </div>
       </div>
 
-      <div className="grid gap-x-12 gap-y-8 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-x-12 gap-y-8 sm:grid-cols-2">
         <WhatsNewRenameGroup title={t('report.renamedRoles')} items={renamed.roles ?? []} />
         <WhatsNewRenameGroup title={t('report.renamedSkills')} items={renamed.skills ?? []} />
         <WhatsNewRenameGroup title={t('report.renamedAgents')} items={renamed.agents ?? []} />

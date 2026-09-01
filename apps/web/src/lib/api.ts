@@ -1324,7 +1324,8 @@ export interface TeamsMigrationReport {
 export interface WhatsNew {
   version: string;
   pending: boolean;
-  notes: string | null;
+  // Every release this user has not seen yet, newest first.
+  releases: Release[];
   backup: BackupInfo | null;
   migration: TeamsMigrationReport | null;
 }
