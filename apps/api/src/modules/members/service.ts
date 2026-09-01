@@ -297,35 +297,42 @@ async function countMembers(projectId: number, filters: MemberFilters = {}): Pro
   return rows[0]?.count ?? 0;
 }
 
-function selectMembers(projectId: number, filters: MemberFilters) {
-  return (
-    db
-      .select({
-        userId: projectMember.userId,
-        name: user.name,
-        email: user.email,
-        username: user.username,
-        image: user.image,
-        timezone: userPreference.timezone,
-        role: projectMember.role,
-        roleId: projectMember.roleId,
-        roleName: teamRole.name,
-        description: projectMember.description,
-        source: projectMember.source,
-        agentId: aiAgent.id,
-        agentUsername: aiAgent.username,
-        createdAt: projectMember.createdAt,
-      })
-      .from(projectMember)
-      .innerJoin(user, eq(user.id, projectMember.userId))
-      .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
-      .leftJoin(aiAgent, eq(aiAgent.userId, projectMember.userId))
-      .leftJoin(userPreference, eq(userPreference.userId, projectMember.userId))
-      .where(and(eq(projectMember.projectId, projectId), matchesFilters(filters)))
-      // The newest membership first: who joined last is what a reader checks after
-      // filling a project.
-      .orderBy(desc(projectMember.createdAt))
-  );
+// How a member list is ordered. 'newest' is the members page, where who joined last is
+// what a reader checks after filling a project; 'owners' puts the owners in front of it,
+// for a reader whose first question is who runs the project. Both order in the database,
+// so a page past the first carries the same rule as the first.
+type MemberOrder = 'newest' | 'owners';
+
+function memberOrderBy(order: MemberOrder) {
+  const newest = desc(projectMember.createdAt);
+  return order === 'owners' ? [desc(eq(projectMember.role, 'owner')), newest] : [newest];
+}
+
+function selectMembers(projectId: number, filters: MemberFilters, order: MemberOrder) {
+  return db
+    .select({
+      userId: projectMember.userId,
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      image: user.image,
+      timezone: userPreference.timezone,
+      role: projectMember.role,
+      roleId: projectMember.roleId,
+      roleName: teamRole.name,
+      description: projectMember.description,
+      source: projectMember.source,
+      agentId: aiAgent.id,
+      agentUsername: aiAgent.username,
+      createdAt: projectMember.createdAt,
+    })
+    .from(projectMember)
+    .innerJoin(user, eq(user.id, projectMember.userId))
+    .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
+    .leftJoin(aiAgent, eq(aiAgent.userId, projectMember.userId))
+    .leftJoin(userPreference, eq(userPreference.userId, projectMember.userId))
+    .where(and(eq(projectMember.projectId, projectId), matchesFilters(filters)))
+    .orderBy(...memberOrderBy(order));
 }
 
 type SelectedMember = Awaited<ReturnType<typeof selectMembers>>[number];
@@ -353,10 +360,12 @@ function mapMembers(rows: SelectedMember[]): MemberRow[] {
 // there are.
 export async function listMembersPage(
   projectId: number,
-  options: MemberFilters & { limit: number; offset: number },
+  options: MemberFilters & { limit: number; offset: number; order?: MemberOrder },
 ): Promise<{ items: MemberRow[]; total: number }> {
   const [rows, total] = await Promise.all([
-    selectMembers(projectId, options).limit(options.limit).offset(options.offset),
+    selectMembers(projectId, options, options.order ?? 'newest')
+      .limit(options.limit)
+      .offset(options.offset),
     countMembers(projectId, options),
   ]);
   return { items: mapMembers(rows), total };
@@ -365,7 +374,7 @@ export async function listMembersPage(
 // Every member of the project. Not exposed over HTTP — god mode's project detail
 // reads them all to pair each with the context it shows.
 export async function listAllMembers(projectId: number): Promise<MemberRow[]> {
-  return mapMembers(await selectMembers(projectId, {}));
+  return mapMembers(await selectMembers(projectId, {}, 'newest'));
 }
 
 // Sets a member's project description (what they do). Returns false when the user is

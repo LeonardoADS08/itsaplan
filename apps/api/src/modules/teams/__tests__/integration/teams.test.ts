@@ -336,20 +336,24 @@ describe('teams', () => {
     });
 
     it('windows the list and reports how many there are in total', async () => {
-      const { api } = await signUpClient();
+      const { user, api } = await signUpClient();
       const project = await api.projects.post({ key: 'MKT', name: 'Marketing' });
       await addProjectMember(api, 'MKT');
       await addProjectMember(api, 'MKT');
       const teamId = (await api.teams.get()).data![0].id;
       const members = api.teams({ teamId }).projects({ projectId: project.data!.id }).members;
 
+      // The owner joined first and would end up on the last page under the newest-first
+      // rule alone, so the ordering has to run in the database rather than on the page.
       const first = await members.get({ query: { page: 1, pageSize: 2 } });
       expect(first.data?.items).toHaveLength(2);
       expect(first.data?.total).toBe(3);
+      expect(first.data?.items[0]).toMatchObject({ userId: user.userId, role: 'owner' });
 
       const second = await members.get({ query: { page: 2, pageSize: 2 } });
       expect(second.data?.items).toHaveLength(1);
       expect(second.data?.total).toBe(3);
+      expect(second.data?.items[0].role).toBe('member');
     });
 
     it('narrows the list to the people or to the AI agents', async () => {
@@ -846,6 +850,37 @@ describe('teams', () => {
         .delete();
       expect(removed.status).toBe(403);
     });
+
+    // The removal takes their project memberships with it, so it is refused where one
+    // of them is a project's only owner — the same rule the project's member list
+    // holds to.
+    it('rejects removing the only owner of a project of the team', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      const member = await addTeamMember(owner, teamId);
+      await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: member.user.userId, role: 'owner' });
+      // The team's owner created MKT, so they own it too; only the second project
+      // leaves the member alone on it.
+      await owner.api.teams({ teamId }).projects.post({ key: 'OPS', name: 'Operations' });
+      await owner.api
+        .projects({ projectKey: 'OPS' })
+        .members.post({ userId: member.user.userId, role: 'owner' });
+      await owner.api
+        .projects({ projectKey: 'OPS' })
+        .members({ userId: owner.user.userId })
+        .delete();
+
+      const removed = await owner.api
+        .teams({ teamId })
+        .members({ userId: member.user.userId })
+        .delete();
+      expect(removed.status).toBe(409);
+      expect(removed.error?.value).toMatchObject({ error: expect.stringContaining('OPS') });
+      expect((await member.api.projects({ projectKey: 'OPS' }).get()).status).toBe(200);
+    });
   });
 
   describe('leave', () => {
@@ -877,6 +912,24 @@ describe('teams', () => {
       const otherTeamId = (await other.api.teams.get()).data![0].id;
 
       expect((await api.teams({ teamId: otherTeamId }).leave.post()).status).toBe(404);
+    });
+
+    it('rejects leaving while the only owner of a project of the team', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      const member = await addTeamMember(owner, teamId);
+      await owner.api.teams({ teamId }).projects.post({ key: 'OPS', name: 'Operations' });
+      await owner.api
+        .projects({ projectKey: 'OPS' })
+        .members.post({ userId: member.user.userId, role: 'owner' });
+      await owner.api
+        .projects({ projectKey: 'OPS' })
+        .members({ userId: owner.user.userId })
+        .delete();
+
+      const left = await member.api.teams({ teamId }).leave.post();
+      expect(left.status).toBe(409);
+      expect((await member.api.projects({ projectKey: 'OPS' }).get()).status).toBe(200);
     });
   });
 });

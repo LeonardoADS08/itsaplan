@@ -12,7 +12,13 @@ import { join } from 'node:path';
 import type { Sql } from 'postgres';
 
 export const BACKUP_DIR = process.env.BACKUP_DIR || '/backups';
-export const RETENTION_DAYS = Number(process.env.BACKUP_RETENTION_DAYS || 30);
+
+// A value that is not a positive number falls back to the default rather than
+// reaching the cutoff arithmetic: NaN days makes every dump read as expired, and the
+// prune would delete the ones a downgrade needs.
+const configuredRetention = Number(process.env.BACKUP_RETENTION_DAYS);
+export const RETENTION_DAYS =
+  Number.isFinite(configuredRetention) && configuredRetention > 0 ? configuredRetention : 30;
 
 export interface BackupResult {
   path: string;

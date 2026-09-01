@@ -305,13 +305,21 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
   )
 
   // The agent's run history: the triggered runs (a mention or a delegation) queued for
-  // it across the projects it works in, newest first, paginated. Test-chat runs are not
-  // recorded here.
+  // it, newest first, paginated. Test-chat runs are not recorded here. A run carries
+  // the prompt it was given and what it answered, so it is bounded to the projects the
+  // reader is a member of — seeing the agent is not seeing what it did everywhere.
   .get(
     '/teams/:teamId/ai-agents/:agentId/runs',
     async ({ params, membership, query }) => {
       await requireVisibleAgent(params.agentId, membership);
-      return listAgentRuns(params.agentId, { before: query.before, limit: query.limit });
+      const projectIds = runsTeam(membership.role)
+        ? undefined
+        : await memberProjectIds(membership.teamId, membership.userId);
+      return listAgentRuns(params.agentId, {
+        before: query.before,
+        limit: query.limit,
+        projectIds,
+      });
     },
     {
       params: agentParams,
@@ -320,7 +328,9 @@ export const aiAgentRoutes = new Elysia({ name: 'ai-agents', detail: { tags: ['A
       response: { 200: AgentRunPageResponse, ...commonErrors },
       detail: {
         summary: 'List agent runs',
-        description: "List an agent's triggered runs.",
+        description:
+          "List an agent's triggered runs. An owner or a manager of the team sees them all; " +
+          'anyone else only the runs that happened in a project they belong to.',
       },
     },
   )

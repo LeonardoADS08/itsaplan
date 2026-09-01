@@ -555,26 +555,24 @@ export async function listTeamProjectMembers(
   if (!(await teamOwnsProject(teamId, projectId))) return null;
   if (!runsTeam(standing) && !(await getMembership(projectId, userId))) return null;
 
-  const { items, total } = await listMembersPage(projectId, options);
+  const { items, total } = await listMembersPage(projectId, { ...options, order: 'owners' });
 
   return {
-    items: items
-      .map((m) => ({
-        userId: m.userId,
-        name: m.name,
-        email: m.email,
-        username: m.username,
-        image: m.image,
-        isAgent: m.isAgent,
-        role: m.role,
-        roleId: m.roleId,
-        roleName: m.roleName,
-        description: m.description,
-        source: m.source,
-        timezone: m.timezone,
-        joinedAt: m.createdAt,
-      }))
-      .sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner')),
+    items: items.map((m) => ({
+      userId: m.userId,
+      name: m.name,
+      email: m.email,
+      username: m.username,
+      image: m.image,
+      isAgent: m.isAgent,
+      role: m.role,
+      roleId: m.roleId,
+      roleName: m.roleName,
+      description: m.description,
+      source: m.source,
+      timezone: m.timezone,
+      joinedAt: m.createdAt,
+    })),
     total,
   };
 }
@@ -644,6 +642,37 @@ export async function setTeamMemberRole(
     .where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)));
 }
 
+// Refuses to end a membership that would leave a project of the team without an owner:
+// ending it takes the member's project memberships with it, and the project's own member
+// routes refuse such a removal for the same reason. The other owner has to be named
+// first, from the project's member list.
+async function assertLeavesNoProjectOwnerless(
+  teamId: number,
+  userId: string,
+  subject: 'You' | 'They',
+): Promise<void> {
+  const soleOwned = await db
+    .select({ key: project.key })
+    .from(projectMember)
+    .innerJoin(project, eq(project.id, projectMember.projectId))
+    .where(
+      and(
+        eq(project.teamId, teamId),
+        eq(projectMember.userId, userId),
+        eq(projectMember.role, 'owner'),
+        sql`(select count(*) from ${projectMember} o where o.project_id = ${project.id} and o.role = 'owner') = 1`,
+      ),
+    )
+    .orderBy(project.key);
+  if (soleOwned.length === 0) return;
+
+  const keys = soleOwned.map((r) => r.key).join(', ');
+  throw new HttpError(
+    409,
+    `${subject} are the only owner of ${keys}. Give each one another owner first.`,
+  );
+}
+
 // Ends a team membership: the member leaves the team and every project it owns. What
 // they already did in those projects stays — issues keep their assignee and their
 // author.
@@ -686,13 +715,15 @@ export async function removeTeamMember(
   const current = await getTeamMembership(teamId, userId);
   if (!current) throw new HttpError(404, 'Member not found');
   if (current === 'agent') throw new HttpError(409, 'An agent is removed with its agent settings');
+  await assertLeavesNoProjectOwnerless(teamId, userId, 'They');
 
   await dropTeamMembership(teamId, userId);
 }
 
 // Drops the caller's own membership, with their access to the team's projects. The
 // team keeps the projects themselves. The last owner cannot leave: a team without an
-// owner has nobody who can rename it.
+// owner has nobody who can rename it. Neither can the only owner of one of its
+// projects, for the same reason one project down.
 export async function leaveTeam(teamId: number, userId: string, role: TeamStanding): Promise<void> {
   if (role === 'owner') {
     const [{ count }] = await db
@@ -701,5 +732,6 @@ export async function leaveTeam(teamId: number, userId: string, role: TeamStandi
       .where(and(eq(teamMember.teamId, teamId), eq(teamMember.role, 'owner')));
     if (count === 1) throw new HttpError(409, 'The last owner cannot leave the team');
   }
+  await assertLeavesNoProjectOwnerless(teamId, userId, 'You');
   await dropTeamMembership(teamId, userId);
 }

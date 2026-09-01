@@ -1,5 +1,5 @@
 import { db, agentRun, issue, project } from '@repo/db';
-import { and, desc, eq, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { iso } from '#shared/lib';
 import type { AgentRunTrigger } from '../model';
 import { intEnv } from './helpers/env';
@@ -226,10 +226,15 @@ export interface AgentRunPage {
 // One page of an agent's runs, newest first. Keyset pagination by id (runs are
 // id-monotonic): pass the previous page's nextCursor as `before`. limit is clamped to
 // 1..50.
+//
+// An agent works in several projects of its team and a run carries the one it ran in,
+// so `projectIds` bounds the page to the projects the reader may see. Omitted, it
+// reads every project — only a caller who runs the team passes nothing.
 export async function listAgentRuns(
   agentId: number,
-  opts: { before?: number; limit?: number } = {},
+  opts: { before?: number; limit?: number; projectIds?: number[] } = {},
 ): Promise<AgentRunPage> {
+  if (opts.projectIds?.length === 0) return { items: [], nextCursor: null };
   const limit = Math.min(Math.max(opts.limit ?? 25, 1), 50);
   const rows = await db
     .select({
@@ -253,7 +258,11 @@ export async function listAgentRuns(
     .leftJoin(issue, eq(issue.id, agentRun.issueId))
     .leftJoin(project, eq(project.id, issue.projectId))
     .where(
-      and(eq(agentRun.agentId, agentId), opts.before ? lt(agentRun.id, opts.before) : undefined),
+      and(
+        eq(agentRun.agentId, agentId),
+        opts.projectIds ? inArray(agentRun.projectId, opts.projectIds) : undefined,
+        opts.before ? lt(agentRun.id, opts.before) : undefined,
+      ),
     )
     .orderBy(desc(agentRun.id))
     .limit(limit + 1);

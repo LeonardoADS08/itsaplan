@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach } from 'bun:test';
 import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
-import { createAgent, teamOf } from '#tests/helpers/agents';
+import { createAgent, projectIdOf, teamOf } from '#tests/helpers/agents';
+import { createRole } from '#tests/helpers/roles';
+import { addProjectMember } from '#tests/helpers/members';
 
 // The run-history endpoint: GET /projects/:key/ai-agents/:agentId/runs lists an agent's
 // triggered runs (a mention or a delegation), newest first, keyset-paginated. Runs are
@@ -318,6 +320,48 @@ describe('agent run history', () => {
     const { asOwner, teamId } = await setup();
     const res = await agents(asOwner, teamId)({ agentId: 'abc' }).runs.get();
     expect(res.status).toBe(400);
+  });
+
+  // A run carries the prompt it was given and what it answered, so the history is
+  // bounded to the projects the reader belongs to. Seeing the agent — which one shared
+  // project is enough for — is not seeing what it did in the rest of the team.
+  it('hides the runs of a project the reader is not a member of', async () => {
+    const { asOwner, columnId, teamId } = await setup();
+    const ops = await asOwner.teams({ teamId }).projects.post({ key: 'OPS', name: 'Operations' });
+    const opsColumn = (await asOwner.projects({ projectKey: 'OPS' }).get()).data!.columns[0].id;
+    const agent = await createInternalAgent(asOwner, 'Design Bot', 'design');
+    await agents(
+      asOwner,
+      teamId,
+    )({ agentId: agent.id }).projects.put({
+      projectIds: [await projectIdOf(asOwner, 'MKT'), ops.data!.id],
+    });
+
+    const mktIssue = (await createIssue(asOwner, columnId, 'Landing page')).data!;
+    await mentionAgent(asOwner, mktIssue.id, agent.username);
+    const opsIssue = (
+      await asOwner
+        .projects({ projectKey: 'OPS' })
+        .issues.post({ columnId: opsColumn, title: 'Pager' })
+    ).data!;
+    await asOwner.issues({ issueId: opsIssue.id }).comments.post({
+      body: `please review @${agent.username}`,
+    });
+
+    const role = await createRole(asOwner, 'MKT', {
+      name: 'Agent handler',
+      permissions: { ai_agents: { read: true } },
+    });
+    const asMember = await addProjectMember(asOwner, 'MKT', role.data!.id);
+
+    // The owner runs the team, so both runs are theirs.
+    const all = await agents(asOwner, teamId)({ agentId: agent.id }).runs.get();
+    expect(all.data!.items.length).toBe(2);
+
+    // The member is only in MKT, so the OPS run is not in their page at all.
+    const mine = await agents(asMember, teamId)({ agentId: agent.id }).runs.get();
+    expect(mine.status).toBe(200);
+    expect(mine.data!.items.map((r) => r.issueIdentifier)).toEqual(['MKT-1']);
   });
 
   it('denies a non-member with 404', async () => {

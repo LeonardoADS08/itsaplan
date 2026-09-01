@@ -51,10 +51,10 @@ export const settingsRoutes = new Elysia({
     },
   })
 
-  // What the running release brought, plus — for the instance owner and a team
-  // owner — the pre-migration database dump and what the migrations did to the
-  // instance's data. Read on every session, so it answers from the shipped
-  // changelog and never waits on the release feed.
+  // What the running release brought, plus — for the instance owner — the
+  // pre-migration database dump and what the migrations did to the instance's data.
+  // Read on every session, so it answers from the shipped changelog and never waits
+  // on the release feed.
   .get('/settings/whats-new', ({ user }) => getWhatsNew(requireUser(user)), {
     response: { 200: WhatsNewSchema, ...errors(401) },
     detail: {
