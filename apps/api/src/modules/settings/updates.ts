@@ -133,6 +133,12 @@ async function localHistory(): Promise<Release[]> {
   return changelog;
 }
 
+// The changelog section of one version, for the screen shown after an upgrade. It
+// reads the shipped file only — the screen must not wait on github.
+export async function localRelease(version: string): Promise<Release | null> {
+  return (await localHistory()).find((r) => r.version === version) ?? null;
+}
+
 async function readFeed(): Promise<Release[]> {
   const res = await fetch(FEED_URL, {
     headers: { 'User-Agent': 'itsaplan' },

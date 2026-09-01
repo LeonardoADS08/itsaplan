@@ -11,8 +11,6 @@
   "endpoint": "Endpoint",
   "clientTabsAria": "Client",
   "addToFile": "Add to <code>{file}</code>",
-  "copyAria": "Copy",
-  "copied": "Copied to clipboard",
   "notes": {
     "claudeCode": "Run this in your terminal.",
     "vscode": "Needs GitHub Copilot.",

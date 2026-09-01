@@ -228,6 +228,9 @@ export const qk = {
   storageSettings: ['storageSettings'] as const,
   // The running version (any signed-in user) and the upstream release check (god).
   appVersion: ['appVersion'] as const,
+  // The post-upgrade screen: the running release's notes, the backup and the
+  // migration report.
+  whatsNew: ['whatsNew'] as const,
   updateStatus: ['updateStatus'] as const,
   // The bindings every client resolves from, and the god-mode editor's copy.
   hotkeySettings: ['hotkeySettings'] as const,

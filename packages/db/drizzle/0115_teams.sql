@@ -1,3 +1,15 @@
+-- The names this migration is about to rewrite, so the report at the end of the file
+-- can say what each one became. Roles that the merge below deletes drop out of the
+-- report on their own: it joins the snapshot back to the rows that still exist.
+CREATE TEMP TABLE "rename_before" AS
+SELECT 'roles' AS "kind", "id", "name" FROM "project_role"
+UNION ALL SELECT 'skills', "id", "name" FROM "agent_skill"
+UNION ALL SELECT 'agents', "id", "username" FROM "ai_agent"
+UNION ALL SELECT 'credentials', "id", COALESCE("label", '') FROM "integration_credential";--> statement-breakpoint
+-- Counters the report reads after the rows they describe are gone.
+CREATE TEMP TABLE "migration_count" ("key" text PRIMARY KEY, "value" integer NOT NULL);--> statement-breakpoint
+INSERT INTO "migration_count" VALUES ('movedInvites', (SELECT count(*) FROM "project_invite"));--> statement-breakpoint
+
 CREATE TABLE "team" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
@@ -164,6 +176,9 @@ UPDATE "team_role" r SET "name" = r."name" || ' [' || p."key" || ']'
       WHERE o."team_id" = r."team_id" AND o."id" <> r."id" AND o."name" = r."name"
    );--> statement-breakpoint
 
+INSERT INTO "migration_count"
+SELECT 'mergedRoles', count(*) FROM "role_migration" rm JOIN "team_default" d ON d."team_id" = rm."team_id"
+ WHERE rm."is_standard_default" AND rm."id" <> d."id";--> statement-breakpoint
 DROP TABLE "role_migration";--> statement-breakpoint
 DROP TABLE "team_default";--> statement-breakpoint
 ALTER TABLE "team_role" ALTER COLUMN "team_id" SET NOT NULL;--> statement-breakpoint
@@ -270,6 +285,15 @@ SELECT DISTINCT ON (p."team_id")
  ORDER BY p."team_id", s."updated_at" DESC;
 
 --> statement-breakpoint
+-- The provider configurations the merge above left behind, named by the project they
+-- belonged to, so the report can point at what an operator may want to re-enter.
+CREATE TEMP TABLE "dropped_notification_setting" AS
+SELECT p."name"
+  FROM "project_notification_setting" s
+  JOIN "project" p ON p."id" = s."project_id"
+  JOIN "team_notification_setting" t ON t."team_id" = p."team_id"
+ WHERE (t."ciphertext", t."updated_at") IS DISTINCT FROM (s."ciphertext", s."updated_at");--> statement-breakpoint
+
 DROP INDEX "integration_credential_project_idx";--> statement-breakpoint
 ALTER TABLE "integration_credential" ALTER COLUMN "project_id" DROP NOT NULL;--> statement-breakpoint
 ALTER TABLE "integration_credential" ADD COLUMN "team_id" integer;--> statement-breakpoint
@@ -369,6 +393,11 @@ UPDATE "agent_tool_link" l
    SET "agent_tool_id" = s.keep_id
   FROM survivor s
  WHERE s."id" = l."agent_tool_id" AND s.keep_id <> s."id";--> statement-breakpoint
+INSERT INTO "migration_count"
+SELECT 'mergedAgentTools', count(*) FROM (
+  SELECT "id", min("id") OVER (PARTITION BY "team_id", "tool_key", "credential_id") AS keep_id
+    FROM "agent_tool"
+) s WHERE s.keep_id <> s."id";--> statement-breakpoint
 DELETE FROM "agent_tool" a
  USING (
    SELECT "id", min("id") OVER (PARTITION BY "team_id", "tool_key", "credential_id") AS keep_id
@@ -490,3 +519,53 @@ UPDATE "ai_agent" SET "runner_scope" = 'team' WHERE "runner_scope" = 'project';-
 ALTER TABLE "ai_agent" ADD CONSTRAINT "ai_agent_runner_scope_check" CHECK ("ai_agent"."runner_scope" IN ('owner', 'team'));
 --> statement-breakpoint
 ALTER TABLE "team" ADD COLUMN "mcp_enabled" boolean DEFAULT true NOT NULL;
+
+--> statement-breakpoint
+-- What this migration did to the instance's data, for the screen the app shows after
+-- an upgrade. Written as one row of app_setting; the temp tables above hold the parts
+-- the schema no longer carries.
+CREATE TEMP TABLE "rename_after" AS
+SELECT 'roles' AS "kind", "id", "name" FROM "team_role"
+UNION ALL SELECT 'skills', "id", "name" FROM "agent_skill"
+UNION ALL SELECT 'agents', "id", "username" FROM "ai_agent"
+UNION ALL SELECT 'credentials', "id", COALESCE("label", '') FROM "integration_credential";--> statement-breakpoint
+
+INSERT INTO "app_setting" ("key", "value", "updated_at")
+SELECT 'migration.0115_teams', jsonb_build_object(
+  'version', 1,
+  'teams', COALESCE((
+    SELECT jsonb_agg(jsonb_build_object('name', t."name", 'projects', p."projects") ORDER BY t."name")
+      FROM "team" t
+      CROSS JOIN LATERAL (
+        SELECT COALESCE(
+                 jsonb_agg(jsonb_build_object('key', pr."key", 'name', pr."name") ORDER BY pr."key"),
+                 '[]'::jsonb) AS "projects"
+          FROM "project" pr WHERE pr."team_id" = t."id"
+      ) p
+     WHERE jsonb_array_length(p."projects") > 0
+  ), '[]'::jsonb),
+  'renamed', (
+    SELECT jsonb_object_agg(k."kind", COALESCE(x."items", '[]'::jsonb))
+      FROM (VALUES ('roles'), ('skills'), ('agents'), ('credentials')) AS k("kind")
+      LEFT JOIN (
+        SELECT b."kind",
+               jsonb_agg(jsonb_build_object('from', b."name", 'to', a."name") ORDER BY b."name") AS "items"
+          FROM "rename_before" b
+          JOIN "rename_after" a ON a."kind" = b."kind" AND a."id" = b."id"
+         WHERE a."name" IS DISTINCT FROM b."name"
+         GROUP BY b."kind"
+      ) x ON x."kind" = k."kind"
+  ),
+  'merged', jsonb_build_object(
+    'roles', COALESCE((SELECT "value" FROM "migration_count" WHERE "key" = 'mergedRoles'), 0),
+    'agentTools', COALESCE((SELECT "value" FROM "migration_count" WHERE "key" = 'mergedAgentTools'), 0)
+  ),
+  'movedInvites', COALESCE((SELECT "value" FROM "migration_count" WHERE "key" = 'movedInvites'), 0),
+  'droppedNotificationSettings', COALESCE(
+    (SELECT jsonb_agg("name" ORDER BY "name") FROM "dropped_notification_setting"), '[]'::jsonb)
+), now()
+ON CONFLICT ("key") DO UPDATE SET "value" = excluded."value", "updated_at" = now();--> statement-breakpoint
+DROP TABLE "rename_before";--> statement-breakpoint
+DROP TABLE "rename_after";--> statement-breakpoint
+DROP TABLE "migration_count";--> statement-breakpoint
+DROP TABLE "dropped_notification_setting";

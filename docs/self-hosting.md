@@ -84,8 +84,16 @@ docker compose up -d
 `git pull` is for the compose file itself; the services come from the registry. Changing
 `API_URL` or `APP_URL` afterwards only needs `docker compose up -d`.
 
-The api applies its migrations on startup, so an upgrade needs no database step. If you
-call the API from your own scripts or from an MCP client, read
+The api applies its migrations on startup, so an upgrade needs no database step. Before
+it applies anything it dumps the database into the `db-backups` volume (`/backups` in the
+api container) and refuses to start if that dump fails — a release whose migrations
+rewrite data is not applied without something to go back to. Dumps are deleted after 30
+days, on the first startup past that; `BACKUP_RETENTION_DAYS` changes the window and
+`SKIP_PRE_MIGRATION_BACKUP=1` upgrades without one, for an operator who backs up by
+other means. After the upgrade the app shows the instance owner where the dump is and
+what the migrations changed.
+
+If you call the API from your own scripts or from an MCP client, read
 [breaking changes](breaking-changes.md) for the paths a release removed.
 
 ## Building from source instead

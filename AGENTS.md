@@ -135,7 +135,8 @@ bun run dev                                       # api :3000 + web :3001
 
 A change to the deploy stack usually has to land in **all three** of `docker-compose.yml`,
 `docker-compose.coolify.yml`, and `docker-compose.coolify-images.yml`. The **api applies migrations on startup** (`migrate.ts` in
-its Dockerfile CMD). `bot` runs Telegram long polling and must stay at one replica.
+its Dockerfile CMD), and dumps the database into the `db-backups` volume first — a failed
+dump stops the startup, so nothing is migrated without a way back. `bot` runs Telegram long polling and must stay at one replica.
 
 ## Test gate (Docker)
 

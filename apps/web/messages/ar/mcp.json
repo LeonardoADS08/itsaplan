@@ -11,8 +11,6 @@
   "endpoint": "نقطة النهاية",
   "clientTabsAria": "العميل",
   "addToFile": "أضِف إلى <code>{file}</code>",
-  "copyAria": "نسخ",
-  "copied": "نُسخ إلى الحافظة",
   "notes": {
     "claudeCode": "نفّذ هذا في الطرفية.",
     "vscode": "يتطلّب GitHub Copilot.",

@@ -187,6 +187,9 @@ export const userPreference = pgTable(
     lastProjectId: integer('last_project_id').references(() => project.id, {
       onDelete: 'set null',
     }),
+    // The release whose "what's new" screen this user has closed. Null until they
+    // close one, which is what an account created before the screen existed reads as.
+    seenVersion: text('seen_version'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

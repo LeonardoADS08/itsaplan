@@ -5,8 +5,10 @@ import { Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 
-export default function McpCodeBlock({ code }: { code: string }) {
-  const t = useTranslations('mcp');
+// A copyable command or snippet. Shared: the MCP connection guide and the
+// post-upgrade screen both show one.
+export default function CodeBlock({ code }: { code: string }) {
+  const t = useTranslations('common');
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
@@ -28,7 +30,7 @@ export default function McpCodeBlock({ code }: { code: string }) {
       </pre>
       <button
         type="button"
-        aria-label={t('copyAria')}
+        aria-label={t('copy')}
         onClick={copy}
         className="absolute end-2 top-2 grid size-7 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
