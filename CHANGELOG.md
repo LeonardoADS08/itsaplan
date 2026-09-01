@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.17.0](https://github.com/croffasia/itsaplan/compare/v0.16.0...v0.17.0) (2026-09-01)
+
+
+### Features
+
+* **web:** add French translation ([#270](https://github.com/croffasia/itsaplan/issues/270)) ([013a775](https://github.com/croffasia/itsaplan/commit/013a7758f1d34603372cf8dfcc39e95927913fc3))
+
+
+### Bug Fixes
+
+* **git:** attach post-merge release pipelines ([#275](https://github.com/croffasia/itsaplan/issues/275)) ([ad895a4](https://github.com/croffasia/itsaplan/commit/ad895a4c12895c68cb45e41dd89fb5a8841abbe7))
+
 ## [0.16.0](https://github.com/croffasia/itsaplan/compare/v0.15.0...v0.16.0) (2026-08-31)
 
 
