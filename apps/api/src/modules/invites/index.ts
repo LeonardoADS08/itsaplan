@@ -7,6 +7,7 @@ import { requireUser, type AuthUser } from '#shared/access';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { getRole } from '#modules/roles/service';
+import { teamParams } from '#modules/teams/model';
 import {
   AcceptInviteResponse,
   InviteCreateResponse,
@@ -178,6 +179,7 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
     },
     {
       teamManager: true,
+      params: teamParams,
       body: createTeamInviteBody,
       response: { 201: InviteRowResponse, ...errors(400, 401, 403, 404, 409) },
       detail: {
@@ -196,6 +198,7 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
     },
     {
       teamManager: true,
+      params: teamParams,
       response: { 200: InviteRowListResponse, ...errors(401, 403, 404) },
       detail: {
         summary: "List a team's invites",
