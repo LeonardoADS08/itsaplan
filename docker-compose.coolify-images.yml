@@ -111,6 +111,10 @@ services:
       - S3_SECRET_ACCESS_KEY=${SERVICE_PASSWORD_MINIO}
       - S3_REGION=${S3_REGION:-us-east-1}
       - S3_FORCE_PATH_STYLE=${S3_FORCE_PATH_STYLE:-}
+      # How long the pre-migration dumps are kept, and the switch that upgrades
+      # without one. BACKUP_DIR is not among them: the volume below pins it.
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-}
+      - SKIP_PRE_MIGRATION_BACKUP=${SKIP_PRE_MIGRATION_BACKUP:-}
     # Holds the dump migrate.ts takes before it applies a release's migrations, and
     # keeps it for BACKUP_RETENTION_DAYS (30) so a downgrade has something to restore.
     volumes:
