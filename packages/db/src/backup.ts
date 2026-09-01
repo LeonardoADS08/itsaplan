@@ -65,9 +65,21 @@ export async function writeBackup(migrations: string[]): Promise<BackupResult> {
   const createdAt = new Date();
   const path = join(BACKUP_DIR, `itsaplan-${stamp(createdAt)}.dump`);
 
+  // The password goes through PGPASSWORD rather than argv, where the process list would
+  // show it for as long as the dump runs; a URI without one sets no variable, so an
+  // ambient PGPASSWORD or .pgpass still applies. The rest of the URI is passed as it is,
+  // so every other connection option (sslmode and the like) still reaches libpq.
+  const dsn = new URL(url);
+  const password = decodeURIComponent(dsn.password);
+  dsn.password = '';
+
   const proc = Bun.spawn(
-    ['pg_dump', '--format=custom', '--no-owner', '--no-privileges', '--file', path, url],
-    { stdout: 'pipe', stderr: 'pipe' },
+    ['pg_dump', '--format=custom', '--no-owner', '--no-privileges', '--file', path, dsn.toString()],
+    {
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env: password ? { ...process.env, PGPASSWORD: password } : process.env,
+    },
   );
   const stderr = await new Response(proc.stderr).text();
   const code = await proc.exited;
