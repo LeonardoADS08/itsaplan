@@ -36,11 +36,12 @@ What the team owns with it: `agent_skill`, `agent_tool` and `integration_credent
 all carry a `team_id` and are shared by every project of the team. `agent_schedule` and
 `agent_run` carry a `project_id` — a run happens in one project.
 
-`ai_agent.role_id` is NOT NULL and references `team_role`: an agent always acts under a
-role of its team, and its rights are the intersection of that role and the actions in
-`ai_agent.tools`. `team_member.role` takes a fourth value, `'agent'`, so an agent stands
-in the team without being a person in it. The projects an agent works in are its bot
-user's `project_member` rows, the same as for a person.
+The projects an agent works in are its bot user's `project_member` rows, the same as for
+a person, and the `role_id` on each of them is what its requests are checked against —
+per project, so one agent can hold different roles in two of them. Its rights in a
+project are the intersection of that role and the actions in `ai_agent.tools`.
+`team_member.role` takes a fourth value, `'agent'`, so an agent stands in the team
+without being a person in it.
 
 `ai_agent_team_username_uq` makes the mention handle unique per team, not per project.
 

@@ -72,7 +72,6 @@ export default function AgentTriggersSection({
 
   return (
     <AgentFormSection
-      id="triggers"
       open={open}
       onOpenChange={onOpenChange}
       icon={Zap}

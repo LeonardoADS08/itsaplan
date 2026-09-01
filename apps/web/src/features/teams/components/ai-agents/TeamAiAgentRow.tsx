@@ -14,7 +14,8 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AGENT_KIND_ICON } from '../../utils/agentKindIcon';
 import { useAgentCan } from '../../context/agentSection';
-import { AgentMetaRow, AgentTriggers } from './AgentMetaRow';
+import { AgentMetaRow } from './AgentMetaRow';
+import { AgentTriggers } from './AgentTriggers';
 import { useTranslations } from 'next-intl';
 
 // One agent as a table row: the Agent cell holds the name, @username, an icon for the

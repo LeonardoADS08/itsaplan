@@ -95,7 +95,8 @@
     "roles": {
       "owner": "Owner",
       "manager": "Manager",
-      "member": "Member"
+      "member": "Member",
+      "agent": "AI agent"
     }
   },
   "roles": {
@@ -316,8 +317,6 @@
     "emptyHint": "An agent runs on the built-in runtime or through the API.",
     "agent": "AI teammate",
     "sheetSubtitle": "A bot user you can delegate issues to",
-    "agentSettings": "Agent settings",
-    "basics": "Basics",
     "kind": "Kind",
     "kindLabel": {
       "external": "External",
@@ -331,10 +330,8 @@
     "username": "Username",
     "usernamePlaceholder": "e.g. triage-bot",
     "usernameHint": "Letters, digits, dots, dashes, and underscores. Up to 64 characters.",
-    "access": "Access",
-    "accessHint": "The permissions the agent acts under",
-    "role": "Role",
-    "chooseRole": "Choose a role",
+    "access": "Availability",
+    "accessHint": "Who can give this agent tasks",
     "model": "Model",
     "modelHint": "Provider and model",
     "credential": "Credential",
@@ -370,11 +367,11 @@
     "runnerWayCliHint": "Our npm package. Point it at a coding agent, it polls for tasks and reports back. Needs a config file with the agent's key.",
     "runnerWayApi": "Your own code",
     "runnerWayApiHint": "Claim tasks and post results over the API with the agent's key, from any script.",
-    "runnerScope": "Task source",
-    "runnerScopeOwner": "Only mine",
-    "runnerScopeTeam": "Everyone's",
-    "runnerScopeOwnerHint": "Only the tasks you trigger.",
-    "runnerScopeTeamHint": "Every member's tasks.",
+    "runnerScope": "Available to",
+    "runnerScopeOwner": "Only me",
+    "runnerScopeTeam": "Everyone",
+    "runnerScopeOwnerHint": "Only you can give it tasks.",
+    "runnerScopeTeamHint": "Any team member can give it tasks.",
     "runnerCopyCommand": "Copy command",
     "runnerHelpOpen": "How to configure the runner",
     "runnerHelpTitle": "How to start a runner",
@@ -465,11 +462,8 @@
     "skillCount": "{count, plural, one {# skill} other {# skills}}",
     "triggerMention": "Mention",
     "triggerDelegation": "Delegation",
-    "triggerFieldCount": "{count, plural, one {# custom field} other {# custom fields}}",
     "noMatch": "No match for “{query}”.",
     "useCustomModel": "Use \"{query}\"",
-    "roleRule": "Evaluated against the role {role}: an action works only when the role permits it too.",
-    "roleRefusesAction": "The role does not permit this action.",
     "readOnlyAlwaysOn": "Read-only access is always on and can't be turned off.",
     "instructionsLabel": "Instructions",
     "done": "Done",
@@ -486,7 +480,6 @@
     "noProjectsHint": "This team owns no project for the agent to work in.",
     "searchProjects": "Search projects",
     "noProjectsShort": "No projects",
-    "roleHint": "Caps what the agent may do, in every project it works in.",
     "chatNeedsAgent": "Create the AI teammate to test it here.",
     "chatNeedsProject": "Attach the AI teammate to a project to test it here.",
     "triggerFieldsTitle": "Custom fields that start a run"

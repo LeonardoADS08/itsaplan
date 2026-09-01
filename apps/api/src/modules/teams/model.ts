@@ -64,9 +64,6 @@ export const TeamMemberListResponse = t.Array(
     ]),
     agentId: t.Nullable(t.Number({ description: 'The AI agent this bot user backs.' })),
     username: t.Nullable(t.String({ description: "An agent's mention handle." })),
-    agentRoleName: t.Nullable(
-      t.String({ description: 'The team role an agent acts under, which is what it may do.' }),
-    ),
     joinedAt: t.String(),
   }),
 );

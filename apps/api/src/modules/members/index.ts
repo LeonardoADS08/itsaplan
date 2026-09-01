@@ -8,6 +8,7 @@ import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { getDefaultRoleId, getRole } from '#modules/roles/service';
 import { getTeamMembership } from '#modules/teams/service';
+import { isAgentUser } from '#modules/agents/core/service';
 import {
   MemberCandidateListResponse,
   MemberListResponse,
@@ -36,6 +37,14 @@ import {
 async function assertNotProvisioned(projectId: number, userId: string): Promise<void> {
   if ((await getMembershipSource(projectId, userId)) === 'scim') {
     throw new HttpError(409, 'This membership is managed by SCIM');
+  }
+}
+
+// An owner bypasses the permission matrix, so the standing is kept for people: an
+// agent works under a role, which is what caps what its key and its tools may do.
+async function assertAgentNotOwner(userId: string, role: string): Promise<void> {
+  if (role === 'owner' && (await isAgentUser(userId))) {
+    throw new HttpError(400, 'An AI agent cannot be a project owner');
   }
 }
 
@@ -96,6 +105,7 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
       if (!(await getTeamMembership(project.teamId, body.userId))) {
         throw new HttpError(400, "This user is not a member of the project's team");
       }
+      await assertAgentNotOwner(body.userId, body.role);
       // An explicit roleId must name a role of this project's team; omitting it
       // joins the member on the team's default role, as accepting an invite does.
       let roleId: number | null = null;
@@ -138,6 +148,7 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
       const target = await getMembership(project.id, params.userId);
       if (!target) throw new HttpError(404, 'Member not found');
       await assertNotProvisioned(project.id, params.userId);
+      await assertAgentNotOwner(params.userId, body.role);
 
       if (body.role === 'owner') {
         await setMembership(project.id, params.userId, 'owner', null);

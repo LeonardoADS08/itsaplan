@@ -90,7 +90,8 @@ const configFields = {
     t.Array(t.Integer(), {
       description:
         'Projects of the team the agent works in, from list_projects. Replaces the set: a ' +
-        'project left out is detached. A project of another team is rejected.',
+        'project left out is detached. A project of another team is rejected. The agent ' +
+        "joins on the team's default role; set_member_role changes it per project.",
     }),
   ),
   runnerScope: t.Optional(
@@ -125,7 +126,6 @@ export const AiAgentResponse = t.Object({
   triggerOnAssign: t.Boolean(),
   fieldTriggers: t.Array(t.Object({ fieldId: t.Number(), name: t.String(), delaySec: t.Number() })),
   delegationDelaySec: t.Number(),
-  roleId: t.Number(),
   ownerUserId: t.Nullable(t.String()),
   runnerScope: t.Union([t.Literal('owner'), t.Literal('team')]),
   lastSeenAt: t.Nullable(t.String()),
@@ -247,27 +247,18 @@ export const ChatThreadListResponse = t.Object({
   nextPage: t.Nullable(t.Number()),
 });
 
-// The team role the bot acts under, in every project it works in. Required on create:
-// what an agent may do is always a role an operator can read and edit, never a default
-// resolved out of sight.
-const roleId = t.Integer({
-  description: 'Role from list_roles the bot acts under, capping what its tools may do.',
-});
-
 export const createAgentBody = t.Object({
   name: t.String({ minLength: 1, description: 'Display name.' }),
   username,
   kind: t.Union([t.Literal('external'), t.Literal('internal')], {
     description: "'external' (API key) or 'internal' (in-process, needs a model config).",
   }),
-  roleId,
   ...configFields,
 });
 
 export const updateAgentBody = t.Object({
   name: t.Optional(t.String({ minLength: 1 })),
   username: t.Optional(username),
-  roleId: t.Optional(roleId),
   ...configFields,
 });
 
@@ -279,7 +270,9 @@ export const agentListQuery = t.Object({
 export const setAgentProjectsBody = t.Object({
   projectIds: t.Array(t.Integer(), {
     description:
-      'Projects of the team the agent works in. Replaces the set: a project left out is detached.',
+      'Projects of the team the agent works in. Replaces the set: a project left out is ' +
+      "detached. The agent joins on the team's default role; set_member_role changes it per " +
+      'project.',
   }),
 });
 

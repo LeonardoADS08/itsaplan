@@ -42,9 +42,9 @@ export default function MemberRow({
   const self = member.userId === session?.user.id;
   // Removing or re-roling a provisioned membership would be undone at the next sync.
   const provisioned = member.source === 'scim';
-  // Agents join and leave with their AI Agent config, not from this list,
-  // so they cannot be revoked or reassigned here.
   const canEdit = can('members_manage', 'edit') || isAdmin;
+  // An agent joins and leaves with its AI Agent config, so it cannot be revoked here;
+  // its role is set here like a person's.
   const canRemove =
     !member.isAgent && !provisioned && (self || can('members_manage', 'delete') || isAdmin);
   const canEditDescription = !member.isAgent && (self || canEdit);
@@ -99,7 +99,7 @@ export default function MemberRow({
           projectKey={projectKey}
           member={member}
           roles={roles}
-          canManage={canEdit && !self && !member.isAgent && !provisioned}
+          canManage={canEdit && !self && !provisioned}
           isLastOwner={isLastOwner}
         />
       </TableCell>

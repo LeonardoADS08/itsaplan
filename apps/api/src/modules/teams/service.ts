@@ -69,9 +69,9 @@ export interface TeamRow {
 }
 
 // One member of a team, as the team detail lists them: a person, or the bot user of
-// one of the team's agents. An agent carries the id and handle it is addressed by and
-// the name of the team role it acts under — its standing in the team is 'agent', which
-// says nothing about what it may do.
+// one of the team's agents. An agent carries the id and handle it is addressed by; its
+// standing in the team is 'agent', and what it may do is the role each of its project
+// memberships carries.
 export interface TeamMemberRow {
   userId: string;
   name: string;
@@ -80,7 +80,6 @@ export interface TeamMemberRow {
   role: TeamStanding;
   agentId: number | null;
   username: string | null;
-  agentRoleName: string | null;
   joinedAt: string;
 }
 
@@ -355,13 +354,11 @@ export async function listTeamMembers(teamId: number): Promise<TeamMemberRow[]> 
       role: teamMember.role,
       agentId: aiAgent.id,
       username: aiAgent.username,
-      agentRoleName: teamRole.name,
       joinedAt: teamMember.createdAt,
     })
     .from(teamMember)
     .innerJoin(user, eq(user.id, teamMember.userId))
     .leftJoin(aiAgent, eq(aiAgent.userId, teamMember.userId))
-    .leftJoin(teamRole, eq(teamRole.id, aiAgent.roleId))
     .where(eq(teamMember.teamId, teamId))
     .orderBy(user.name);
 
@@ -373,7 +370,6 @@ export async function listTeamMembers(teamId: number): Promise<TeamMemberRow[]> 
     role: m.role as TeamStanding,
     agentId: m.agentId,
     username: m.username,
-    agentRoleName: m.agentRoleName,
     joinedAt: iso(m.joinedAt),
   }));
 }

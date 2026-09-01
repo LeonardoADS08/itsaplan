@@ -95,7 +95,8 @@
     "roles": {
       "owner": "Власник",
       "manager": "Менеджер",
-      "member": "Учасник"
+      "member": "Учасник",
+      "agent": "ШІ-агент"
     }
   },
   "roles": {
@@ -316,8 +317,6 @@
     "emptyHint": "Агент працює на вбудованому рантаймі або через API.",
     "agent": "AI-тіммейт",
     "sheetSubtitle": "Бот-користувач, якому можна делегувати задачі",
-    "agentSettings": "Налаштування агента",
-    "basics": "Основне",
     "kind": "Тип",
     "kindLabel": {
       "external": "Зовнішній",
@@ -331,10 +330,8 @@
     "username": "Ім'я користувача",
     "usernamePlaceholder": "напр. triage-bot",
     "usernameHint": "Літери, цифри, крапки, дефіси та підкреслення. До 64 символів.",
-    "access": "Доступ",
-    "accessHint": "Права, під якими діє агент",
-    "role": "Роль",
-    "chooseRole": "Виберіть роль",
+    "access": "Доступність",
+    "accessHint": "Хто може ставити завдання агенту",
     "model": "Модель",
     "modelHint": "Провайдер і модель",
     "credential": "Облікові дані",
@@ -370,11 +367,11 @@
     "runnerWayCliHint": "Наш npm-пакет. Указуєте йому кодинг-агента — він забирає задачі та повертає результат. Потрібен файл конфігурації з ключем агента.",
     "runnerWayApi": "Власний код",
     "runnerWayApiHint": "Забирайте задачі та надсилайте результат через API за ключем агента — з будь-якого скрипта.",
-    "runnerScope": "Джерело завдань",
-    "runnerScopeOwner": "Лише мої",
-    "runnerScopeTeam": "Усіх учасників",
-    "runnerScopeOwnerHint": "Лише завдання, які ставите ви.",
-    "runnerScopeTeamHint": "Завдання всіх учасників.",
+    "runnerScope": "Доступний",
+    "runnerScopeOwner": "Лише мені",
+    "runnerScopeTeam": "Усім",
+    "runnerScopeOwnerHint": "Ставити завдання можете лише ви.",
+    "runnerScopeTeamHint": "Ставити завдання може будь-який учасник команди.",
     "runnerCopyCommand": "Скопіювати команду",
     "runnerHelpOpen": "Як налаштувати раннер",
     "runnerHelpTitle": "Як запустити раннер",
@@ -465,11 +462,8 @@
     "skillCount": "{count, plural, one {# навичка} few {# навички} many {# навичок} other {# навички}}",
     "triggerMention": "Згадка",
     "triggerDelegation": "Делегування",
-    "triggerFieldCount": "{count, plural, one {# кастомне поле} few {# кастомні поля} many {# кастомних полів} other {# кастомного поля}}",
     "noMatch": "Нічого не знайдено за «{query}».",
     "useCustomModel": "Використати «{query}»",
-    "roleRule": "Перевіряється за роллю {role}: дія працює, лише якщо роль її теж дозволяє.",
-    "roleRefusesAction": "Роль не дозволяє цю дію.",
     "readOnlyAlwaysOn": "Доступ лише на читання завжди увімкнений, його не можна вимкнути.",
     "instructionsLabel": "Інструкції",
     "done": "Готово",
@@ -486,7 +480,6 @@
     "noProjectsHint": "У команди немає проєктів, у яких агент міг би працювати.",
     "searchProjects": "Пошук проєктів",
     "noProjectsShort": "Немає проєктів",
-    "roleHint": "Обмежує права агента в усіх його проєктах.",
     "chatNeedsAgent": "Створіть AI-тіммейта, щоб протестувати його тут.",
     "chatNeedsProject": "Додайте AI-тіммейта до проєкту, щоб протестувати його тут.",
     "triggerFieldsTitle": "Кастомні поля, що запускають run"

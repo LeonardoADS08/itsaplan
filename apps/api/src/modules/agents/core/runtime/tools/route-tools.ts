@@ -56,9 +56,9 @@ function parseBody(text: string): unknown {
   }
 }
 
-// The catalog as the config UI reads it: each action with the permission its route
-// asserts, so the UI can mark an action the agent's role refuses. An action with no
-// route behind it, or one whose route asks only for project membership, has none.
+// The catalog list_ai_agent_tools returns: each action with the permission its route
+// asserts, so a caller can tell which role an action needs. An action with no route
+// behind it, or one whose route asks only for project membership, has none.
 export function actionCatalog(): (ToolMeta & { permission?: Permission })[] {
   const byName = new Map(routeTools(getMcpApp()).map((route) => [route.name, route]));
   return [...AGENT_ACTIONS, ...ALWAYS_ON_ACTIONS].map((action) => ({

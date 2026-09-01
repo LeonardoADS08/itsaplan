@@ -14,16 +14,18 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useSetMemberRole } from '@/services/members.service';
 
 // A member's role as one action among the others on their row: an icon opening the
-// roles the team assigns from, plus Owner, with the one they hold checked. The role
-// itself is stated by the badge beside it, so this only has to change it. The
-// select in the members list (MemberRoleControl) is the same write in a table cell.
+// roles the team assigns from, plus Owner, with the one they hold checked. An agent is
+// offered the roles without Owner: an owner bypasses the matrix, and the API refuses it
+// for an agent. The role itself is stated by the badge beside it, so this only has to
+// change it. The select in the members list (MemberRoleControl) is the same write in a
+// table cell.
 export default function MemberRoleMenu({
   projectKey,
   member,
   roles,
 }: {
   projectKey: string;
-  member: Pick<MemberRow, 'userId' | 'role' | 'roleId'>;
+  member: Pick<MemberRow, 'userId' | 'role' | 'roleId' | 'isAgent'>;
   roles: Role[];
 }) {
   const t = useTranslations('members');
@@ -72,9 +74,11 @@ export default function MemberRoleMenu({
             {r.name}
           </DropdownMenuCheckboxItem>
         ))}
-        <DropdownMenuCheckboxItem checked={isOwnerRow} onSelect={promoteToOwner}>
-          {tCommon('owner')}
-        </DropdownMenuCheckboxItem>
+        {!member.isAgent && (
+          <DropdownMenuCheckboxItem checked={isOwnerRow} onSelect={promoteToOwner}>
+            {tCommon('owner')}
+          </DropdownMenuCheckboxItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

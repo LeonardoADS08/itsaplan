@@ -16,7 +16,6 @@ export default function AgentRunnerSection({
   // The saved agent, for its presence. Null while creating: no key exists yet, so the
   // state reads as not connected.
   agent: AiAgent | null;
-  id: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {

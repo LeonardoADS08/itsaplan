@@ -41,7 +41,6 @@ export default function AgentModelSection({
 
   return (
     <AgentFormSection
-      id="model"
       open={open}
       onOpenChange={onOpenChange}
       icon={Cpu}

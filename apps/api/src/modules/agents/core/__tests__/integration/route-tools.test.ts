@@ -11,7 +11,7 @@ import { AGENT_ACTIONS, ALWAYS_ON_ACTIONS } from '../../runtime/tools/catalog';
 import { routeTools } from '#mcp/generate';
 import { getMcpApp } from '#mcp/app-ref';
 import { createRole } from '#tests/helpers/roles';
-import { createAgent } from '#tests/helpers/agents';
+import { createAgent, setAgentProjectRole } from '#tests/helpers/agents';
 
 // The tools an internal agent runs with, built from the routes tagged mcpTool() and
 // dispatched in process with the agent's own API key. What is asserted here is the
@@ -31,7 +31,8 @@ async function setup() {
 }
 
 // Builds the tool set of a freshly created internal agent, the way the runtime does.
-// The username only has to be unique, so it is numbered.
+// The username only has to be unique, so it is numbered. A roleId puts the agent's
+// membership of MKT on that role, which is what its calls are then checked against.
 let agentSeq = 0;
 async function toolsFor(asOwner: Api, tools: string[], roleId?: number) {
   const created = await createAgent(asOwner, 'MKT', {
@@ -39,10 +40,12 @@ async function toolsFor(asOwner: Api, tools: string[], roleId?: number) {
     username: `triage-${++agentSeq}`,
     kind: 'internal',
     tools,
-    ...(roleId === undefined ? {} : { roleId }),
   });
   const agentId = created.data?.agent.id;
   if (agentId === undefined) throw new Error('Test agent was not created');
+  if (roleId !== undefined) {
+    await setAgentProjectRole(asOwner, 'MKT', created.data!.agent.userId, roleId);
+  }
   const project = await getProjectByKey('MKT');
   if (!project) throw new Error('Test project was not created');
   const agent = await getAgentById(agentId, project.id);
@@ -157,8 +160,8 @@ describe('internal agent route tools', () => {
     }
   });
 
-  // The action picker marks an action the agent's role refuses, which it can only do
-  // when the catalog carries the permission the route behind the action asserts.
+  // The catalog states which role an action needs, which it can only do when it
+  // carries the permission the route behind the action asserts.
   it('reports the permission of the route behind each action', () => {
     const catalog = new Map(actionCatalog().map((action) => [action.key, action.permission]));
 

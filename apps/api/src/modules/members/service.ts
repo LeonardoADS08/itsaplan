@@ -50,9 +50,9 @@ export interface MemberRow {
   roleName: string | null;
   // What this member does in the project, free text set by an owner. Empty when unset.
   description: string;
-  // True when this member is an AI agent's bot user (has an ai_agent row). Agents
-  // join by agent creation, not an invite, so their role and access are managed on
-  // the AI Agents screen, not here.
+  // True when this member is an AI agent's bot user (has an ai_agent row). An agent
+  // joins by agent creation or from this list rather than by an invite, and its role
+  // in the project is set here like a person's.
   isAgent: boolean;
   source: MemberSource;
   createdAt: string;

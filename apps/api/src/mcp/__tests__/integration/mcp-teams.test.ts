@@ -3,7 +3,7 @@ import { auth } from '@repo/auth';
 import { app, authedApi } from '#tests/helpers/app';
 import { resetDb } from '#tests/helpers/db';
 import { signUpTestUser } from '#tests/helpers/auth';
-import { createAgent, teamOf } from '#tests/helpers/agents';
+import { createAgent, setAgentProjectRole, teamOf } from '#tests/helpers/agents';
 import { createRole } from '#tests/helpers/roles';
 import { getAgentById, getInternalAgentApiKey } from '#modules/agents/core/service';
 
@@ -39,7 +39,7 @@ async function call(apiKey: string, name: string, args: Record<string, unknown> 
 }
 
 // A user, their first team, and the key of an internal agent living in it. The agent
-// runs under a role that may manage agents, which is what these tools need.
+// works in MKT on a role that may manage agents, which is what these tools need.
 async function setup() {
   const owner = await signUpTestUser({ name: 'Owner' });
   const asOwner = authedApi(owner.cookie);
@@ -54,8 +54,8 @@ async function setup() {
     name: 'Triage Bot',
     username: 'triage',
     kind: 'internal',
-    roleId,
   });
+  await setAgentProjectRole(asOwner, 'MKT', created.data!.agent.userId, roleId);
   const agent = await getAgentById(created.data!.agent.id, teamId);
   return { owner, asOwner, teamId, roleId, agentKey: await getInternalAgentApiKey(agent!) };
 }

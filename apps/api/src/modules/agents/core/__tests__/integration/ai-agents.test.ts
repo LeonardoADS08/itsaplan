@@ -270,28 +270,37 @@ describe('ai agents', () => {
     expect(upd.data).toMatchObject({ triggerOnMention: true, triggerOnAssign: true });
   });
 
-  it('assigns an authorization role to either kind of agent', async () => {
+  it("attaches an agent to a project on the team's default role", async () => {
     const { asOwner } = await setup();
-    // The team ships with a default "Member" role; use its id.
     const roles = await listProjectRoles(asOwner, 'MKT');
-    const roleId = roles.data![0].id;
-    const res = await createAgent(asOwner, 'MKT', {
+    const defaultRole = roles.data!.find((r) => r.isDefault)!;
+    const created = await createAgent(asOwner, 'MKT', {
       name: 'Ext',
       username: 'ext',
       kind: 'external',
-      roleId,
     });
-    expect(res.status).toBe(201);
-    expect(res.data?.agent).toMatchObject({ kind: 'external', roleId });
-    // Both kinds act through the same API under a role, so an internal agent takes
-    // one too: its tool calls are checked by the same permission matrix.
-    const internal = await createAgent(asOwner, 'MKT', {
-      name: 'Int',
-      username: 'int',
-      kind: 'internal',
-      roleId,
+    expect(created.status).toBe(201);
+
+    // The membership is what the permission checks read, so that is where the role is:
+    // the agent joins on the default one and the members list reassigns it per project.
+    const members = await asOwner.projects({ projectKey: 'MKT' }).members.get({ query: {} });
+    const bot = members.data!.items.find((m) => m.userId === created.data!.agent.userId);
+    expect(bot).toMatchObject({ isAgent: true, role: 'member', roleId: defaultRole.id });
+  });
+
+  it('refuses to make an agent a project owner (400)', async () => {
+    const { asOwner } = await setup();
+    const created = await createAgent(asOwner, 'MKT', {
+      name: 'Ext',
+      username: 'ext',
+      kind: 'external',
     });
-    expect(internal.data?.agent).toMatchObject({ kind: 'internal', roleId });
+    // An owner bypasses the permission matrix; an agent only ever works under a role.
+    const res = await asOwner
+      .projects({ projectKey: 'MKT' })
+      .members({ userId: created.data!.agent.userId })
+      .patch({ role: 'owner' });
+    expect(res.status).toBe(400);
   });
 
   it("closes the team's owner and manager guards to an agent key", async () => {
@@ -310,37 +319,6 @@ describe('ai agents', () => {
     expect(
       (await asAgent.teams({ teamId }).projects.post({ key: 'ENG', name: 'Engineering' })).status,
     ).toBe(403);
-  });
-
-  it('refuses an agent with no role (400)', async () => {
-    const { asOwner, teamId } = await setup();
-    // An agent always acts under a role of its team, so the create names one; without
-    // it the body does not validate.
-    const res = await agents(asOwner, teamId).post({
-      name: 'Ext',
-      username: 'ext',
-      kind: 'external',
-      // @ts-expect-error the role is required, which is what this asserts
-      roleId: undefined,
-    });
-    expect(res.status).toBe(400);
-  });
-
-  it('rejects a role from another team for an external agent', async () => {
-    const { asOwner } = await setup();
-    // Every project of a team shares its roles, so only a role of another team is out
-    // of reach here.
-    const stranger = authedApi((await signUpTestUser({ name: 'Stranger' })).cookie);
-    await stranger.projects.post({ key: 'ENG', name: 'Engineering' });
-    const foreign = await listProjectRoles(stranger, 'ENG');
-
-    const res = await createAgent(asOwner, 'MKT', {
-      name: 'Ext',
-      username: 'ext',
-      kind: 'external',
-      roleId: foreign.data![0].id,
-    });
-    expect(res.status).toBe(400);
   });
 
   it('lists agents without the secret', async () => {
@@ -745,9 +723,9 @@ describe('ai agents', () => {
 
     expect((await asOutsider.get()).status).toBe(404);
     expect((await asOutsider.tools.get()).status).toBe(404);
-    expect(
-      (await asOutsider.post({ name: 'X', username: 'x', kind: 'external', roleId: 1 })).status,
-    ).toBe(404);
+    expect((await asOutsider.post({ name: 'X', username: 'x', kind: 'external' })).status).toBe(
+      404,
+    );
     expect((await asOutsider({ agentId }).patch({ name: 'X' })).status).toBe(404);
     expect((await asOutsider({ agentId })['regenerate-key'].post()).status).toBe(404);
     expect((await asOutsider({ agentId }).delete()).status).toBe(404);
@@ -864,7 +842,6 @@ describe('ai agents', () => {
     });
     const asMember = await addProjectMember(asOwner, 'MKT', role.data!.id);
     const agent = agents(asMember, teamId)({ agentId: created.data!.agent.id });
-    const roleId = created.data!.agent.roleId;
 
     // OPS is not a project of theirs, so they cannot put an agent there.
     expect((await agent.projects.put({ projectIds: [mkt, ops.data!.id] })).status).toBe(403);
@@ -874,7 +851,6 @@ describe('ai agents', () => {
           name: 'Ops bot',
           username: 'ops-bot',
           kind: 'external',
-          roleId,
           projectIds: [ops.data!.id],
         })
       ).status,
@@ -885,7 +861,6 @@ describe('ai agents', () => {
       name: 'Mkt bot',
       username: 'mkt-bot',
       kind: 'external',
-      roleId,
       projectIds: [mkt],
     });
     expect(mine.data?.agent.projects.map((p) => p.key)).toEqual(['MKT']);

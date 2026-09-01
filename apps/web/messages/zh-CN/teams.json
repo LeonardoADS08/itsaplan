@@ -95,7 +95,8 @@
     "roles": {
       "owner": "所有者",
       "manager": "管理者",
-      "member": "成员"
+      "member": "成员",
+      "agent": "AI 代理"
     }
   },
   "roles": {
@@ -316,8 +317,6 @@
     "emptyHint": "代理由内置运行时运行或通过 API 驱动。",
     "agent": "AI 队友",
     "sheetSubtitle": "可以接受工作项委派的 AI 代理",
-    "agentSettings": "代理设置",
-    "basics": "基本信息",
     "kind": "类型",
     "kindLabel": {
       "external": "外部",
@@ -331,10 +330,8 @@
     "username": "用户名",
     "usernamePlaceholder": "例如：triage-bot",
     "usernameHint": "可使用字母、数字、点、连字符和下划线，最多 64 个字符。",
-    "access": "访问权限",
-    "accessHint": "限制代理可以执行的操作",
-    "role": "角色",
-    "chooseRole": "选择角色",
+    "access": "可用范围",
+    "accessHint": "谁可以给该代理分配任务",
     "model": "模型",
     "modelHint": "提供商和模型",
     "credential": "凭据",
@@ -370,11 +367,11 @@
     "runnerWayCliHint": "我们的 npm 包。指向一个编码智能体，它会领取任务并回传结果。需要一个包含智能体密钥的配置文件。",
     "runnerWayApi": "你自己的代码",
     "runnerWayApiHint": "用智能体密钥通过 API 领取任务并提交结果，任何脚本都可以。",
-    "runnerScope": "任务来源",
-    "runnerScopeOwner": "仅我的",
-    "runnerScopeTeam": "所有成员的",
-    "runnerScopeOwnerHint": "只接收你触发的任务。",
-    "runnerScopeTeamHint": "所有成员的任务。",
+    "runnerScope": "可用于",
+    "runnerScopeOwner": "仅我",
+    "runnerScopeTeam": "所有人",
+    "runnerScopeOwnerHint": "只有你可以给它分配任务。",
+    "runnerScopeTeamHint": "团队中任何成员都可以给它分配任务。",
     "runnerCopyCommand": "复制命令",
     "runnerHelpOpen": "如何配置运行器",
     "runnerHelpTitle": "如何启动运行器",
@@ -465,11 +462,8 @@
     "skillCount": "{count, plural, other {# 个技能}}",
     "triggerMention": "提及",
     "triggerDelegation": "委派",
-    "triggerFieldCount": "{count, plural, other {# 个自定义字段}}",
     "noMatch": "没有与“{query}”匹配的结果。",
     "useCustomModel": "使用“{query}”",
-    "roleRule": "按角色 {role} 判定：只有该角色也允许时，操作才会生效。",
-    "roleRefusesAction": "该角色不允许此操作。",
     "readOnlyAlwaysOn": "只读权限始终启用，无法关闭。",
     "instructionsLabel": "说明",
     "done": "完成",
@@ -486,7 +480,6 @@
     "noProjectsHint": "该团队还没有可供智能体工作的项目。",
     "searchProjects": "搜索项目",
     "noProjectsShort": "无项目",
-    "roleHint": "限制智能体在其所有项目中可做的事。",
     "chatNeedsAgent": "创建 AI 队友后即可在此测试。",
     "chatNeedsProject": "将 AI 队友加入项目后即可在此测试。",
     "triggerFieldsTitle": "触发运行的自定义字段"

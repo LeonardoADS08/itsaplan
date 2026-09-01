@@ -95,7 +95,8 @@
     "roles": {
       "owner": "مالك",
       "manager": "مدير",
-      "member": "عضو"
+      "member": "عضو",
+      "agent": "وكيل ذكاء اصطناعي"
     }
   },
   "roles": {
@@ -316,8 +317,6 @@
     "emptyHint": "الوكيل بيشتغل على وقت التشغيل المدمج أو عن طريق API.",
     "agent": "زميل فريق بالذكاء الاصطناعي",
     "sheetSubtitle": "مستخدم آلي تقدر تفوّضله المهام",
-    "agentSettings": "إعدادات الوكيل",
-    "basics": "الأساسيات",
     "kind": "النوع",
     "kindLabel": {
       "external": "خارجي",
@@ -331,10 +330,8 @@
     "username": "اسم المستخدم",
     "usernamePlaceholder": "مثل: triage-bot",
     "usernameHint": "حروف وأرقام ونقط وشرطات وشرطات سفلية، لحد 64 حرف.",
-    "access": "الوصول",
-    "accessHint": "الصلاحيات اللي الوكيل بيشتغل بيها",
-    "role": "الدور",
-    "chooseRole": "اختيار دور",
+    "access": "الإتاحة",
+    "accessHint": "مين يقدر يدّي الوكيل مهام",
     "model": "النموذج",
     "modelHint": "المزوّد والنموذج",
     "credential": "بيانات الاعتماد",
@@ -370,11 +367,11 @@
     "runnerWayCliHint": "حزمة npm بتاعتنا. وجّهها على وكيل برمجة، وهي بتسأل على المهام وترجّع النتيجة. محتاجة ملف إعدادات فيه مفتاح الوكيل.",
     "runnerWayApi": "كودك إنت",
     "runnerWayApiHint": "استلم المهام وابعت النتايج عبر واجهة البرمجة (API) بمفتاح الوكيل، من أي سكربت.",
-    "runnerScope": "مصدر المهام",
-    "runnerScopeOwner": "بتاعتي بس",
-    "runnerScopeTeam": "بتاعة الكل",
-    "runnerScopeOwnerHint": "المهام اللي إنت بتشغّلها بس.",
-    "runnerScopeTeamHint": "مهام كل الأعضاء.",
+    "runnerScope": "متاح لـ",
+    "runnerScopeOwner": "أنا بس",
+    "runnerScopeTeam": "الكل",
+    "runnerScopeOwnerHint": "إنت بس اللي تقدر تدّيه مهام.",
+    "runnerScopeTeamHint": "أي عضو في الفريق يقدر يدّيه مهام.",
     "runnerCopyCommand": "نسخ الأمر",
     "runnerHelpOpen": "إزاي تظبط المنفّذ",
     "runnerHelpTitle": "إزاي تشغّل منفّذ",
@@ -465,11 +462,8 @@
     "skillCount": "{count, plural, zero {لا مهارات} one {مهارة واحدة} two {مهارتان} few {# مهارات} many {# مهارة} other {# مهارة}}",
     "triggerMention": "إشارة",
     "triggerDelegation": "تفويض",
-    "triggerFieldCount": "{count, plural, zero {# حقل مخصص} one {حقل مخصص} two {حقلان مخصصان} few {# حقول مخصصة} many {# حقلاً مخصصاً} other {# حقل مخصص}}",
     "noMatch": "لا نتائج لـ “{query}”.",
     "useCustomModel": "استخدام \"{query}\"",
-    "roleRule": "يُقيَّم وفق الدور {role}: لا يعمل الإجراء إلا إذا سمح به الدور أيضًا.",
-    "roleRefusesAction": "الدور لا يسمح بهذا الإجراء.",
     "readOnlyAlwaysOn": "الوصول للقراءة بس مفعّل على طول ومش هينفع توقفه.",
     "instructionsLabel": "التعليمات",
     "done": "تم",
@@ -486,7 +480,6 @@
     "noProjectsHint": "لا يملك هذا الفريق مشروعًا يعمل فيه الوكيل.",
     "searchProjects": "البحث في المشاريع",
     "noProjectsShort": "لا توجد مشاريع",
-    "roleHint": "يحدّ مما يمكن للوكيل فعله في كل مشروع يعمل فيه.",
     "chatNeedsAgent": "أنشئ زميل الفريق بالذكاء الاصطناعي لتجربته هنا.",
     "chatNeedsProject": "أضف زميل الفريق بالذكاء الاصطناعي إلى مشروع لتجربته هنا.",
     "triggerFieldsTitle": "الحقول المخصصة التي تبدأ تشغيلاً"

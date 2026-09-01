@@ -128,8 +128,11 @@ Two decisions a reader would otherwise propose again:
 - **The team is the boundary.** There is no instance-level agent and no non-human-identity
   flag on the user. An agent is reachable through its team or not at all.
 - **The `ai_agents` permissions are administrative.** A role granting `create` or `edit`
-  can make an agent, give it any role of the team, and read its key — so granting either
-  is granting everything the team's roles can reach.
+  can make an agent, attach it to the projects the caller sees, and read its key — so
+  granting either is granting everything an agent of those projects can reach.
+- **An agent's role is its `project_member` row**, per project, set from the project's
+  member list like a person's. Attaching an agent joins it on the team's default role;
+  `members/` refuses to make it an owner, since an owner bypasses the matrix.
 
 Over MCP the team is resolved from the API key rather than asked for (`mcp/server.ts`):
 an agent's key acts in its own team, a person with one team in theirs, and a person in

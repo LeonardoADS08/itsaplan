@@ -135,8 +135,8 @@ export interface Team {
 export type TeamRole = 'owner' | 'manager' | 'member';
 
 // One member of a team: a person, or the bot user of one of its agents. An agent's
-// standing in the team is 'agent' and says nothing about what it may do — that is
-// agentRoleName, the team role it acts under.
+// standing in the team is 'agent' and says nothing about what it may do — that is the
+// role each of its project memberships carries.
 export interface TeamMember {
   userId: string;
   name: string;
@@ -145,7 +145,6 @@ export interface TeamMember {
   role: TeamRole | 'agent';
   agentId: number | null;
   username: string | null;
-  agentRoleName: string | null;
   joinedAt: string;
 }
 
@@ -373,8 +372,6 @@ export interface AiAgent {
   fieldTriggers: AgentFieldTriggerRead[];
   // How long a delegation run waits before the agent may pick it up.
   delegationDelaySec: number;
-  // The team_role the agent acts under, in every project it works in.
-  roleId: number;
   // The member who created the agent, and whose runs an 'owner'-scoped runner is
   // limited to; 'team' scope serves any member's runs.
   ownerUserId: string | null;
@@ -470,8 +467,8 @@ export interface AgentScheduleRun {
 // One work-item tool from the server-side catalog. `key` is stored on the agent
 // (grantable actions only); label/description are for the picker. `always` marks the
 // read-only tools that are always granted and shown non-editable. `permission` is the
-// cell of the role matrix the action's route asserts, so the picker can mark an action
-// the agent's role refuses; absent when the route asks only for project membership.
+// cell of the role matrix the action's route asserts; absent when the route asks only
+// for project membership.
 export interface AgentTool {
   key: string;
   group: 'issues' | 'initiatives' | 'cycles' | 'notes' | 'project';
@@ -498,8 +495,6 @@ export interface NewAiAgentInput {
   fieldTriggers?: AgentFieldTrigger[];
   delegationDelaySec?: number;
   projectIds?: number[];
-  // The team role the agent acts under, in every project it works in.
-  roleId: number;
   runnerScope?: 'owner' | 'team';
 }
 
@@ -519,7 +514,6 @@ export interface AiAgentPatch {
   fieldTriggers?: AgentFieldTrigger[];
   delegationDelaySec?: number;
   projectIds?: number[];
-  roleId?: number;
   runnerScope?: 'owner' | 'team';
 }
 
@@ -2680,8 +2674,9 @@ export interface MemberRow {
   roleName: string | null;
   // What this member does in the project, set by an owner. Empty string when unset.
   description: string;
-  // True when this member is an AI agent's bot user. Its role and access are managed
-  // on the AI Agents screen, so this list does not let you reassign or revoke it.
+  // True when this member is an AI agent's bot user. It joins and leaves with its AI
+  // Agent config, so this list does not revoke it; its role is set here like a
+  // person's.
   isAgent: boolean;
   // 'scim' when a provisioned group granted this membership. The sync rewrites such
   // a row on every run, so the role and remove actions are refused for it.

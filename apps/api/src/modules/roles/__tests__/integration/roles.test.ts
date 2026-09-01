@@ -3,7 +3,7 @@ import { api, authedApi } from '#tests/helpers/app';
 import { signUpTestUser, type TestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { PERMISSION_RESOURCES, PERMISSION_ACTIONS, resourceActions } from '#shared/permissions';
-import { createAgent } from '#tests/helpers/agents';
+import { createAgent, setAgentProjectRole } from '#tests/helpers/agents';
 
 // Integration coverage for the roles feature: the static permission catalog, the
 // two ways to list roles (a team's own list, and the list a project draws on), and
@@ -382,14 +382,14 @@ describe('roles', () => {
         .roles.post({ name: 'Editor', permissions: {} });
       const roleId = created.data!.id;
 
-      // The agent's bot user also gets a project_member row on the role, which must
-      // not show up as a member of its own.
-      await createAgent(owner.api, 'MKT', {
+      // The agent's bot user holds a project_member row on the role, which must be
+      // counted as an agent rather than as a member of its own.
+      const agent = await createAgent(owner.api, 'MKT', {
         name: 'Ext',
         username: 'ext',
         kind: 'external',
-        roleId,
       });
+      await setAgentProjectRole(owner.api, 'MKT', agent.data!.agent.userId, roleId);
 
       const res = await owner.api.teams({ teamId: owner.teamId }).roles({ roleId }).usage.get();
       expect(res.data).toMatchObject({ members: 0, agents: 1, invites: 0 });

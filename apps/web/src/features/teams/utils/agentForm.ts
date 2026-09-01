@@ -1,4 +1,4 @@
-import type { AgentTool, AiAgent, NewAiAgentInput, AiAgentPatch, Role } from '@/lib/api';
+import type { AgentTool, AiAgent, NewAiAgentInput, AiAgentPatch } from '@/lib/api';
 import { transliterate } from '@/utils/projectKey';
 
 // The editable shape of an agent form. temperature/maxSteps are kept as strings so
@@ -26,9 +26,6 @@ export interface AgentFormValue {
   // The projects of the team the agent works in. Its key reaches those and nothing
   // else, so an agent with none authenticates and sees no project.
   projectIds: number[];
-  // The team role the agent acts under. Null only while the roles are still loading:
-  // the form seeds the team's default one and the submit waits for it.
-  roleId: number | null;
   runnerScope: 'owner' | 'team';
 }
 
@@ -55,12 +52,7 @@ export function suggestUsername(name: string): string {
 // matching the server rules (1-64 chars, [a-zA-Z0-9._-]).
 export function isAgentFormValid(v: AgentFormValue): boolean {
   const username = v.username.trim();
-  return (
-    v.name.trim().length > 0 &&
-    username.length <= 64 &&
-    USERNAME_PATTERN.test(username) &&
-    v.roleId != null
-  );
+  return v.name.trim().length > 0 && username.length <= 64 && USERNAME_PATTERN.test(username);
 }
 
 // The form's starting value, from an existing agent when editing or blank defaults
@@ -86,7 +78,6 @@ export function initialAgentValue(agent?: AiAgent): AgentFormValue {
     })),
     delegationDelayMin: String(Math.round((agent?.delegationDelaySec ?? 120) / 60)),
     projectIds: (agent?.projects ?? []).map((project) => project.id),
-    roleId: agent?.roleId ?? null,
     runnerScope: agent?.runnerScope ?? 'team',
   };
 }
@@ -110,13 +101,12 @@ function parseNum(s: string): number | null {
 }
 
 // The kind-specific config, shared by the create input and edit patch. Both kinds
-// carry the authorization role they act under, their run triggers, and their
-// instructions; an external agent adds the scope of the runs its runner receives, an
-// internal one the model/tools config.
+// carry their projects, their run triggers, and their instructions; an external agent
+// adds the scope of the runs its runner receives, an internal one the model/tools
+// config.
 function configFields(v: AgentFormValue) {
   const common = {
     projectIds: v.projectIds,
-    roleId: v.roleId!,
     instructions: v.instructions.trim() || null,
     triggerOnMention: v.triggerOnMention,
     triggerOnAssign: v.triggerOnAssign,
@@ -155,16 +145,6 @@ export function toUpdatePatch(v: AgentFormValue): AiAgentPatch {
 // that are always on.
 export function grantedToolCount(tools: AgentTool[], selected: string[]): number {
   return selected.length + tools.filter((t) => t.always).length;
-}
-
-// Whether the agent's role refuses an action. The rights of an internal agent are the
-// intersection of the actions it holds and its role, so an action granted here still
-// answers 403 at run time when the role does not permit it. An action whose route asks
-// only for project membership carries no permission and is never refused.
-export function refusedByRole(tool: AgentTool, role: Role | undefined): boolean {
-  if (!tool.permission || !role) return false;
-  const [resource, action] = tool.permission;
-  return !role.permissions[resource]?.[action];
 }
 
 // Buckets a list by a key, keeping the order the keys first appear in, so a grouped

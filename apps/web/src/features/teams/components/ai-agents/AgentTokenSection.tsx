@@ -24,7 +24,6 @@ export default function AgentTokenSection({
   // The plaintext key issued in this sheet, or null once dismissed.
   revealedKey: string | null;
   onRevealedKey: (apiKey: string | null) => void;
-  id: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {

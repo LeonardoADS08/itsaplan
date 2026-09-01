@@ -19,25 +19,26 @@ export async function projectIdOf(api: Api, projectKey: string): Promise<number>
 type CreateAgentBody = Parameters<ReturnType<Api['teams']>['ai-agents']['post']>[0];
 
 // Creates an agent on the team that owns the project and attaches it to that project,
-// which is what an agent bound to one project looks like now. An agent always acts
-// under a role of its team, so a test that does not care which one gets the default.
+// which is what an agent bound to one project looks like now. It joins on the team's
+// default role, which a test that cares about the role reassigns afterwards.
 // Returns the raw response so a test can assert on its status.
-export async function createAgent(
-  api: Api,
-  projectKey: string,
-  body: Omit<CreateAgentBody, 'roleId'> & { roleId?: number },
-) {
+export async function createAgent(api: Api, projectKey: string, body: CreateAgentBody) {
   const projects = await api.projects.get();
   const project = projects.data!.find((p) => p.key === projectKey)!;
-  const teamId = project.teamId;
-  let roleId = body.roleId;
-  if (roleId === undefined) {
-    const roles = await api.teams({ teamId }).roles.get();
-    roleId = (roles.data!.find((r) => r.isDefault) ?? roles.data![0]).id;
-  }
-  return api.teams({ teamId })['ai-agents'].post({
+  return api.teams({ teamId: project.teamId })['ai-agents'].post({
     projectIds: [project.id],
     ...body,
-    roleId,
   });
+}
+
+// Puts the agent's membership of a project on a role, the way the project's member
+// list does. An agent joins on the team's default role, so this is how a test gives
+// it the role its calls are then checked against.
+export async function setAgentProjectRole(
+  api: Api,
+  projectKey: string,
+  userId: string,
+  roleId: number,
+) {
+  return api.projects({ projectKey }).members({ userId }).patch({ role: 'member', roleId });
 }

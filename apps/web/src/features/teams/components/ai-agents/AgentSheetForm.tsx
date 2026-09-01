@@ -12,7 +12,6 @@ import {
   useIntegrationModelsQuery,
   useIntegrationOptionsQuery,
 } from '@/services/integrations.service';
-import { useTeamRolesQuery } from '@/services/roles.service';
 import { useTeamProjectsQuery, useTeamQuery } from '@/services/teams.service';
 import {
   useSkillsQuery,
@@ -28,8 +27,7 @@ import { Button } from '@/components/ui/button';
 import { useAgentSection } from '../../context/agentSection';
 import { AgentCapabilityList } from './AgentCapabilityList';
 import { AgentEmptyNotice } from './AgentEmptyNotice';
-import TeamAiAgentFields from './TeamAiAgentFields';
-import { AGENT_EXPANDED_WIDTH } from './AgentExpandedLayout';
+import TeamAiAgentFields, { AGENT_EXPANDED_WIDTH } from './TeamAiAgentFields';
 import {
   initialAgentValue,
   isAgentFormValid,
@@ -49,7 +47,6 @@ import { useTranslations } from 'next-intl';
 // the agent exists (they are linked through a separate endpoint).
 export function AgentSheetForm({
   agent,
-  defaultProjectId,
   expanded = false,
   onCreated,
 }: {
@@ -57,17 +54,12 @@ export function AgentSheetForm({
   // The project a new agent starts attached to, set when the sheet is opened from
   // inside one. An agent reaches nothing until it works in a project, so creating it
   // there means creating it for that project.
-  defaultProjectId?: number;
   expanded?: boolean;
   onCreated: (agent: AiAgent) => void;
 }) {
   const t = useTranslations('teams.agents');
   const tCommon = useTranslations('common');
-  const [value, setValue] = useState<AgentFormValue>(() => {
-    const initial = initialAgentValue(agent ?? undefined);
-    if (agent || defaultProjectId == null) return initial;
-    return { ...initial, projectIds: [defaultProjectId] };
-  });
+  const [value, setValue] = useState<AgentFormValue>(() => initialAgentValue(agent ?? undefined));
   const isCreate = agent == null;
   // The plaintext key issued in this sheet, by the create or by a regenerate. It is
   // shown once in the API key section and cannot be read back from the server.
@@ -96,7 +88,6 @@ export function AgentSheetForm({
     teamId,
     value.kind === 'internal' ? selectedProvider : null,
   );
-  const rolesQuery = useTeamRolesQuery(teamId);
   const skillsLibraryQuery = useSkillsQuery(
     value.kind === 'internal' && canManageSkills ? teamId : null,
   );
@@ -121,15 +112,6 @@ export function AgentSheetForm({
     updateAgent.isPending ||
     setAgentSkills.isPending ||
     setAgentTools.isPending;
-
-  // An agent always acts under a role of its team, so a new one starts on the default
-  // role as soon as the list loads. An existing agent already carries its own.
-  useEffect(() => {
-    const roles = rolesQuery.data;
-    if (!roles || roles.length === 0) return;
-    const defaultRole = roles.find((r) => r.isDefault) ?? roles[0];
-    setValue((v) => (v.roleId == null ? { ...v, roleId: defaultRole.id } : v));
-  }, [rolesQuery.data]);
 
   // A new agent starts with every action granted. Seed the tool set once the action
   // catalog loads, only while creating and only if the user has not changed it yet.
@@ -296,7 +278,6 @@ export function AgentSheetForm({
       catalog={catalog}
       models={providerModelsQuery.data ?? []}
       modelsLoading={providerModelsQuery.isLoading}
-      roles={rolesQuery.data ?? []}
       agent={agent}
       skillsContent={skillsContent}
       skillsBadge={countBadge(selectedSkills.length, skillsLibrary.length)}

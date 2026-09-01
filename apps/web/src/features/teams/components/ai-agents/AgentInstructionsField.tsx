@@ -47,7 +47,7 @@ export function AgentInstructionsField({
           placeholder={t('instructionsPlaceholder')}
           ariaLabel={t('instructionsLabel')}
           slashContainer='[data-slot="sheet-content"]'
-          className="flex min-h-24 w-full flex-col rounded-md border border-input px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50"
+          className="flex max-h-43 min-h-24 w-full flex-col overflow-y-auto rounded-md border border-input px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50"
         />
       )}
 

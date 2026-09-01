@@ -1,34 +1,18 @@
-import { Fragment, type ReactNode, useState } from 'react';
-import {
-  type LucideIcon,
-  Cpu,
-  FolderKanban,
-  IdCard,
-  KeyRound,
-  ListChecks,
-  Shield,
-  SlidersHorizontal,
-  Sparkles,
-  Terminal,
-  Wrench,
-  Zap,
-} from 'lucide-react';
+import { type ReactNode, useState } from 'react';
+import { SlidersHorizontal, Sparkles, Wrench } from 'lucide-react';
 import type {
   AgentTool,
   AiAgent,
   IntegrationMeta,
   IntegrationOption,
   ProviderModel,
-  Role,
   TeamProject,
 } from '@/lib/api';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { type SectionNavItem } from '@/components/common/page/SectionNav';
 import { AGENT_KIND_ICON } from '../../utils/agentKindIcon';
-import { type AgentFormValue, grantedToolCount } from '../../utils/agentForm';
+import { type AgentFormValue } from '../../utils/agentForm';
 import { AgentFormSection } from './AgentFormSection';
-import AgentExpandedLayout from './AgentExpandedLayout';
 import AgentAccessSection from './AgentAccessSection';
 import AgentProjectsSection from './AgentProjectsSection';
 import AgentTokenSection from './AgentTokenSection';
@@ -39,11 +23,16 @@ import { AgentInstructionsField } from './AgentInstructionsField';
 import AgentRunnerSection from './AgentRunnerSection';
 import { useTranslations } from 'next-intl';
 
-// Which sections open when the form first renders, so it opens as a short list of
-// sections instead of a wall of fields. Basics is not in it because it never
-// collapses; the API key section is, because an external agent is unusable until its
-// key is in the operator's hands.
+// Which sections open when an existing agent is opened for editing, so the form reads
+// as a short list of sections instead of a wall of fields. Basics is not in it because
+// it never collapses; the API key section is, because an external agent is unusable
+// until its key is in the operator's hands. A new agent starts with all of them closed:
+// nothing is filled in yet, and the key section opens itself once a key is issued.
 const DEFAULT_OPEN: Record<string, boolean> = { access: true, projects: true, token: true };
+
+// Content width of the full-width editor. The sheet sizes its footer to match, so the
+// two must stay in sync.
+export const AGENT_EXPANDED_WIDTH = 'max-w-[860px]';
 
 // The agent form: the sections an agent of this kind has, in a stacked column or, at
 // full width, beside a section nav. `kindLocked` fixes the kind on edit (the API has
@@ -60,7 +49,6 @@ export default function TeamAiAgentFields({
   catalog,
   models,
   modelsLoading,
-  roles,
   agent,
   skillsContent,
   skillsBadge,
@@ -82,7 +70,6 @@ export default function TeamAiAgentFields({
   catalog: IntegrationMeta[];
   models: ProviderModel[];
   modelsLoading: boolean;
-  roles: Role[];
   // The saved agent, for the state only the server knows (its runner's presence).
   // Null while creating.
   agent: AiAgent | null;
@@ -103,9 +90,10 @@ export default function TeamAiAgentFields({
 }) {
   const t = useTranslations('teams.agents');
   const tCommon = useTranslations('common');
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>(DEFAULT_OPEN);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+    agent ? DEFAULT_OPEN : {},
+  );
   const sectionProps = (id: string) => ({
-    id,
     open: openSections[id] ?? false,
     onOpenChange: (o: boolean) => setOpenSections((s) => ({ ...s, [id]: o })),
   });
@@ -113,7 +101,7 @@ export default function TeamAiAgentFields({
   // No section header: the name, handle, and instructions are the agent itself, so
   // they open the form as plain fields rather than as one more thing to expand.
   const basicsSection = (
-    <div id="basics" className="scroll-mt-4 space-y-4">
+    <div key="basics" className="space-y-4">
       {!kindLocked && (
         <div className="space-y-1.5">
           <span className="text-sm font-medium">{t('kind')}</span>
@@ -184,7 +172,6 @@ export default function TeamAiAgentFields({
       {...sectionProps('access')}
       value={value}
       onChange={onChange}
-      roles={roles}
     />
   );
 
@@ -225,8 +212,6 @@ export default function TeamAiAgentFields({
     />
   );
 
-  const activeCount = grantedToolCount(tools, value.tools);
-
   const actionsSection = (
     <AgentActionsSection
       key="actions"
@@ -235,7 +220,6 @@ export default function TeamAiAgentFields({
       toolsLoading={toolsLoading}
       selected={value.tools}
       onChange={(keys) => onChange({ tools: keys })}
-      role={roles.find((r) => r.id === value.roleId)}
     />
   );
 
@@ -349,62 +333,34 @@ export default function TeamAiAgentFields({
     </AgentFormSection>
   );
 
-  // One section of the form: its nav entry and the fields it lists come from the same
-  // entry, so the two orders cannot drift apart.
-  const section = (
-    id: string,
-    label: string,
-    icon: LucideIcon,
-    node: ReactNode,
-    badge?: string,
-  ): SectionNavItem & { node: ReactNode } => ({ id, label, icon, badge, node });
-
-  const projectsBadge =
-    projects.length > 0 ? `${value.projectIds.length} / ${projects.length}` : undefined;
-
-  const sections =
+  const stack =
     value.kind === 'external'
       ? [
-          section('basics', t('basics'), IdCard, basicsSection),
-          section('projects', t('projects'), FolderKanban, projectsSection, projectsBadge),
-          section('token', t('apiKey'), KeyRound, tokenSection),
-          section('access', t('access'), Shield, accessSection),
-          section('triggers', t('triggers'), Zap, triggersSection),
-          section('runner', t('runner'), Terminal, runnerSection),
+          basicsSection,
+          projectsSection,
+          tokenSection,
+          accessSection,
+          triggersSection,
+          runnerSection,
         ]
       : [
-          section('basics', t('basics'), IdCard, basicsSection),
-          section('projects', t('projects'), FolderKanban, projectsSection, projectsBadge),
-          section('access', t('access'), Shield, accessSection),
-          section('model', t('model'), Cpu, modelSection),
-          section('advanced', t('advanced'), SlidersHorizontal, advancedSection),
-          section('triggers', t('triggers'), Zap, triggersSection),
-          section(
-            'actions',
-            t('actions'),
-            ListChecks,
-            actionsSection,
-            tools.length > 0 ? `${activeCount} / ${tools.length}` : undefined,
-          ),
-          ...(skillsSection
-            ? [section('skills', t('skills'), Sparkles, skillsSection, skillsBadge)]
-            : []),
-          ...(toolsSection ? [section('tools', t('tools'), Wrench, toolsSection, toolsBadge)] : []),
+          basicsSection,
+          projectsSection,
+          modelSection,
+          advancedSection,
+          triggersSection,
+          actionsSection,
+          skillsSection,
+          toolsSection,
         ];
 
-  const stack = sections.map(({ id, node }) => <Fragment key={id}>{node}</Fragment>);
-
-  // Full width: a sticky section nav on the left and one readable column of sections
-  // on the right, inside this component's own scroll container so the nav's scroll spy
-  // can track which section is in view.
+  // Full width: one readable column of sections, scrolling inside this component so
+  // the sheet's header and footer stay put.
   if (expanded) {
     return (
-      <AgentExpandedLayout
-        navSections={sections}
-        onExpand={(id) => setOpenSections((s) => ({ ...s, [id]: true }))}
-      >
-        {stack}
-      </AgentExpandedLayout>
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-5 pb-10 sm:px-6 sm:pt-2">
+        <div className={`mx-auto w-full space-y-8 ${AGENT_EXPANDED_WIDTH}`}>{stack}</div>
+      </div>
     );
   }
 

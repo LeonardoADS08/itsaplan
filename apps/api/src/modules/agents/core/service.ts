@@ -6,7 +6,6 @@ import {
   project,
   projectMember,
   teamMember,
-  teamRole,
   agentSkillLink,
   agentToolLink,
   agentFieldTrigger,
@@ -23,6 +22,7 @@ import { normalizeToolKeys, ALWAYS_ON_ACTIONS } from './runtime/tools/catalog';
 import { deleteThreadsWhere } from './runtime/memory';
 import { listAgentMemberFieldIds } from '#modules/custom-fields/service';
 import { runsTeam, type TeamStanding } from '#modules/teams/service';
+import { getDefaultRoleId } from '#modules/roles/service';
 
 // Data access for AI agents. Each agent is backed by a hidden bot user
 // (ai_agent.user_id -> user.id): that user is what a work item is assigned to,
@@ -98,8 +98,6 @@ export interface AiAgentRow {
   fieldTriggers: FieldTriggerRead[];
   // How long a delegation run waits before it can be claimed.
   delegationDelaySec: number;
-  // The team_role the bot user acts under, in every project it is a member of.
-  roleId: number;
   // The member who created the agent, and whose runs an 'owner'-scoped runner is
   // limited to. 'team' scope lets the runner take any member's runs.
   ownerUserId: string | null;
@@ -142,7 +140,6 @@ function mapAgent(row: {
   triggerOnAssign: boolean;
   fieldTriggers: FieldTriggerRead[];
   delegationDelaySec: number;
-  roleId: number;
   ownerUserId: string | null;
   runnerScope: string;
   lastSeenAt: Date | null;
@@ -173,7 +170,6 @@ function mapAgent(row: {
     triggerOnAssign: row.triggerOnAssign,
     fieldTriggers: row.fieldTriggers,
     delegationDelaySec: row.delegationDelaySec,
-    roleId: row.roleId,
     ownerUserId: row.ownerUserId,
     runnerScope: row.runnerScope as RunnerScope,
     lastSeenAt: row.lastSeenAt ? iso(row.lastSeenAt) : null,
@@ -212,7 +208,6 @@ const agentColumns = {
     FieldTriggerRead[]
   >`(select coalesce(json_agg(json_build_object('fieldId', ${agentFieldTrigger.fieldId}, 'name', ${customField.name}, 'delaySec', ${agentFieldTrigger.delaySec}) order by ${customField.name}), '[]'::json) from ${agentFieldTrigger} join ${customField} on ${customField.id} = ${agentFieldTrigger.fieldId} where ${agentFieldTrigger.agentId} = ${aiAgent.id})`,
   delegationDelaySec: aiAgent.delegationDelaySec,
-  roleId: aiAgent.roleId,
   ownerUserId: aiAgent.ownerUserId,
   runnerScope: aiAgent.runnerScope,
   lastSeenAt: aiAgent.lastSeenAt,
@@ -470,8 +465,7 @@ export async function agentTeam(userId: string): Promise<number | null> {
   return rows[0]?.teamId ?? null;
 }
 
-// True if the user id is an agent's bot user. A comment authored by such a user
-// never triggers agent runs, which stops agent-to-agent mention loops.
+// True if the user id is an agent's bot user rather than a person's.
 export async function isAgentUser(userId: string): Promise<boolean> {
   return (await agentTeam(userId)) !== null;
 }
@@ -492,19 +486,6 @@ async function assertModelCredential(
       `A model needs an LLM provider credential, not ${credential.integrationKey}.`,
     );
   }
-}
-
-// Asserts the role is one of the agent's own team, so what the agent may do is visible
-// on that team's roles list and follows every edit of it. A role of another team is
-// rejected.
-async function assertTeamRole(teamId: number, roleId: number): Promise<number> {
-  const rows = await db
-    .select({ id: teamRole.id })
-    .from(teamRole)
-    .where(and(eq(teamRole.teamId, teamId), eq(teamRole.id, roleId)))
-    .limit(1);
-  if (!rows[0]) throw new HttpError(400, 'Role not found in this team');
-  return rows[0].id;
 }
 
 // The projects of the team the agent is to work in. An id that is not a project of the
@@ -544,8 +525,6 @@ export interface NewAgentInput {
   // The projects of the team the agent works in. Empty means it works in none yet:
   // it authenticates and reaches nothing until it is attached to one.
   projectIds?: number[];
-  // The team role the agent acts under, in every project it works in.
-  roleId: number;
   // External-agent runner scope (default: any member's runs).
   runnerScope?: RunnerScope;
   // The member creating the agent, who owns its runner.
@@ -601,11 +580,9 @@ export async function createAgent(
   await assertUsernameFree(teamId, input.username);
   if (isInternal) await assertModelCredential(teamId, input.modelCredentialId);
   const projectIds = await resolveTeamProjectIds(teamId, input.projectIds ?? []);
-
-  // Every agent acts under a role of its team, so what it may do is a role an operator
-  // can read and edit. The project_member rows below carry it, which is what applies
-  // the permission checks to the agent's requests.
-  const roleId = await assertTeamRole(teamId, input.roleId);
+  // An agent joins a project the way a person accepting an invite does: on the team's
+  // default role, changed per project from the project's member list afterwards.
+  const roleId = await getDefaultRoleId(teamId);
 
   const agentId = await db.transaction(async (tx) => {
     await tx
@@ -630,7 +607,6 @@ export async function createAgent(
           triggerOnMention: input.triggerOnMention ?? isInternal,
           triggerOnAssign: input.triggerOnAssign ?? false,
           delegationDelaySec: input.delegationDelaySec,
-          roleId,
           ownerUserId: input.ownerUserId ?? null,
           runnerScope: input.runnerScope ?? 'team',
         })
@@ -664,14 +640,11 @@ export async function createAgent(
 
 // Replaces the projects the agent works in. Membership is what gives its key access,
 // so this is the whole of attaching and detaching: a project left out is detached, and
-// the runs, threads and issues it produced there are untouched. Every membership
-// carries the agent's role, so it works the same way in each of them.
-async function setAgentProjects(
-  agent: AiAgentRow,
-  roleId: number,
-  projectIds: number[],
-): Promise<number[]> {
+// the runs, threads and issues it produced there are untouched. A project it already
+// works in keeps the role that membership carries.
+async function setAgentProjects(agent: AiAgentRow, projectIds: number[]): Promise<number[]> {
   const wanted = await resolveTeamProjectIds(agent.teamId, projectIds);
+  const roleId = await getDefaultRoleId(agent.teamId);
   await db.transaction(async (tx) => {
     await tx
       .delete(projectMember)
@@ -769,7 +742,6 @@ export interface AgentPatch {
   // The projects the agent works in. Replaces the set, so a project left out is
   // detached.
   projectIds?: number[];
-  roleId?: number;
   modelCredentialId?: number | null;
   model?: string | null;
   instructions?: string | null;
@@ -801,14 +773,6 @@ export async function updateAgent(
     await db.update(user).set({ name: patch.name }).where(eq(user.id, agent.userId));
   }
 
-  // One role applies to every project of the agent, so changing it updates the config
-  // row and each of the bot user's memberships.
-  const roleId =
-    patch.roleId !== undefined ? await assertTeamRole(teamId, patch.roleId) : undefined;
-  if (roleId !== undefined) {
-    await db.update(projectMember).set({ roleId }).where(eq(projectMember.userId, agent.userId));
-  }
-
   const set: Partial<typeof aiAgent.$inferInsert> = {};
   if (patch.username !== undefined) {
     await assertUsernameFree(teamId, patch.username, id);
@@ -825,7 +789,6 @@ export async function updateAgent(
   if (patch.triggerOnMention !== undefined) set.triggerOnMention = patch.triggerOnMention;
   if (patch.triggerOnAssign !== undefined) set.triggerOnAssign = patch.triggerOnAssign;
   if (patch.delegationDelaySec !== undefined) set.delegationDelaySec = patch.delegationDelaySec;
-  if (roleId !== undefined) set.roleId = roleId;
   // The scope and its owner are one setting: 'owner' means the runs of the member who
   // chose it, so switching to it hands the agent to them.
   if (patch.runnerScope !== undefined) {
@@ -847,7 +810,7 @@ export async function updateAgent(
   // kept rather than dropped as unknown.
   const projectIds =
     patch.projectIds !== undefined
-      ? await setAgentProjects(agent, roleId ?? agent.roleId, patch.projectIds)
+      ? await setAgentProjects(agent, patch.projectIds)
       : agent.projects.map((p) => p.id);
   if (patch.fieldTriggers !== undefined) {
     await setFieldTriggers(id, projectIds, patch.fieldTriggers);

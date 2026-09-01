@@ -14,8 +14,8 @@
 // tools/local.ts). What a tool
 // accepts and who may call it come from the route itself (see tools/route-tools.ts);
 // this file adds the allowlist, the UI copy, and the agent-only overrides (see
-// ToolMeta.overrides). An agent's effective rights are the intersection of these keys
-// and its team role.
+// ToolMeta.overrides). An agent's effective rights in a project are the intersection
+// of these keys and the role its membership of that project carries.
 //
 // ToolMeta carries no resource and no action. The permission of an action is the one
 // its route asserts and is read off the route (see actionCatalog in route-tools.ts);

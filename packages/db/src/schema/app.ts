@@ -430,7 +430,8 @@ export const label = pgTable(
 // configuration (provider/model/instructions/tools) used to run it. Which projects
 // of the team an agent works in is its project_member rows, written by the routes
 // that attach it; what it may do there is the intersection of the tools it is
-// granted and its team role, which its team_member and project_member rows carry.
+// granted and the role that membership carries, which is per project like a
+// person's.
 export const aiAgent = pgTable(
   'ai_agent',
   {
@@ -465,16 +466,6 @@ export const aiAgent = pgTable(
     // to keep editing the issue after delegating it. Applies to delegation only: a
     // mention is a question already asked, and its author waits for the reply.
     delegationDelaySec: integer('delegation_delay_sec').notNull().default(120),
-    // Authorization: the team_role the bot user acts under. Every agent request
-    // carries its API key and is enforced by this role through the normal permission
-    // checks — an external agent's HTTP calls and an internal agent's in-process tool
-    // dispatch alike. Required, so what an agent may do is always a role of its team
-    // that an operator can read and edit rather than a matrix in code. No cascade: the
-    // roles route moves the agents off a role before it deletes it, and deleting the
-    // team takes the agents and the roles together in one statement.
-    roleId: integer('role_id')
-      .notNull()
-      .references(() => teamRole.id),
     // The agent's own API key, encrypted at rest (AES-256-GCM, see shared/crypto).
     // An internal agent replays it on every tool call, so unlike better-auth's
     // hashed apikey row it has to stay recoverable. Set for internal agents only:

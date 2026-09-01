@@ -34,7 +34,6 @@ export default function AgentProjectsSection({
 
   return (
     <AgentFormSection
-      id="projects"
       open={open}
       onOpenChange={onOpenChange}
       icon={FolderKanban}

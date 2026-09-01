@@ -100,11 +100,15 @@ export async function getRoleUsage(roleId: number): Promise<RoleUsage> {
     db
       .select({ n: count() })
       .from(projectMember)
-      // An agent's bot user holds a project_member row on the same role; it is
+      // An agent's bot user holds a project_member row like a person does; it is
       // counted as an agent instead. Same agent test as listMembers.
       .leftJoin(aiAgent, eq(aiAgent.userId, projectMember.userId))
       .where(and(eq(projectMember.roleId, roleId), isNull(aiAgent.id))),
-    db.select({ n: count() }).from(aiAgent).where(eq(aiAgent.roleId, roleId)),
+    db
+      .select({ n: count() })
+      .from(projectMember)
+      .innerJoin(aiAgent, eq(aiAgent.userId, projectMember.userId))
+      .where(eq(projectMember.roleId, roleId)),
     db
       .select({ n: count() })
       .from(teamInvite)
@@ -117,10 +121,10 @@ export function isRoleInUse(usage: RoleUsage): boolean {
   return usage.members + usage.agents + usage.invites > 0;
 }
 
-// Deletes a role after moving everything on it — members, agents, pending invites
-// — to targetRoleId, in one transaction, so nothing is left with a dangling role.
-// The caller guards against deleting the default role and supplies the target
-// whenever the role is in use.
+// Deletes a role after moving everything on it — memberships, people's and agents'
+// alike, and pending invites — to targetRoleId, in one transaction, so nothing is
+// left with a dangling role. The caller guards against deleting the default role and
+// supplies the target whenever the role is in use.
 export async function deleteRole(
   teamId: number,
   roleId: number,
@@ -131,11 +135,6 @@ export async function deleteRole(
       .update(projectMember)
       .set({ roleId: targetRoleId })
       .where(eq(projectMember.roleId, roleId));
-    // An agent always holds a role, and getRoleUsage counts the agents on this one, so
-    // the caller has named where they move before it asks for the deletion.
-    if (targetRoleId != null) {
-      await tx.update(aiAgent).set({ roleId: targetRoleId }).where(eq(aiAgent.roleId, roleId));
-    }
     await tx
       .update(teamInvite)
       .set({ roleId: targetRoleId })

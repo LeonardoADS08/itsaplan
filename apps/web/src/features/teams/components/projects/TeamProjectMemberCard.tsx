@@ -41,10 +41,13 @@ export default function TeamProjectMemberCard({
   const removeMember = useRemoveMember(projectKey);
   const [confirming, setConfirming] = useState(false);
 
-  const fixed = member.isAgent || member.source === 'scim';
+  // An agent joins and leaves with its AI Agent config, and a provisioned membership is
+  // the identity provider's, so neither is revoked here. A provisioned role is theirs
+  // too; an agent's role is set here like a person's.
+  const provisioned = member.source === 'scim';
   // The last owner cannot be demoted, so their role has nothing left to change.
-  const canReassign = canEdit && !self && !fixed && !isLastOwner;
-  const canRevoke = canDelete && !self && !fixed && !isLastOwner;
+  const canReassign = canEdit && !self && !provisioned && !isLastOwner;
+  const canRevoke = canDelete && !self && !member.isAgent && !provisioned && !isLastOwner;
   const canDescribe = !member.isAgent && (self || canEdit);
   const displayName = member.name || member.email;
 
