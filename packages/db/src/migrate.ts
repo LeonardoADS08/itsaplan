@@ -37,7 +37,9 @@ for (let attempt = 1; ; attempt++) {
 // A dump of the database as this release found it, so an operator who has to go back
 // to the previous release has something to restore. Taken before anything is applied,
 // and a failure stops the startup: a migration that runs without one cannot be undone.
-// SKIP_PRE_MIGRATION_BACKUP=1 is for an operator who backs up by other means.
+// SKIP_PRE_MIGRATION_BACKUP=1 is for an operator who backs up by other means, and is
+// what `db:migrate:test` sets — BACKUP_DIR is a path only the api container has, and
+// a test database that is truncated between tests has nothing to go back to.
 const journal = JSON.parse(readFileSync(`${migrationsFolder}/meta/_journal.json`, 'utf8'));
 const pending = await pendingMigrations(migrationClient, journal);
 const skipBackup = process.env.SKIP_PRE_MIGRATION_BACKUP === '1';
