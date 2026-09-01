@@ -577,18 +577,28 @@ describe('invites', () => {
       expect(teams.data?.find((one) => one.id === teamId)).toMatchObject({ role: 'member' });
     });
 
-    it('leaves the rank of someone already in the team alone', async () => {
+    it('refuses a project invite for someone already in the team with 409', async () => {
       const owner = await setupOwner();
       const teamId = await ownTeamId(owner.api);
       const manager = await addTeamMember(owner, teamId, 'manager');
-      const created = await owner.api
+
+      const res = await owner.api
         .projects({ projectKey: 'MKT' })
         .invites.post({ email: manager.user.email, role: 'member' });
 
-      await manager.api.invites({ token: created.data!.token }).accept.post();
+      expect(res.status).toBe(409);
+    });
 
-      const teams = await manager.api.teams.get();
-      expect(teams.data?.find((one) => one.id === teamId)).toMatchObject({ role: 'manager' });
+    // Accepting one would rewrite the membership they hold, which is how a project's
+    // last owner would be demoted past the last-owner check in members/.
+    it('refuses a project invite for someone already in the project with 409', async () => {
+      const owner = await setupOwner();
+
+      const res = await owner.api
+        .projects({ projectKey: 'MKT' })
+        .invites.post({ email: owner.user.email, role: 'member' });
+
+      expect(res.status).toBe(409);
     });
 
     it('lets a team manager who is not in the project invite into it', async () => {
@@ -660,6 +670,18 @@ describe('invites', () => {
 
       expect((await owner.api.teams({ teamId }).invites.post(body)).status).toBe(201);
       expect((await owner.api.teams({ teamId }).invites.post(body)).status).toBe(409);
+    });
+
+    it('refuses an invite for someone already in the team with 409', async () => {
+      const owner = await setupOwner();
+      const teamId = await ownTeamId(owner.api);
+      const member = await addTeamMember(owner, teamId, 'member');
+
+      const res = await owner.api
+        .teams({ teamId })
+        .invites.post({ email: member.user.email, role: 'manager' });
+
+      expect(res.status).toBe(409);
     });
 
     it('lists the invites into the team and into its projects, newest first', async () => {
@@ -735,34 +757,6 @@ describe('invites', () => {
         .teams({ teamId })
         .invites.post({ email: 'other@example.com', role: 'member' });
       expect(asMember.status).toBe(201);
-    });
-
-    it('promotes a plain team member who accepts a manager invite', async () => {
-      const owner = await setupOwner();
-      const teamId = await ownTeamId(owner.api);
-      const member = await addTeamMember(owner, teamId, 'member');
-      const created = await owner.api
-        .teams({ teamId })
-        .invites.post({ email: member.user.email, role: 'manager' });
-
-      await member.api.invites({ token: created.data!.token }).accept.post();
-
-      const teams = await member.api.teams.get();
-      expect(teams.data?.find((one) => one.id === teamId)).toMatchObject({ role: 'manager' });
-    });
-
-    it('never lowers the rank of someone who accepts a member invite', async () => {
-      const owner = await setupOwner();
-      const teamId = await ownTeamId(owner.api);
-      const manager = await addTeamMember(owner, teamId, 'manager');
-      const created = await owner.api
-        .teams({ teamId })
-        .invites.post({ email: manager.user.email, role: 'member' });
-
-      await manager.api.invites({ token: created.data!.token }).accept.post();
-
-      const teams = await manager.api.teams.get();
-      expect(teams.data?.find((one) => one.id === teamId)).toMatchObject({ role: 'manager' });
     });
 
     it('denies a plain team member with 403', async () => {

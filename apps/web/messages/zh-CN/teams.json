@@ -72,6 +72,9 @@
     "title": "邀请加入团队",
     "emailLabel": "邮箱",
     "emailPlaceholder": "name@example.com",
+    "alreadyMember": "{email} 已在此团队中",
+    "alreadyPending": "{email} 已有待处理的邀请",
+    "refused": "无法邀请 {email}",
     "roleLabel": "团队角色",
     "roleHint": {
       "member": "在你添加他的项目中工作。",

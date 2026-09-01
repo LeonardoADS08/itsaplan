@@ -39,6 +39,9 @@ export function useAddMember(projectKey: string) {
       qc.invalidateQueries({ queryKey: qk.anyTeam });
       toast.success(t('added'));
     },
+    // The add dialog shows why the person was refused under its picker, so opt out
+    // of the global error toast.
+    meta: { suppressErrorToast: true },
   });
 }
 
@@ -112,6 +115,8 @@ export function useCreateInvite(projectKey: string) {
       if (result.emailQueued) toast.success(t('emailQueued'));
       else toast.info(t('emailUnavailable'));
     },
+    // As with useAddMember: the add dialog owns the error UI.
+    meta: { suppressErrorToast: true },
   });
 }
 

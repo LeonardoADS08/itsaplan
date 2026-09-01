@@ -72,6 +72,9 @@
     "title": "Invite to team",
     "emailLabel": "Email",
     "emailPlaceholder": "name@example.com",
+    "alreadyMember": "{email} is already in this team",
+    "alreadyPending": "{email} already has a pending invite",
+    "refused": "{email} could not be invited",
     "roleLabel": "Team role",
     "roleHint": {
       "member": "Works in the projects you add them to.",

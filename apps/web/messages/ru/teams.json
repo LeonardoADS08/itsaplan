@@ -72,6 +72,9 @@
     "title": "Пригласить в команду",
     "emailLabel": "Почта",
     "emailPlaceholder": "name@example.com",
+    "alreadyMember": "{email} уже в этой команде",
+    "alreadyPending": "{email} уже приглашён",
+    "refused": "Не удалось пригласить {email}",
     "roleLabel": "Роль в команде",
     "roleHint": {
       "member": "Работает в проектах, куда его добавят.",

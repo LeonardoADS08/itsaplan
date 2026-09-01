@@ -118,7 +118,11 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
         }
       }
       if (!(await addMember(project.id, body.userId, body.role, roleId))) {
-        throw new HttpError(409, 'This user is already a member of the project');
+        throw new HttpError(
+          409,
+          'This user is already a member of the project',
+          'ALREADY_PROJECT_MEMBER',
+        );
       }
       return noContent();
     },

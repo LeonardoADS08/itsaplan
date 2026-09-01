@@ -72,6 +72,9 @@
     "title": "Запросити до команди",
     "emailLabel": "Пошта",
     "emailPlaceholder": "name@example.com",
+    "alreadyMember": "{email} вже в цій команді",
+    "alreadyPending": "{email} вже запрошений",
+    "refused": "Не вдалося запросити {email}",
     "roleLabel": "Роль у команді",
     "roleHint": {
       "member": "Працює в проєктах, куди його додадуть.",

@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { Mail, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { InviteTeamRole, TeamRole } from '@/lib/api';
+import { ApiError, type InviteTeamRole, type TeamRole } from '@/lib/api';
 import Modal from '@/components/common/overlay/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCreateTeamInvite } from '@/services/teams.service';
+
+// The message for each refusal the API can answer with; any other error falls back
+// to 'refused'.
+type RefusalKey = 'alreadyMember' | 'alreadyPending' | 'refused';
+
+const REFUSAL_KEY: Record<string, RefusalKey> = {
+  ALREADY_TEAM_MEMBER: 'alreadyMember',
+  INVITE_ALREADY_PENDING: 'alreadyPending',
+};
 
 // Invites someone to the team itself: they join its member list and reach its
 // projects through a membership added afterwards. Laid out like the project's own
@@ -35,6 +44,7 @@ export default function TeamInviteDialog({
   const tManage = useTranslations('teams.manage');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<InviteTeamRole>('member');
+  const [refusal, setRefusal] = useState<string | null>(null);
   const createInvite = useCreateTeamInvite(teamId);
 
   const ranks: InviteTeamRole[] = teamRole === 'owner' ? ['member', 'manager'] : ['member'];
@@ -43,11 +53,14 @@ export default function TeamInviteDialog({
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!address) return;
+    setRefusal(null);
     try {
       await createInvite.mutateAsync({ email: address, role });
       onClose();
-    } catch {
-      // The global handler toasts the reason; keep the dialog open for a retry.
+    } catch (error) {
+      // Kept open with the reason under the field, so the address can be corrected.
+      const code = error instanceof ApiError ? (error.code ?? '') : '';
+      setRefusal(t(REFUSAL_KEY[code] ?? 'refused', { email: address }));
     }
   }
 
@@ -73,9 +86,14 @@ export default function TeamInviteDialog({
               autoComplete="off"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setRefusal(null);
+              }}
+              aria-invalid={refusal != null}
               disabled={createInvite.isPending}
             />
+            {refusal && <p className="text-xs text-destructive">{refusal}</p>}
           </div>
 
           <div className="space-y-2">

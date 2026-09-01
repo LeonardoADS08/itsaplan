@@ -181,12 +181,15 @@ export function useTeamInvitesQuery(teamId: number, enabled = true) {
   });
 }
 
+// The invite dialog shows the reason under its address field, so this mutation opts
+// out of the global error toast.
 export function useCreateTeamInvite(teamId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { email: string; role: InviteTeamRole }) =>
       api.createTeamInvite(teamId, input),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.teamInvites(teamId) }),
+    meta: { suppressErrorToast: true },
   });
 }
 

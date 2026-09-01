@@ -1,8 +1,8 @@
 import { db, teamInvite, teamMember, projectMember, teamRole, team, project, user } from '@repo/db';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { HttpError, iso, pgErrorCode } from '#shared/lib';
-import type { MemberRole } from '#modules/members/service';
-import type { TeamRole } from '#modules/teams/service';
+import { getMembership, type MemberRole } from '#modules/members/service';
+import { getTeamMembership, type TeamRole } from '#modules/teams/service';
 
 // Data access for invites. An invite is a token-addressed grant of membership in a
 // team, and — when it names a project — in that project too. Creating one requires
@@ -129,8 +129,46 @@ function toRow(r: InviteSelection): InviteRow {
   };
 }
 
+// The account behind an email, or undefined when nobody signed up with it. The invite
+// email is stored normalized (lowercase); the account email is compared
+// case-insensitively because better-auth does not guarantee it is lowercased.
+async function findAccount(email: string): Promise<{ id: string } | undefined> {
+  const [account] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(sql`lower(${user.email})`, email))
+    .limit(1);
+  return account;
+}
+
+// An address already inside the team takes no invite. Accepting one rewrites the
+// membership the account already holds, which is how a project's last owner would be
+// demoted to member; a team member reaches a project through its member list instead.
+async function assertNotAlreadyMember(input: NewInvite, email: string): Promise<void> {
+  const account = await findAccount(email);
+  if (!account) return;
+
+  if (input.projectId != null && (await getMembership(input.projectId, account.id))) {
+    throw new HttpError(
+      409,
+      'This user is already a member of the project',
+      'ALREADY_PROJECT_MEMBER',
+    );
+  }
+  if (await getTeamMembership(input.teamId, account.id)) {
+    throw new HttpError(
+      409,
+      input.projectId == null
+        ? 'This user is already a member of the team'
+        : 'This user is already in the team. Add them to the project from its member list.',
+      'ALREADY_TEAM_MEMBER',
+    );
+  }
+}
+
 export async function createInvite(input: NewInvite): Promise<InviteRow> {
   const email = normalizeEmail(input.email);
+  await assertNotAlreadyMember(input, email);
   // Project owners bypass roles, so an owner invite never carries a role_id.
   const roleId = input.projectRole === 'member' ? input.roleId : null;
   let row;
@@ -149,7 +187,11 @@ export async function createInvite(input: NewInvite): Promise<InviteRow> {
       .returning({ id: teamInvite.id });
   } catch (err) {
     if (pgErrorCode(err) === '23505') {
-      throw new HttpError(409, 'A pending invite for this email already exists');
+      throw new HttpError(
+        409,
+        'A pending invite for this email already exists',
+        'INVITE_ALREADY_PENDING',
+      );
     }
     throw err;
   }
@@ -235,13 +277,7 @@ export async function getInviteByToken(token: string): Promise<InviteView | null
     .where(eq(teamInvite.token, token));
   const r = rows[0];
   if (!r) return null;
-  // The invite email is stored normalized (lowercase); compare case-insensitively
-  // against the account email, which better-auth does not guarantee is lowercased.
-  const account = await db
-    .select({ id: user.id })
-    .from(user)
-    .where(eq(sql`lower(${user.email})`, r.email))
-    .limit(1);
+  const account = await findAccount(r.email);
   return {
     token: r.token,
     teamName: r.teamName,
@@ -254,7 +290,7 @@ export async function getInviteByToken(token: string): Promise<InviteView | null
     roleName: r.roleName,
     status: r.status as InviteStatus,
     createdAt: iso(r.createdAt),
-    hasAccount: account.length > 0,
+    hasAccount: account != null,
   };
 }
 
@@ -291,10 +327,9 @@ export async function acceptInvite(
   userId: string,
 ): Promise<AcceptedInvite> {
   return db.transaction(async (tx) => {
-    // An invite only ever raises the rank someone holds in the team: setWhere keeps
-    // an owner or a manager where they are, so a project invite (always 'member')
-    // does not demote them, while a manager invite promotes a plain member — the
-    // only way a rank is granted after joining.
+    // An invite is refused for an address already in the team, so a conflict here is
+    // someone who joined between the invite and this accept. setWhere keeps an owner
+    // or a manager where they are: an invite never lowers a rank.
     await tx
       .insert(teamMember)
       .values({ teamId: invite.teamId, userId, role: invite.teamRole })

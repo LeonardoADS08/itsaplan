@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Mail, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ApiError } from '@/lib/api';
 import Modal from '@/components/common/overlay/Modal';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +21,16 @@ import {
 } from '@/services/members.service';
 import { useTeamRolesQuery } from '@/services/roles.service';
 import MemberPicker, { type MemberOption } from './MemberPicker';
+
+// The message for each refusal the API can answer with; any other error falls back
+// to 'refused'.
+type RefusalKey = 'alreadyMember' | 'alreadyInTeam' | 'alreadyInvited' | 'refused';
+
+const REFUSAL_KEY: Record<string, RefusalKey> = {
+  ALREADY_PROJECT_MEMBER: 'alreadyMember',
+  ALREADY_TEAM_MEMBER: 'alreadyInTeam',
+  INVITE_ALREADY_PENDING: 'alreadyInvited',
+};
 
 // Owner is not a custom role, so it sits outside the roles list under this value.
 const OWNER_VALUE = 'owner';
@@ -55,6 +66,7 @@ export default function MemberAddDialog({
   const [query, setQuery] = useState('');
   const [target, setTarget] = useState<MemberOption | null>(null);
   const [roleValue, setRoleValue] = useState('');
+  const [refusal, setRefusal] = useState<string | null>(null);
   const candidatesQuery = useMemberCandidatesQuery(projectKey, canAdd);
   const rolesQuery = useTeamRolesQuery(teamId);
   const addMember = useAddMember(projectKey);
@@ -83,6 +95,7 @@ export default function MemberAddDialog({
 
   async function submit() {
     if (!target || !role) return;
+    setRefusal(null);
     const input =
       role === OWNER_VALUE
         ? { role: 'owner' as const }
@@ -94,8 +107,11 @@ export default function MemberAddDialog({
         await createInvite.mutateAsync({ email: target.email, ...input });
       }
       onClose();
-    } catch {
-      // The global handler toasts the reason; keep the dialog open for a retry.
+    } catch (error) {
+      // Kept open with the reason under the picker, so another person can be chosen.
+      const code = error instanceof ApiError ? (error.code ?? '') : '';
+      const email = target.kind === 'invite' ? target.email : target.candidate.email;
+      setRefusal(t(REFUSAL_KEY[code] ?? 'refused', { email }));
     }
   }
 
@@ -119,7 +135,10 @@ export default function MemberAddDialog({
             <MemberPicker
               candidates={candidates}
               value={target}
-              onChange={setTarget}
+              onChange={(option) => {
+                setTarget(option);
+                setRefusal(null);
+              }}
               query={query}
               onQueryChange={setQuery}
               invite={invite}
@@ -127,6 +146,7 @@ export default function MemberAddDialog({
               canInvite={canInvite}
               disabled={busy}
             />
+            {refusal && <p className="text-xs text-destructive">{refusal}</p>}
           </div>
 
           <div className="space-y-2">

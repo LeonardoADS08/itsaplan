@@ -72,6 +72,9 @@
     "title": "دعوة للفريق",
     "emailLabel": "البريد",
     "emailPlaceholder": "name@example.com",
+    "alreadyMember": "{email} موجود بالفعل في هذا الفريق",
+    "alreadyPending": "{email} لديه دعوة معلقة بالفعل",
+    "refused": "تعذّرت دعوة {email}",
     "roleLabel": "الدور في الفريق",
     "roleHint": {
       "member": "يعمل في المشاريع التي تضيفه إليها.",

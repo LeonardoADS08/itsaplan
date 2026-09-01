@@ -116,7 +116,9 @@ Enforced declaratively through macros, never imperative calls in handlers.
   from the candidate list); anyone else joins through an invite, which puts them in
   the team as well. A team invite (`/teams/:teamId/invites`) names no project. One
   pending invite per (team, email) and per (project, email) — partial unique indexes →
-  409. `members/` removes (last owner protected).
+  409, and so is an address already in the team or in the project: accepting such an
+  invite would rewrite the membership it already holds, demoting an owner past the
+  last-owner check. `members/` removes (last owner protected).
 - The member list of a project is governed by its role matrix **or** by the team that
   owns it: `memberAdmin: ["members_manage", "<action>"]` passes an owner or manager of
   the team without a `project_member` row of their own, and every member route uses it
