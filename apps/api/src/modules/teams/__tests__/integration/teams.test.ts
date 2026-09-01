@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { api as anonApi, authedApi, type Api } from '#tests/helpers/app';
+import { api as anonApi, apiKeyApi, authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { addProjectMember } from '#tests/helpers/members';
+import { createAgent } from '#tests/helpers/agents';
 
 // The teams feature owns list, create, detail, rename, and leave. Every account is
 // given a team at registration, named after its username, so a fresh account already
@@ -930,6 +931,22 @@ describe('teams', () => {
       const left = await member.api.teams({ teamId }).leave.post();
       expect(left.status).toBe(409);
       expect((await member.api.projects({ projectKey: 'OPS' }).get()).status).toBe(200);
+    });
+
+    it('rejects an agent leaving with its own key', async () => {
+      const owner = await signUpClient();
+      const teamId = (await owner.api.teams.get()).data![0].id;
+      await owner.api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const created = await createAgent(owner.api, 'MKT', {
+        name: 'Runner',
+        username: 'runner',
+        kind: 'external',
+      });
+      const agentApi = apiKeyApi(created.data!.apiKey!);
+
+      expect((await agentApi.teams({ teamId }).leave.post()).status).toBe(409);
+      const members = await owner.api.teams({ teamId }).members.get();
+      expect(members.data?.items.some((one) => one.role === 'agent')).toBe(true);
     });
   });
 });

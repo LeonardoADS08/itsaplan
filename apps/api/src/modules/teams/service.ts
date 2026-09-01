@@ -723,8 +723,10 @@ export async function removeTeamMember(
 // Drops the caller's own membership, with their access to the team's projects. The
 // team keeps the projects themselves. The last owner cannot leave: a team without an
 // owner has nobody who can rename it. Neither can the only owner of one of its
-// projects, for the same reason one project down.
+// projects, for the same reason one project down. An agent cannot either: its standing
+// is written with the agent and nothing puts it back, so leaving would strand it.
 export async function leaveTeam(teamId: number, userId: string, role: TeamStanding): Promise<void> {
+  if (role === 'agent') throw new HttpError(409, 'An agent is removed with its agent settings');
   if (role === 'owner') {
     const [{ count }] = await db
       .select({ count: sql<number>`count(*)::int` })
