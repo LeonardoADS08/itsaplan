@@ -417,6 +417,27 @@ describe('projects', () => {
       expect(filters.conditions[0].values).toEqual([dstBacklog.id]);
     });
 
+    it('gives a copied webhook its own secret and leaves it off', async () => {
+      const { api } = await signUpClient();
+      await setupSource(api);
+      const source = await api.projects({ projectKey: 'SRC' }).webhooks.post({
+        url: 'https://example.com/hook',
+        events: ['issue.created'],
+      });
+
+      await api.projects({ projectKey: 'SRC' }).copy.post({
+        key: 'DST',
+        name: 'Destination',
+        include: { webhooks: true },
+      });
+
+      expect(source.data!.isActive).toBe(true);
+      const copied = (await api.projects({ projectKey: 'DST' }).webhooks.get()).data![0];
+      expect(copied.url).toBe('https://example.com/hook');
+      expect(copied.secret).not.toBe(source.data!.secret);
+      expect(copied.isActive).toBe(false);
+    });
+
     it('copies only the sections named in include, seeding default states', async () => {
       const { api } = await signUpClient();
       await setupSource(api);

@@ -28,6 +28,7 @@ import { getProjectDefaults } from '#modules/settings/service';
 import { listAgents, updateAgent } from '#modules/agents/core/service';
 import { listAllAgentSchedules, createAgentSchedule } from '#modules/agents/schedules/service';
 import { nextCronRun } from '#modules/agents/schedules/cron';
+import { generateSecret } from '#modules/webhooks/service';
 
 // Which parts of a source project the copy carries over. A key set false skips that
 // entity. Some sections depend on others (a view's filters reference
@@ -478,8 +479,10 @@ export async function copyProject(
       }
     }
 
-    // Webhook subscriptions, copied verbatim including the signing secret so an
-    // existing receiver keeps verifying. The failure counter resets.
+    // Webhook subscriptions: the URL and the event selection, with a signing secret of
+    // their own — the copy's owner must not receive the source's. The receiver cannot
+    // verify that signature until it is given the new secret, so the copy starts
+    // inactive and its owner enables it.
     if (inc.webhooks) {
       const webhookRows = await tx
         .select()
@@ -490,9 +493,9 @@ export async function copyProject(
         await tx.insert(webhook).values({
           projectId: proj.id,
           url: w.url,
-          secret: w.secret,
+          secret: generateSecret(),
           events: w.events,
-          isActive: w.isActive,
+          isActive: false,
         });
       }
     }
