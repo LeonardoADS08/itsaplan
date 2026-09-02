@@ -592,21 +592,29 @@ export async function listTeamProjectMembers(
   };
 }
 
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+// Writes a team owned by one account, with the default role its projects assign. Every
+// account owns one; the sign-up hook in @repo/auth writes the same rows inline, since
+// it runs inside better-auth rather than through this module.
+export async function insertOwnedTeam(tx: Transaction, name: string, ownerId: string) {
+  const [row] = await tx.insert(team).values({ name }).returning();
+  const [membership] = await tx
+    .insert(teamMember)
+    .values({ teamId: row.id, userId: ownerId, role: 'owner' })
+    .returning();
+  await tx.insert(teamRole).values({
+    teamId: row.id,
+    name: 'Member',
+    isDefault: true,
+    permissions: defaultMemberPermissions(),
+  });
+  return { team: row, membership };
+}
+
 export async function createTeam(name: string, ownerId: string): Promise<TeamRow> {
   return db.transaction(async (tx) => {
-    const [row] = await tx.insert(team).values({ name }).returning();
-    const [membership] = await tx
-      .insert(teamMember)
-      .values({ teamId: row.id, userId: ownerId, role: 'owner' })
-      .returning();
-    // The roles the team's projects assign live on the team, so it starts with the
-    // default one, as the sign-up hook in @repo/auth does for the team it creates.
-    await tx.insert(teamRole).values({
-      teamId: row.id,
-      name: 'Member',
-      isDefault: true,
-      permissions: defaultMemberPermissions(),
-    });
+    const { team: row, membership } = await insertOwnedTeam(tx, name, ownerId);
     return {
       id: row.id,
       name: row.name,
