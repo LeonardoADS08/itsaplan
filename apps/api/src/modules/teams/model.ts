@@ -36,6 +36,11 @@ export const TeamResponse = t.Object({
     [t.Literal('owner'), t.Literal('manager'), t.Literal('member'), t.Literal('agent')],
     { description: 'Your standing in this team.' },
   ),
+  source: t.Union([t.Literal('invite'), t.Literal('scim')], {
+    description:
+      "How your membership came about. A provisioned one is the identity provider's: you " +
+      'cannot leave the team while it stands.',
+  }),
   joinedAt: t.String(),
   projectCount: t.Number(),
   memberCount: t.Number(),
@@ -79,6 +84,9 @@ export const TeamMemberPageResponse = pageResponse(
       t.Literal('member'),
       t.Literal('agent'),
     ]),
+    source: t.Union([t.Literal('invite'), t.Literal('scim')], {
+      description: "A provisioned membership is the identity provider's and is not removed here.",
+    }),
     agentId: t.Nullable(t.Number({ description: 'The AI agent this bot user backs.' })),
     username: t.Nullable(t.String({ description: "An agent's mention handle." })),
     joinedAt: t.String(),
@@ -113,6 +121,9 @@ export const TeamProjectDetailResponse = t.Object({
   viewer: t.Nullable(
     t.Object({
       role: t.Union([t.Literal('owner'), t.Literal('member')]),
+      source: t.Union([t.Literal('invite'), t.Literal('scim')], {
+        description: "A provisioned membership is the identity provider's: it cannot be left.",
+      }),
       permissions: PermissionMatrixSchema,
     }),
     {

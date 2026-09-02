@@ -16,7 +16,7 @@ import TeamProjectLeaveDialog from './TeamProjectLeaveDialog';
 // What the reader may do with one project of the team, as the actions of the panel
 // header. Editing and copying follow their rank in the team — a manager does both,
 // an owner also deletes — while leaving follows their membership in the project,
-// which its last owner cannot give up.
+// which its last owner, and anyone a provisioned group put there, cannot give up.
 export default function TeamProjectActions({
   teamId,
   teamRole,
@@ -26,7 +26,7 @@ export default function TeamProjectActions({
   teamId: number;
   teamRole: TeamRole;
   project: TeamProject;
-  viewer: { role: MemberRole } | null;
+  viewer: { role: MemberRole; source: 'invite' | 'scim' } | null;
 }) {
   const t = useTranslations('projects');
   const router = useRouter();
@@ -38,7 +38,8 @@ export default function TeamProjectActions({
 
   const userId = session?.user.id;
   const isLastOwner = viewer?.role === 'owner' && project.owners.length === 1;
-  const canLeave = !!viewer && !isLastOwner;
+  // A provisioned membership ends at the identity provider, so it is not given up here.
+  const canLeave = !!viewer && !isLastOwner && viewer.source !== 'scim';
   const canEdit = teamRole !== 'member';
   const canDelete = teamRole === 'owner';
 

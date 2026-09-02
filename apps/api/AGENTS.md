@@ -129,7 +129,12 @@ Enforced declaratively through macros, never imperative calls in handlers.
   only ever writes, re-roles or removes its own `'scim'` rows, and `members/` refuses to
   edit or remove one (409) because the next sync would undo the change. A project
   membership it grants comes with a `team_member` row in the owning team, added as a
-  plain member and never removed again — the same order an accepted invite follows.
+  plain member — the same order an accepted invite follows. `team_member.source` marks
+  that row the same way, and it is removed again once the sync holds no project
+  membership of that team; a row someone else created, or one whose rank was raised
+  afterwards, stays. `teams/` refuses to remove or leave such a row for the same reason
+  `members/` refuses its project one: the rank is the team's to set, the membership
+  itself is the identity provider's.
 
 ## Team-owned agents
 

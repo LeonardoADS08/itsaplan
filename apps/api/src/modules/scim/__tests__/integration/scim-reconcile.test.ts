@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
 import { resetDb } from '#tests/helpers/db';
 import { addUser, joinProject, type Actor } from '#modules/god/__tests__/helpers';
-import { createRole } from '#tests/helpers/roles';
+import { createRole, teamIdOf } from '#tests/helpers/roles';
 import { patchOps, scimUserBody, setupScim, type ScimSetup } from '../helpers';
 
 // What a provisioned group grants: the mappings the instance owner declares in god
@@ -16,6 +16,11 @@ async function createProject(owner: Actor, name: string, key: string) {
 async function membersOf(owner: Actor, projectKey: string) {
   const res = await owner.api.projects({ projectKey }).members.get();
   return res.data!.items;
+}
+
+async function teamMemberIds(owner: Actor, teamId: number) {
+  const res = await owner.api.teams({ teamId }).members.get();
+  return res.data!.items.map((m) => m.userId);
 }
 
 async function provisionGroup(setup: ScimSetup, displayName: string, memberIds: string[]) {
@@ -85,6 +90,46 @@ describe('SCIM group reconciliation', () => {
 
     const members = await membersOf(setup.god, 'MKT');
     expect(members.map((m) => m.userId)).not.toContain(ada.data!.id);
+  });
+
+  it('grants the team membership the project one stands on, and takes it back', async () => {
+    const setup = await setupScim();
+    const project = await createProject(setup.god, 'Marketing', 'MKT');
+    const teamId = await teamIdOf(setup.god.api, 'MKT');
+    const ada = await setup.scim.scim.v2.Users.post(scimUserBody());
+    const groupId = await provisionGroup(setup, 'Engineering', [ada.data!.id]);
+    await setup.god.api.god['scim-groups']({ groupId }).mappings.put({
+      mappings: [{ projectId: project.id, role: 'member', roleId: null }],
+    });
+    expect(await teamMemberIds(setup.god, teamId)).toContain(ada.data!.id);
+
+    await setup.scim.scim.v2
+      .Groups({ id: groupId })
+      .patch(patchOps([{ op: 'remove', path: 'members', value: [{ value: ada.data!.id }] }]));
+
+    expect(await teamMemberIds(setup.god, teamId)).not.toContain(ada.data!.id);
+  });
+
+  it('leaves a team membership that came from an invite alone', async () => {
+    const setup = await setupScim();
+    const project = await createProject(setup.god, 'Marketing', 'MKT');
+    const teamId = await teamIdOf(setup.god.api, 'MKT');
+    const invited = await addUser({ email: 'invited@example.com' });
+    const invite = await setup.god.api
+      .teams({ teamId })
+      .invites.post({ email: invited.email, role: 'member' });
+    await invited.api.invites({ token: invite.data!.token }).accept.post();
+    const groupId = await provisionGroup(setup, 'Engineering', [invited.id]);
+    await setup.god.api.god['scim-groups']({ groupId }).mappings.put({
+      mappings: [{ projectId: project.id, role: 'member', roleId: null }],
+    });
+
+    await setup.scim.scim.v2
+      .Groups({ id: groupId })
+      .patch(patchOps([{ op: 'remove', path: 'members', value: [{ value: invited.id }] }]));
+
+    expect((await membersOf(setup.god, 'MKT')).map((m) => m.userId)).not.toContain(invited.id);
+    expect(await teamMemberIds(setup.god, teamId)).toContain(invited.id);
   });
 
   it('revokes membership when the group is unmapped, and when it is deleted', async () => {
@@ -194,6 +239,25 @@ describe('SCIM group reconciliation', () => {
       .members({ userId: ada.data!.id })
       .delete();
     expect(removed.status).toBe(409);
+  });
+
+  it('refuses to remove or leave the team membership the sync owns', async () => {
+    const setup = await setupScim();
+    const project = await createProject(setup.god, 'Marketing', 'MKT');
+    const teamId = await teamIdOf(setup.god.api, 'MKT');
+    const ada = await addUser({ email: 'ada@example.com' });
+    const groupId = await provisionGroup(setup, 'Engineering', [ada.id]);
+    await setup.god.api.god['scim-groups']({ groupId }).mappings.put({
+      mappings: [{ projectId: project.id, role: 'member', roleId: null }],
+    });
+
+    const removed = await setup.god.api.teams({ teamId }).members({ userId: ada.id }).delete();
+    expect(removed.status).toBe(409);
+    expect(removed.error!.value).toMatchObject({ error: 'This membership is managed by SCIM' });
+
+    const left = await ada.api.teams({ teamId }).leave.post();
+    expect(left.status).toBe(409);
+    expect(await teamMemberIds(setup.god, teamId)).toContain(ada.id);
   });
 
   describe('mapping validation', () => {

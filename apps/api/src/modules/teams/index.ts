@@ -370,7 +370,8 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
         summary: 'Remove a member from the team',
         description:
           'Remove a member from the team and from every project the team owns. The issues ' +
-          'they were assigned to and the work they logged stay as they are.',
+          'they were assigned to and the work they logged stay as they are. A membership a ' +
+          'provisioned group granted is managed by the identity provider.',
       },
     },
   )
@@ -389,7 +390,8 @@ export const teamRoutes = new Elysia({ name: 'teams', detail: { tags: ['Teams'] 
         summary: 'Leave a team',
         description:
           'Leave a team you belong to, and every project it owns. The last owner cannot ' +
-          'leave; the projects stay with the team.',
+          'leave, and neither can a member a provisioned group put there; the projects stay ' +
+          'with the team.',
       },
     },
   );

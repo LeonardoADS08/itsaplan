@@ -62,10 +62,14 @@ it, and a repeated create for an address it already provisioned answers "already
 rather than overwriting the link back to the provider.
 
 A pushed group grants nothing until you say what it is for: on the same page, open a group
-and add the projects its members should join, and the role they join on. Removing a project
-from that list takes away the memberships the group gave it. A membership someone got
-through an invite is never touched by a sync, and one the sync created cannot be edited from
-the project's members page — it changes at the identity provider.
+and add the projects its members should join, and the role they join on. A project belongs
+to a team, so joining one also makes the person a member of that team, on the plain member
+rank; the roles you can pick from are the team's. Removing a project from that list takes
+away the memberships the group gave it, and once the group grants nothing else in that team,
+the team membership goes with them. A membership someone got through an invite is never
+touched by a sync, in either direction, and one the sync created cannot be edited from the
+project's members page, nor ended from the team's — it changes at the identity provider.
+What the person ranks as in the team is still the team's own to set.
 
 A group also appears here without any explicit push, in two cases: a SCIM user whose
 payload embeds a `groups` attribute instead of being assigned through a separate group

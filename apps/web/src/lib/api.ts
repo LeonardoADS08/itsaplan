@@ -152,6 +152,9 @@ export interface Team {
   // The caller's rank in the team. The API also answers an agent's own key, which reads
   // 'agent' there; an agent never opens this app, so a person's rank is what arrives.
   role: TeamRole;
+  // How the caller's own membership came about. A provisioned one is the identity
+  // provider's: the team cannot be left while it stands.
+  source: 'invite' | 'scim';
   joinedAt: string;
   projectCount: number;
   memberCount: number;
@@ -179,6 +182,9 @@ export interface TeamMember {
   email: string;
   image: string | null;
   role: TeamRole | 'agent';
+  // 'scim' when a provisioned group granted this membership. It ends at the identity
+  // provider, so the list does not remove it.
+  source: 'invite' | 'scim';
   agentId: number | null;
   username: string | null;
   joinedAt: string;
@@ -223,7 +229,8 @@ export interface TeamProjectDetail {
   lastActivityAt: string | null;
   stats: AnalyticsStats;
   // The reader's own membership in the project, null when they only run the team.
-  viewer: { role: MemberRole; permissions: Permissions } | null;
+  // A provisioned one ends at the identity provider, so it cannot be left here.
+  viewer: { role: MemberRole; source: 'invite' | 'scim'; permissions: Permissions } | null;
 }
 
 // One member of a project the team owns. The access their membership resolves to is

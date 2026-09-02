@@ -20,6 +20,7 @@ import { defaultMemberPermissions, fullPermissions, type Permissions } from '#sh
 import {
   getMemberContext,
   getMembership,
+  getMembershipSource,
   getTeamPermissions,
   listMembersPage,
   matchesFilters,
@@ -52,6 +53,9 @@ export interface TeamRow {
   // The caller's standing in the team, not a property of the team itself. An agent
   // reading its own team is 'agent', which runs nothing.
   role: TeamStanding;
+  // How the caller's own membership came about. 'scim' is the identity provider's, and
+  // is left there rather than here.
+  source: MemberSource;
   joinedAt: string;
   projectCount: number;
   memberCount: number;
@@ -78,6 +82,7 @@ export interface TeamMemberRow {
   email: string;
   image: string | null;
   role: TeamStanding;
+  source: MemberSource;
   agentId: number | null;
   username: string | null;
   joinedAt: string;
@@ -132,7 +137,7 @@ export interface TeamProjectDetail {
   stats: StatsDto;
   // The reader's own membership in this project, or null when they only reach it
   // through the team. What they may do with its members is decided from it.
-  viewer: { role: MemberRole; permissions: Permissions } | null;
+  viewer: { role: MemberRole; source: MemberSource; permissions: Permissions } | null;
 }
 
 // One page of the team's members, with how many match the search.
@@ -174,6 +179,7 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
       name: team.name,
       mcpEnabled: team.mcpEnabled,
       role: teamMember.role,
+      source: teamMember.source,
       joinedAt: teamMember.createdAt,
       createdAt: team.createdAt,
     })
@@ -261,6 +267,7 @@ async function loadTeamRows(userId: string, teamId?: number): Promise<TeamRow[]>
       name: row.name,
       mcpEnabled: row.mcpEnabled,
       role: standing,
+      source: row.source as MemberSource,
       joinedAt: iso(row.joinedAt),
       projectCount: (runsTeam(standing) ? projectCount?.count : projectCount?.joined) ?? 0,
       memberCount: members.get(row.id)?.count ?? 0,
@@ -401,6 +408,7 @@ export async function listTeamMembers(
         email: user.email,
         image: user.image,
         role: teamMember.role,
+        source: teamMember.source,
         agentId: aiAgent.id,
         username: aiAgent.username,
         joinedAt: teamMember.createdAt,
@@ -427,6 +435,7 @@ export async function listTeamMembers(
       email: m.email,
       image: m.image,
       role: m.role as TeamStanding,
+      source: m.source as MemberSource,
       agentId: m.agentId,
       username: m.username,
       joinedAt: iso(m.joinedAt),
@@ -533,12 +542,18 @@ export async function getTeamProject(
   const viewer = await getMemberContext(projectId, userId);
   if (!runsTeam(standing) && !viewer) return null;
 
-  const [activity, stats] = await Promise.all([lastActivityAt(projectId), getStats(projectId)]);
+  const [activity, stats, source] = await Promise.all([
+    lastActivityAt(projectId),
+    getStats(projectId),
+    getMembershipSource(projectId, userId),
+  ]);
 
   return {
     lastActivityAt: activity,
     stats,
-    viewer: viewer ? { role: viewer.role, permissions: viewer.permissions } : null,
+    viewer: viewer
+      ? { role: viewer.role, source: source ?? 'invite', permissions: viewer.permissions }
+      : null,
   };
 }
 
@@ -597,6 +612,7 @@ export async function createTeam(name: string, ownerId: string): Promise<TeamRow
       name: row.name,
       mcpEnabled: row.mcpEnabled,
       role: 'owner',
+      source: 'invite',
       joinedAt: iso(membership.createdAt),
       projectCount: 0,
       memberCount: 1,
@@ -702,6 +718,20 @@ async function dropTeamMembership(teamId: number, userId: string): Promise<void>
   });
 }
 
+// A membership the SCIM group reconciliation owns ends at the identity provider: the
+// next sync would put it back, and dropping it here would take the project memberships
+// that same sync granted with it. Only the plain member rows it writes — a rank raised
+// by hand is the team's, and the reconciliation leaves those alone too.
+async function assertNotProvisioned(teamId: number, userId: string): Promise<void> {
+  const [row] = await db
+    .select({ role: teamMember.role, source: teamMember.source })
+    .from(teamMember)
+    .where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)));
+  if (row?.source === 'scim' && row.role === 'member') {
+    throw new HttpError(409, 'This membership is managed by SCIM');
+  }
+}
+
 // Removes a member from the team. Nobody removes themselves — that is leaving the
 // team. Removing an owner is possible because the actor is one and stays, so the team
 // never loses its last owner.
@@ -715,6 +745,7 @@ export async function removeTeamMember(
   const current = await getTeamMembership(teamId, userId);
   if (!current) throw new HttpError(404, 'Member not found');
   if (current === 'agent') throw new HttpError(409, 'An agent is removed with its agent settings');
+  await assertNotProvisioned(teamId, userId);
   await assertLeavesNoProjectOwnerless(teamId, userId, 'They');
 
   await dropTeamMembership(teamId, userId);
@@ -734,6 +765,7 @@ export async function leaveTeam(teamId: number, userId: string, role: TeamStandi
       .where(and(eq(teamMember.teamId, teamId), eq(teamMember.role, 'owner')));
     if (count === 1) throw new HttpError(409, 'The last owner cannot leave the team');
   }
+  await assertNotProvisioned(teamId, userId);
   await assertLeavesNoProjectOwnerless(teamId, userId, 'You');
   await dropTeamMembership(teamId, userId);
 }

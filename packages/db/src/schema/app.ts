@@ -78,11 +78,17 @@ export const teamMember = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     role: text('role').notNull().default('member'),
+    // How this membership came about, read the same way as project_member.source:
+    // 'scim' is a row the SCIM group reconciliation created and therefore owns, so
+    // deprovisioning removes it again; everything else is 'invite' and a sync never
+    // touches it.
+    source: text('source').notNull().default('invite'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     primaryKey({ columns: [t.teamId, t.userId] }),
     check('team_member_role_check', sql`${t.role} IN ('owner', 'manager', 'member', 'agent')`),
+    check('team_member_source_check', sql`${t.source} IN ('invite', 'scim')`),
     index('team_member_user_idx').on(t.userId),
   ],
 );

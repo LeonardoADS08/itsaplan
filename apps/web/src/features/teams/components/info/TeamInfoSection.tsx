@@ -17,10 +17,12 @@ import { Label } from '@/components/ui/label';
 import TeamLeadsSection from './TeamLeadsSection';
 import TeamLeaveDialog from './TeamLeaveDialog';
 
-// The last owner of a team has nobody to hand it over to, so leaving it is not
-// offered — the API rejects it too.
-function isLastOwner(team: Team): boolean {
-  return team.role === 'owner' && team.ownerCount === 1;
+// Leaving is offered only where the API allows it: the last owner has nobody to hand
+// the team over to, and a membership a provisioned group granted ends at the identity
+// provider.
+function canLeave(team: Team): boolean {
+  if (team.role === 'owner' && team.ownerCount === 1) return false;
+  return !(team.source === 'scim' && team.role === 'member');
 }
 
 // The team itself: the name its owner edits here, the caller's rank in it, and the
@@ -89,7 +91,7 @@ export default function TeamInfoSection({ teamId }: { teamId: number }) {
 
         <TeamLeadsSection teamId={teamId} />
 
-        {!isLastOwner(team) && (
+        {canLeave(team) && (
           <SettingsSection
             title={tManage('leaveAction')}
             description={t('leaveHint')}
