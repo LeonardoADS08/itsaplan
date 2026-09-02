@@ -20,6 +20,7 @@ import {
 import { getProjectSetting, setProjectSetting } from '#shared/project-settings';
 import { deleteThreadsWhere } from '#modules/agents/core/runtime/memory';
 import { getProjectDefaults } from '#modules/settings/service';
+import { dropUnusedTeamMembership } from '#modules/scim/reconcile';
 
 // Data access for projects: the top-level container that groups its own columns,
 // issue types, labels, assignees, custom fields, issues, saved views, and
@@ -511,5 +512,16 @@ export async function setSubtaskAutomationSettings(
 // outside those cascades.
 export async function deleteProject(projectId: number): Promise<void> {
   await deleteThreadsWhere({ projectId });
+  // A team membership the SCIM reconciliation granted stands on the project
+  // memberships it granted with it, and no group change follows the delete to re-check
+  // it, so the members are read while they still exist and re-checked afterwards.
+  const provisioned = await db
+    .select({ teamId: project.teamId, userId: projectMember.userId })
+    .from(projectMember)
+    .innerJoin(project, eq(project.id, projectMember.projectId))
+    .where(and(eq(projectMember.projectId, projectId), eq(projectMember.source, 'scim')));
   await db.delete(project).where(eq(project.id, projectId));
+  for (const { teamId, userId } of provisioned) {
+    await dropUnusedTeamMembership(teamId, userId);
+  }
 }

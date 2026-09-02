@@ -119,7 +119,7 @@ async function reconcileProject(projectId: number): Promise<void> {
 // that team does. Only a row the reconciliation owns: one somebody set up by hand is
 // left alone, as their project membership is, and so is a row whose rank was raised
 // afterwards — a team is left with owners and managers it did not have to re-appoint.
-async function dropUnusedTeamMembership(teamId: number, userId: string): Promise<void> {
+export async function dropUnusedTeamMembership(teamId: number, userId: string): Promise<void> {
   const remaining = await db
     .select({ projectId: projectMember.projectId })
     .from(projectMember)

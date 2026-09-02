@@ -110,6 +110,22 @@ describe('SCIM group reconciliation', () => {
     expect(await teamMemberIds(setup.god, teamId)).not.toContain(ada.data!.id);
   });
 
+  it('takes the team membership back when the project it stood on is deleted', async () => {
+    const setup = await setupScim();
+    const project = await createProject(setup.god, 'Marketing', 'MKT');
+    const teamId = await teamIdOf(setup.god.api, 'MKT');
+    const ada = await setup.scim.scim.v2.Users.post(scimUserBody());
+    const groupId = await provisionGroup(setup, 'Engineering', [ada.data!.id]);
+    await setup.god.api.god['scim-groups']({ groupId }).mappings.put({
+      mappings: [{ projectId: project.id, role: 'member', roleId: null }],
+    });
+
+    const deleted = await setup.god.api.projects({ projectKey: 'MKT' }).delete();
+
+    expect(deleted.status).toBe(204);
+    expect(await teamMemberIds(setup.god, teamId)).not.toContain(ada.data!.id);
+  });
+
   it('leaves a team membership that came from an invite alone', async () => {
     const setup = await setupScim();
     const project = await createProject(setup.god, 'Marketing', 'MKT');
