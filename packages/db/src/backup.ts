@@ -131,6 +131,18 @@ export async function pruneBackups(): Promise<number> {
   return removed;
 }
 
+// Records which migrations this startup applied, so the "what changed" screen can tell
+// a report of one upgrade from a report left by an earlier one. Written whether or not
+// a dump was taken, and only when something was applied: a plain restart applies
+// nothing and must not erase what the last upgrade did.
+export async function recordMigrationRun(sql: Sql, migrations: string[]): Promise<void> {
+  await sql`
+    insert into app_setting (key, value, updated_at)
+    values ('migration.last', ${JSON.stringify({ migrations })}::jsonb, now())
+    on conflict (key) do update set value = excluded.value, updated_at = now()
+  `;
+}
+
 // Records the dump where the app can read it: the "what changed" screen tells the
 // operator where it is and when it goes away. Written after the migrations, so
 // app_setting is guaranteed to exist.

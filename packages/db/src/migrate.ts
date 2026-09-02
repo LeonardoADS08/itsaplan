@@ -4,7 +4,13 @@ import { readFileSync } from 'node:fs';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
-import { pendingMigrations, pruneBackups, recordBackup, writeBackup } from './backup';
+import {
+  pendingMigrations,
+  pruneBackups,
+  recordBackup,
+  recordMigrationRun,
+  writeBackup,
+} from './backup';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -61,6 +67,7 @@ if (pending.length > 0 && !skipBackup) {
 
 console.log('⏳ Running migrations...');
 await migrate(db, { migrationsFolder });
+if (pending.length > 0) await recordMigrationRun(migrationClient, pending);
 if (backup) await recordBackup(migrationClient, backup);
 const removed = await pruneBackups();
 if (removed > 0) console.log(`🧹 Removed ${removed} backup(s) past the retention window`);

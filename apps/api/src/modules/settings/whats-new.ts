@@ -12,7 +12,10 @@ import { getAppVersion, releasesSince, type Release } from './updates';
 // the line to draw here — every account is given a team of its own at registration,
 // which would make that everyone.
 
-const MIGRATION_REPORT_KEY = 'migration.0115_teams';
+const MIGRATION_TAG = '0115_teams';
+const MIGRATION_REPORT_KEY = `migration.${MIGRATION_TAG}`;
+// What the last upgrade applied, written by migrate.ts on startup.
+const MIGRATION_RUN_KEY = 'migration.last';
 const BACKUP_KEY = 'backup.last';
 
 export interface BackupInfo {
@@ -58,12 +61,18 @@ export async function getWhatsNew(user: AuthUser): Promise<WhatsNew> {
     .where(eq(userPreference.userId, user.id));
   const admin = user.role === 'god';
   const releases = await releasesSince(preference?.seenVersion ?? null);
-  const [backup, migration] = admin
+  const [backup, applied] = admin
     ? await Promise.all([
         readSetting<BackupInfo>(BACKUP_KEY),
-        readSetting<TeamsMigrationReport>(MIGRATION_REPORT_KEY),
+        readSetting<{ migrations: string[] }>(MIGRATION_RUN_KEY),
       ])
     : [null, null];
+  // The report belongs to the upgrade that applied its migration. A later release,
+  // and a fresh install where the migration ran over an empty database, leave it out:
+  // the row it wrote stays for an operator reading app_setting by hand.
+  const migration = applied?.migrations.includes(MIGRATION_TAG)
+    ? await readSetting<TeamsMigrationReport>(MIGRATION_REPORT_KEY)
+    : null;
   return {
     version,
     pending: preference?.seenVersion !== version,

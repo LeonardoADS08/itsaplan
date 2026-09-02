@@ -180,6 +180,20 @@ UPDATE "team_role" r SET "name" = r."name" || ' [' || p."key" || ']'
       WHERE o."team_id" = r."team_id" AND o."id" <> r."id" AND o."name" = r."name"
    );--> statement-breakpoint
 
+-- A suffix can land on a name a role already carried — a project named "Web" holding
+-- both "Member" and "Member (Web)" ends with two of the latter, and both take the same
+-- key next. Numbering what is still equal is what the unique index below stands on;
+-- the team's default role sorts first, so it keeps its name.
+WITH "numbered" AS (
+  SELECT "id",
+         ROW_NUMBER() OVER (PARTITION BY "team_id", "name" ORDER BY "is_default" DESC, "id")
+           AS "position"
+    FROM "team_role"
+)
+UPDATE "team_role" r SET "name" = r."name" || ' #' || n."position"
+  FROM "numbered" n
+ WHERE n."id" = r."id" AND n."position" > 1;--> statement-breakpoint
+
 INSERT INTO "migration_count"
 SELECT 'mergedRoles', count(*) FROM "role_migration" rm JOIN "team_default" d ON d."team_id" = rm."team_id"
  WHERE rm."is_standard_default" AND rm."id" <> d."id";--> statement-breakpoint
