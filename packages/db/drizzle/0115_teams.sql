@@ -148,6 +148,9 @@ UPDATE "project_invite" i SET "role_id" = d."id"
 UPDATE "ai_agent" a SET "role_id" = d."id"
   FROM "role_migration" rm JOIN "team_default" d ON d."team_id" = rm."team_id"
  WHERE a."role_id" = rm."id" AND rm."is_standard_default" AND rm."id" <> d."id";--> statement-breakpoint
+UPDATE "scim_group_mapping" g SET "role_id" = d."id"
+  FROM "role_migration" rm JOIN "team_default" d ON d."team_id" = rm."team_id"
+ WHERE g."role_id" = rm."id" AND rm."is_standard_default" AND rm."id" <> d."id";--> statement-breakpoint
 DELETE FROM "team_role" r USING "role_migration" rm, "team_default" d
  WHERE r."id" = rm."id" AND rm."is_standard_default" AND d."team_id" = rm."team_id" AND rm."id" <> d."id";--> statement-breakpoint
 
