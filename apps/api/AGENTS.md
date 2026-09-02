@@ -125,6 +125,10 @@ Enforced declaratively through macros, never imperative calls in handlers.
   — list, add, assign a role, describe, remove. The two that address one member by
   `:userId` use `memberSelfOrAdmin` instead: that member acts on their own row —
   leaving the project, saying what they do in it — with no member permission at all.
+  The one standing the member permission does not carry is `owner`: an owner bypasses
+  the matrix, so adding one and promoting to one both go through `assertProjectAdmin`
+  — an owner of the project, or an owner or manager of the team that owns it. The team
+  rank is stricter still: only a team owner grants or takes `owner` there.
 - `project_member.source` says which path a row came from: `modules/scim/reconcile.ts`
   only ever writes, re-roles or removes its own `'scim'` rows, and `members/` refuses to
   edit or remove one (409) because the next sync would undo the change. A project

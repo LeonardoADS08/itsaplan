@@ -4,11 +4,12 @@ import { paginate } from '#shared/pagination';
 import { noContent } from '#shared/http';
 import { authContext } from '#shared/auth-context';
 import { guards } from '#shared/guards';
-import { requireUser } from '#shared/access';
+import { assertProjectAdmin, requireUser, type AuthUser } from '#shared/access';
 import { HttpError } from '#shared/lib';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { getDefaultRoleId, getRole } from '#modules/roles/service';
 import { getTeamMembership } from '#modules/teams/service';
+import type { ProjectRow } from '#modules/projects/service';
 import { isAgentUser } from '#modules/agents/core/service';
 import {
   MemberCandidateListResponse,
@@ -46,6 +47,19 @@ async function assertAgentNotOwner(userId: string, role: string): Promise<void> 
   if (role === 'owner' && (await isAgentUser(userId))) {
     throw new HttpError(400, 'An AI agent cannot be a project owner');
   }
+}
+
+// Who may hand out project ownership. The member permission fills the list and
+// assigns the roles the team offers; ownership is not one of them, since an owner
+// bypasses the matrix and could hand it back. Only an owner of the project, or an
+// owner or manager of the team that owns it, grants it.
+async function assertMayGrantOwner(
+  project: ProjectRow,
+  role: string,
+  user: AuthUser | undefined | null,
+): Promise<void> {
+  if (role !== 'owner') return;
+  await assertProjectAdmin(project, user);
 }
 
 export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Members'] } })
@@ -100,10 +114,11 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
   // an invite, which puts them in the team first.
   .post(
     '/projects/:projectKey/members',
-    async ({ project, body }) => {
+    async ({ project, body, user }) => {
       if (!(await getTeamMembership(project.teamId, body.userId))) {
         throw new HttpError(400, "This user is not a member of the project's team");
       }
+      await assertMayGrantOwner(project, body.role, user);
       await assertAgentNotOwner(body.userId, body.role);
       // An explicit roleId must name a role of this project's team; omitting it
       // joins the member on the team's default role, as accepting an invite does.
@@ -134,7 +149,8 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
         summary: 'Add a member',
         description:
           "Add a member of the project's team to the project, as an owner or on a custom role " +
-          "(roleId, or null for the team's default role).",
+          "(roleId, or null for the team's default role). Only a project owner or a team owner " +
+          'or manager adds an owner.',
         ...mcpTool('add_member'),
       },
     },
@@ -151,6 +167,7 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
       const target = await getMembership(project.id, params.userId);
       if (!target) throw new HttpError(404, 'Member not found');
       await assertNotProvisioned(project.id, params.userId);
+      await assertMayGrantOwner(project, body.role, user);
       await assertAgentNotOwner(params.userId, body.role);
 
       if (body.role === 'owner') {
@@ -178,10 +195,10 @@ export const memberRoutes = new Elysia({ name: 'members', detail: { tags: ['Memb
       detail: {
         summary: "Update a member's role",
         description:
-          "Set a member's role. 'owner' promotes to owner; 'member' assigns a custom role by " +
-          'roleId, or null for the default. You cannot change your own role, the last owner ' +
-          'cannot be demoted, and a membership granted by a provisioned group is managed by ' +
-          'the identity provider.',
+          "Set a member's role. 'owner' promotes to owner, which only a project owner or a team " +
+          "owner or manager may grant; 'member' assigns a custom role by roleId, or null for " +
+          'the default. You cannot change your own role, the last owner cannot be demoted, and ' +
+          'a membership granted by a provisioned group is managed by the identity provider.',
         ...mcpTool('set_member_role'),
       },
     },

@@ -79,11 +79,22 @@ export async function requireProjectAdmin(
   projectKey: string,
   user: AuthUser | undefined | null,
 ): Promise<ProjectRow> {
-  const current = requireUser(user);
   const project = await requireProject(projectKey);
-  if ((await getMembership(project.id, current.id)) === 'owner') return project;
-  const standing = await getTeamMembership(project.teamId, current.id);
-  if (runsTeam(standing)) return project;
+  await assertProjectAdmin(project, user);
+  return project;
+}
+
+// The same rule for a handler that already holds the project row: an owner of the
+// project, or an owner or manager of the team that owns it. Granting project
+// ownership asks for it — an owner bypasses the role matrix, so the member
+// permission that fills the list must not also be able to hand that out.
+export async function assertProjectAdmin(
+  project: ProjectRow,
+  user: AuthUser | undefined | null,
+): Promise<void> {
+  const current = requireUser(user);
+  if ((await getMembership(project.id, current.id)) === 'owner') return;
+  if (runsTeam(await getTeamMembership(project.teamId, current.id))) return;
   throw new HttpError(403, 'Only a project owner or a team owner or manager can do this');
 }
 

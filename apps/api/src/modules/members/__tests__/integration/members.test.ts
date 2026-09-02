@@ -138,6 +138,33 @@ describe('members', () => {
       });
     });
 
+    it('denies a member whose role grants members_manage create the owner role with 403', async () => {
+      const owner = await setupOwner();
+      const joiner = await addTeamMember(owner);
+      const adder = await addMember(owner);
+      const role = await createRole(owner.api, 'MKT', {
+        name: 'People',
+        permissions: { members_manage: { read: true, create: true } },
+      });
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: adder.user.userId })
+        .patch({ role: 'member', roleId: role.data!.id });
+
+      const res = await adder.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: joiner.userId, role: 'owner' });
+      expect(res.status).toBe(403);
+
+      expect(
+        (
+          await adder.api
+            .projects({ projectKey: 'MKT' })
+            .members.post({ userId: joiner.userId, role: 'member' })
+        ).status,
+      ).toBe(204);
+    });
+
     it('rejects someone outside the team with 400', async () => {
       const owner = await setupOwner();
       const stranger = await signUpTestUser();
@@ -472,6 +499,38 @@ describe('members', () => {
         .projects({ projectKey: 'MKT' })
         .members({ userId: other.user.userId })
         .patch({ role: 'member', roleId: role.data!.id });
+      expect(res.status).toBe(204);
+    });
+
+    it('denies a member whose role grants members_manage edit the owner role with 403', async () => {
+      const owner = await setupOwner();
+      const editor = await addMember(owner);
+      const other = await addMember(owner);
+      const role = await createRole(owner.api, 'MKT', {
+        name: 'People',
+        permissions: { members_manage: { read: true, edit: true } },
+      });
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: editor.user.userId })
+        .patch({ role: 'member', roleId: role.data!.id });
+
+      const res = await editor.api
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: other.user.userId })
+        .patch({ role: 'owner' });
+      expect(res.status).toBe(403);
+    });
+
+    it('lets a manager of the team promote a member to owner', async () => {
+      const owner = await setupOwner();
+      const member = await addMember(owner);
+      const manager = await addTeamMember(owner, 'manager');
+
+      const res = await authedApi(manager.cookie)
+        .projects({ projectKey: 'MKT' })
+        .members({ userId: member.user.userId })
+        .patch({ role: 'owner' });
       expect(res.status).toBe(204);
     });
 
