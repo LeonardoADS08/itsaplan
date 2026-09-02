@@ -18,6 +18,8 @@ import {
   type Permissions,
 } from '#shared/permissions';
 import { getProjectSetting, setProjectSetting } from '#shared/project-settings';
+import { PROJECT_FEATURES, featureLabel, type ProjectFeature } from '#shared/features';
+import { getLimits } from '#shared/limits';
 import { deleteThreadsWhere } from '#modules/agents/core/runtime/memory';
 import { getProjectDefaults } from '#modules/settings/service';
 import { dropUnusedTeamMembership } from '#modules/scim/reconcile';
@@ -48,6 +50,10 @@ export interface ProjectRow {
   pointsEstimateEnabled: boolean;
   timeEstimateEnabled: boolean;
   timeLoggingEnabled: boolean;
+  // The sections this project may use at all. A section missing here is blocked for
+  // the team that owns the project: its flag above reads as off and the settings page
+  // does not offer it.
+  availableFeatures: ProjectFeature[];
   createdAt: string;
 }
 
@@ -81,7 +87,13 @@ const projectWithTeam = {
   teamMcpEnabled: team.mcpEnabled,
 };
 
-export function mapProject(row: ProjectWithTeam): ProjectRow {
+// A blocked section reads as off whatever the project has stored, so masking here is
+// what turns a feature off everywhere: the web app reads the flags off this DTO, and
+// the route guards read them off the project the guard resolved.
+export async function mapProject(row: ProjectWithTeam): Promise<ProjectRow> {
+  const { blockedFeatures } = await getLimits({ teamId: row.teamId });
+  const on = (feature: ProjectFeature, stored: boolean) =>
+    stored && !blockedFeatures.includes(feature);
   return {
     id: row.id,
     teamId: row.teamId,
@@ -91,16 +103,17 @@ export function mapProject(row: ProjectWithTeam): ProjectRow {
     description: row.description,
     mcpEnabled: row.mcpEnabled,
     teamMcpEnabled: row.teamMcpEnabled,
-    initiativesEnabled: row.initiativesEnabled,
-    dashboardsEnabled: row.dashboardsEnabled,
-    notesEnabled: row.notesEnabled,
-    cyclesEnabled: row.cyclesEnabled,
-    subtasksEnabled: row.subtasksEnabled,
-    checklistsEnabled: row.checklistsEnabled,
-    issueStatsEnabled: row.issueStatsEnabled,
+    initiativesEnabled: on('initiatives', row.initiativesEnabled),
+    dashboardsEnabled: on('dashboards', row.dashboardsEnabled),
+    notesEnabled: on('notes', row.notesEnabled),
+    cyclesEnabled: on('cycles', row.cyclesEnabled),
+    subtasksEnabled: on('subtasks', row.subtasksEnabled),
+    checklistsEnabled: on('checklists', row.checklistsEnabled),
+    issueStatsEnabled: on('issueStats', row.issueStatsEnabled),
     pointsEstimateEnabled: row.pointsEstimateEnabled,
     timeEstimateEnabled: row.timeEstimateEnabled,
     timeLoggingEnabled: row.timeLoggingEnabled,
+    availableFeatures: PROJECT_FEATURES.filter((feature) => !blockedFeatures.includes(feature)),
     createdAt: iso(row.createdAt),
   };
 }
@@ -128,19 +141,21 @@ export async function listProjects(
     .leftJoin(teamRole, eq(teamRole.id, projectMember.roleId))
     .where(where)
     .orderBy(project.key);
-  return rows.map(({ memberRole, rolePermissions, ...row }) => {
-    const role = memberRole === 'owner' ? 'owner' : 'member';
-    const item: ProjectListItem = { ...mapProject(row), role };
-    if (opts.withPermissions) {
-      item.permissions =
-        role === 'owner'
-          ? fullPermissions()
-          : rolePermissions
-            ? normalizePermissions(rolePermissions)
-            : defaultMemberPermissions();
-    }
-    return item;
-  });
+  return Promise.all(
+    rows.map(async ({ memberRole, rolePermissions, ...row }) => {
+      const role = memberRole === 'owner' ? 'owner' : 'member';
+      const item: ProjectListItem = { ...(await mapProject(row)), role };
+      if (opts.withPermissions) {
+        item.permissions =
+          role === 'owner'
+            ? fullPermissions()
+            : rolePermissions
+              ? normalizePermissions(rolePermissions)
+              : defaultMemberPermissions();
+      }
+      return item;
+    }),
+  );
 }
 
 export async function getProjectByKey(key: string): Promise<ProjectRow | null> {
@@ -371,6 +386,11 @@ export async function setProjectFeatures(
   projectId: number,
   patch: Partial<ProjectFeatures>,
 ): Promise<ProjectRow | null> {
+  const { blockedFeatures } = await getLimits({ teamId: await getProjectTeamId(projectId) });
+  const blocked = blockedFeatures.find((feature) => patch[feature]);
+  if (blocked) {
+    throw new HttpError(400, `${featureLabel(blocked)} are not available for this team`);
+  }
   const values: Partial<typeof project.$inferInsert> = {};
   if (patch.initiatives !== undefined) values.initiativesEnabled = patch.initiatives;
   if (patch.dashboards !== undefined) values.dashboardsEnabled = patch.dashboards;

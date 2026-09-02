@@ -2,7 +2,12 @@ import { db, teamInvite, teamMember, projectMember, teamRole, team, project, use
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { HttpError, iso, pgErrorCode } from '#shared/lib';
 import { getMembership, type MemberRole } from '#modules/members/service';
-import { getTeamMembership, runsTeam, type TeamRole } from '#modules/teams/service';
+import {
+  assertTeamSeatFree,
+  getTeamMembership,
+  runsTeam,
+  type TeamRole,
+} from '#modules/teams/service';
 
 // Data access for invites. An invite is a token-addressed grant of membership in a
 // team, and — when it names a project — in that project too. Creating one requires
@@ -372,6 +377,10 @@ export async function acceptInvite(
   if (invite.projectId != null && (await getMembership(invite.projectId, userId))) {
     throw new HttpError(409, 'You are already a member of this project', 'ALREADY_PROJECT_MEMBER');
   }
+
+  // Somebody already in the team takes no further seat: the accept only rewrites the
+  // rank they hold.
+  if (!(await getTeamMembership(invite.teamId, userId))) await assertTeamSeatFree(invite.teamId);
 
   return db.transaction(async (tx) => {
     // An invite is refused for an address already in the team, so a conflict here is

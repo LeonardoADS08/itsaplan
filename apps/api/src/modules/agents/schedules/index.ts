@@ -21,6 +21,7 @@ import {
   updateScheduleBody,
 } from './model';
 import {
+  assertScheduleInterval,
   cancelPendingScheduleRuns,
   createAgentSchedule,
   deleteAgentSchedule,
@@ -64,6 +65,7 @@ export const agentScheduleRoutes = new Elysia({
     '/projects/:projectKey/agent-schedules',
     async ({ project, body, set, user }) => {
       const cron = body.cron.trim();
+      await assertScheduleInterval(project.teamId, cron);
       const row = await createAgentSchedule({
         projectId: project.id,
         agentId: body.agentId,
@@ -93,6 +95,7 @@ export const agentScheduleRoutes = new Elysia({
     '/projects/:projectKey/agent-schedules/:scheduleId',
     async ({ project, params, body, user }) => {
       const cron = body.cron?.trim();
+      if (cron !== undefined) await assertScheduleInterval(project.teamId, cron);
       const current = await getAgentSchedule(project.id, params.scheduleId, requireUser(user).id);
       if (!current) throw new HttpError(404, 'Schedule not found');
       // Recompute the next run when the cron changes, or when resuming a paused schedule.

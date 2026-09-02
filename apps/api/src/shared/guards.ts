@@ -11,8 +11,11 @@ import {
   requireTeamPermission,
   assertPermission,
   assertMcpEnabled,
+  assertFeatureEnabled,
+  assertProjectFeature,
   type AuthUser,
 } from './access';
+import type { ProjectFeature } from './features';
 import { getProjectById } from '#modules/projects/service';
 import { runsTeam, teamMcpEnabled } from '#modules/teams/service';
 import { isMcpRequest } from './mcp-request';
@@ -55,8 +58,9 @@ function permissionDetail(permission: Permission) {
 // (no :projectKey in the path). resolveProjectId maps the route params to the
 // entity's owning project id (null means the entity was not found). The macro
 // asserts the given action on `resource` and injects the resolved `projectId` into
-// the handler context, so a handler that needs it does not resolve it again. Used
-// like:
+// the handler context, so a handler that needs it does not resolve it again. `feature`
+// names the optional section the entity belongs to, closing every route of the macro
+// while the project has that section off. Used like:
 //
 //   .macro({
 //     workItem: entityGuard("work_items", "Issue not found",
@@ -67,6 +71,7 @@ export function entityGuard(
   resource: PermissionResource,
   notFound: string,
   resolveProjectId: (params: Record<string, string>) => Promise<number | null>,
+  feature?: ProjectFeature,
 ) {
   return (action: PermissionAction) => ({
     ...permissionDetail([resource, action]),
@@ -74,6 +79,7 @@ export function entityGuard(
       const projectId = await resolveProjectId(params as Record<string, string>);
       if (projectId == null) throw new HttpError(404, notFound);
       await assertPermission(projectId, user, resource, action);
+      if (feature) await assertProjectFeature(projectId, feature);
       await assertMcpAllowed(projectId, request.headers);
       return { projectId };
     },
@@ -135,6 +141,20 @@ export const guards = new Elysia({ name: 'guards' }).use(authContext).macro({
         const project = await requireProjectAccess((params as ProjectKeyParams).projectKey, user);
         assertMcpEnabled(project, isMcpRequest(request.headers));
         return { project };
+      },
+    };
+  },
+
+  // The optional section a route belongs to, set beside the permission the route
+  // asserts. A section its project has turned off closes its routes, so what the
+  // settings page hides cannot be reached through the API either. It resolves the
+  // project through the membership check as well, so it belongs on a route that
+  // already requires membership — not on one a team owner reaches without it.
+  feature(name: ProjectFeature) {
+    return {
+      async resolve({ params, user }) {
+        const project = await requireProjectAccess((params as ProjectKeyParams).projectKey, user);
+        assertFeatureEnabled(project, name);
       },
     };
   },

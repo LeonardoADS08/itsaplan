@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, afterEach, beforeEach } from 'bun:test';
 import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { addProjectMember } from '#tests/helpers/members';
 import { createRole, listProjectRoles } from '#tests/helpers/roles';
 import { createAgent, projectIdOf, teamOf } from '#tests/helpers/agents';
+import { clearLimits, setLimits } from '#tests/helpers/limits';
 
 // Full integration flow: a real session against the real (test) database.
 // Requires the test DB to be up and migrated:
@@ -34,6 +35,7 @@ describe('projects', () => {
   beforeEach(async () => {
     await resetDb();
   });
+  afterEach(clearLimits);
 
   describe('create', () => {
     it('creates a project and lists it for its owner', async () => {
@@ -755,6 +757,53 @@ describe('projects', () => {
         checklistsEnabled: false,
         issueStatsEnabled: false,
       });
+    });
+
+    it('closes the routes and the fields of a section that is turned off', async () => {
+      const { api } = await signUpClient();
+      await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      const columnId = (await viewOf(api, 'MKT')).data!.columns[0].id;
+      const parent = await api.projects({ projectKey: 'MKT' }).issues.post({
+        columnId,
+        title: 'Parent',
+      });
+      await api
+        .projects({ projectKey: 'MKT' })
+        .settings.patch({ features: { initiatives: false, checklists: false, subtasks: false } });
+
+      expect((await api.projects({ projectKey: 'MKT' }).initiatives.get()).status).toBe(403);
+      expect(
+        (await api.issues({ issueId: parent.data!.id }).checklists.post({ title: 'Steps' })).status,
+      ).toBe(403);
+      // A field reaching a closed section is refused with it, not only its own routes.
+      const subtask = await api
+        .projects({ projectKey: 'MKT' })
+        .issues.post({ columnId, title: 'Subtask', parentId: parent.data!.id });
+      expect(subtask.status).toBe(403);
+    });
+
+    it('reports a section the team cannot use as off and refuses to turn it on', async () => {
+      const { api } = await signUpClient();
+      await api.projects.post({ key: 'MKT', name: 'Marketing' });
+      setLimits({ blockedFeatures: ['initiatives'] });
+
+      const settings = await api.projects({ projectKey: 'MKT' }).settings.get();
+      expect(settings.data?.features).toMatchObject({ initiatives: false, dashboards: true });
+
+      const project = (await viewOf(api, 'MKT')).data!.project;
+      expect(project.initiativesEnabled).toBe(false);
+      expect(project.availableFeatures).not.toContain('initiatives');
+      expect(project.availableFeatures).toContain('dashboards');
+
+      const on = await api
+        .projects({ projectKey: 'MKT' })
+        .settings.patch({ features: { initiatives: true } });
+      expect(on.status).toBe(400);
+      expect((await api.projects({ projectKey: 'MKT' }).initiatives.get()).status).toBe(403);
+
+      // The block is not stored on the project: it applies again as soon as it is gone.
+      clearLimits();
+      expect((await viewOf(api, 'MKT')).data!.project.initiativesEnabled).toBe(true);
     });
 
     it('denies turning a section off to a non-owner (owner-only)', async () => {

@@ -41,8 +41,11 @@ export const initiativeRoutes = new Elysia({
   // Guard for routes that address an initiative by its own id (no :projectKey in
   // the path). Set `initiative: "<action>"` in the route options.
   .macro({
-    initiative: entityGuard('initiatives', 'Initiative not found', (p) =>
-      getInitiativeProjectId(Number(p.initiativeId)),
+    initiative: entityGuard(
+      'initiatives',
+      'Initiative not found',
+      (p) => getInitiativeProjectId(Number(p.initiativeId)),
+      'initiatives',
     ),
   })
 
@@ -68,6 +71,7 @@ export const initiativeRoutes = new Elysia({
     {
       query: listInitiativesQuery,
       permission: ['initiatives', 'read'],
+      feature: 'initiatives',
       response: { 200: InitiativePageResponse, ...commonErrors },
       detail: {
         summary: 'List initiatives',
@@ -85,6 +89,7 @@ export const initiativeRoutes = new Elysia({
     {
       query: initiativeOptionsQuery,
       permission: ['work_items', 'read'],
+      feature: 'initiatives',
       response: { 200: InitiativeOptionListResponse, ...commonErrors },
       detail: {
         summary: 'List initiative options',
@@ -98,6 +103,7 @@ export const initiativeRoutes = new Elysia({
     async ({ project }) => initiativeStatusCounts(project.id),
     {
       permission: ['initiatives', 'read'],
+      feature: 'initiatives',
       response: { 200: InitiativeCountsResponse, ...commonErrors },
       detail: {
         summary: 'Initiative status counts',
@@ -115,6 +121,7 @@ export const initiativeRoutes = new Elysia({
     {
       body: createInitiativeBody,
       permission: ['initiatives', 'create'],
+      feature: 'initiatives',
       response: { 201: InitiativeResponse, ...commonErrors },
       detail: {
         summary: 'Create an initiative',

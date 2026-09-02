@@ -1,4 +1,4 @@
-import { db, issue, issueAttachment, issueFieldValue } from '@repo/db';
+import { db, issue, issueAttachment, issueFieldValue, project } from '@repo/db';
 import { eq, sql } from 'drizzle-orm';
 import { iso, num } from '#shared/lib';
 
@@ -67,6 +67,18 @@ export async function getProjectAttachmentBytes(projectId: number): Promise<numb
     .from(issueAttachment)
     .innerJoin(issue, eq(issue.id, issueAttachment.issueId))
     .where(eq(issue.projectId, projectId));
+  return num(rows[0]?.total ?? 0);
+}
+
+// The same total across every project of one team, which is what a team-wide storage
+// ceiling counts.
+export async function getTeamAttachmentBytes(teamId: number): Promise<number> {
+  const rows = await db
+    .select({ total: sql<string>`coalesce(sum(${issueAttachment.sizeBytes}), 0)` })
+    .from(issueAttachment)
+    .innerJoin(issue, eq(issue.id, issueAttachment.issueId))
+    .innerJoin(project, eq(project.id, issue.projectId))
+    .where(eq(project.teamId, teamId));
   return num(rows[0]?.total ?? 0);
 }
 

@@ -1,8 +1,9 @@
-import { describe, expect, it, beforeEach } from 'bun:test';
+import { describe, expect, it, afterEach, beforeEach } from 'bun:test';
 import { resetDb } from '#tests/helpers/db';
 import { addUser, joinProject, type Actor } from '#modules/god/__tests__/helpers';
 import { createRole, teamIdOf } from '#tests/helpers/roles';
 import { patchOps, scimUserBody, setupScim, type ScimSetup } from '../helpers';
+import { clearLimits, setLimits } from '#tests/helpers/limits';
 
 // What a provisioned group grants: the mappings the instance owner declares in god
 // mode turn group membership into project membership. Only the rows the sync owns
@@ -34,6 +35,24 @@ async function provisionGroup(setup: ScimSetup, displayName: string, memberIds: 
 
 describe('SCIM group reconciliation', () => {
   beforeEach(resetDb);
+  afterEach(clearLimits);
+
+  it('adds nobody the team has no seat for', async () => {
+    const setup = await setupScim();
+    const project = await createProject(setup.god, 'Marketing', 'MKT');
+    const ada = await setup.scim.scim.v2.Users.post(scimUserBody());
+    const groupId = await provisionGroup(setup, 'Engineering', [ada.data!.id]);
+    // The instance owner alone already fills the team.
+    setLimits({ maxTeamMembers: 1 });
+
+    await setup.god.api.god['scim-groups']({ groupId }).mappings.put({
+      mappings: [{ projectId: project.id, role: 'member', roleId: null }],
+    });
+
+    expect(await membersOf(setup.god, 'MKT')).not.toContainEqual(
+      expect.objectContaining({ userId: ada.data!.id }),
+    );
+  });
 
   it('grants membership at the mapped role when a group is mapped', async () => {
     const setup = await setupScim();

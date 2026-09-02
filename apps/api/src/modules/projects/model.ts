@@ -1,4 +1,5 @@
 import { t } from 'elysia';
+import { PROJECT_FEATURES } from '#shared/features';
 import { ColumnResponse } from '#modules/columns/model';
 import { CustomFieldResponse } from '#modules/custom-fields/model';
 import { IssueTypeResponse } from '#modules/issue-types/model';
@@ -78,6 +79,7 @@ export const ProjectResponse = t.Object({
   pointsEstimateEnabled: t.Boolean(),
   timeEstimateEnabled: t.Boolean(),
   timeLoggingEnabled: t.Boolean(),
+  availableFeatures: t.Array(t.UnionEnum([...PROJECT_FEATURES])),
   createdAt: t.String(),
 });
 

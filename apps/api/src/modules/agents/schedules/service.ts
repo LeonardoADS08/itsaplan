@@ -1,6 +1,8 @@
 import { db, agentRun, agentSchedule, aiAgent, user } from '@repo/db';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { HttpError, iso, rethrowDuplicate } from '#shared/lib';
+import { getLimits } from '#shared/limits';
+import { minCronIntervalSeconds } from './cron';
 import { agentWorksInProject, canTriggerAgent, isTriggerableBy } from '../core/service';
 import { contextTokensOf } from '../core/run-queue';
 import { deleteThreadsWhere } from '../core/runtime/memory';
@@ -132,6 +134,16 @@ export async function getAgentSchedule(
 async function assertTriggerable(agentId: number, actorUserId: string): Promise<void> {
   if (!(await canTriggerAgent(agentId, actorUserId))) {
     throw new HttpError(403, 'This agent only takes tasks from its owner');
+  }
+}
+
+// Refuses a cron that fires more often than the team's floor allows.
+export async function assertScheduleInterval(teamId: number, cron: string): Promise<void> {
+  const { minScheduleIntervalSeconds } = await getLimits({ teamId });
+  if (minScheduleIntervalSeconds === 0) return;
+  if (minCronIntervalSeconds(cron) < minScheduleIntervalSeconds) {
+    const minutes = Math.ceil(minScheduleIntervalSeconds / 60);
+    throw new HttpError(400, `A schedule runs at most once every ${minutes} minutes`);
   }
 }
 

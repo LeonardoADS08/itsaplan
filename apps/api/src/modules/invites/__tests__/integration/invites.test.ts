@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, afterEach, beforeEach } from 'bun:test';
 import { app, authedApi } from '#tests/helpers/app';
 import { signUpTestUser, type TestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { createRole } from '#tests/helpers/roles';
+import { clearLimits, setLimits } from '#tests/helpers/limits';
 
 // Integration coverage for the invites feature: the routes that create/list/revoke
 // invites into a project and into a team, and the invitee-side routes that read,
@@ -81,6 +82,7 @@ describe('invites', () => {
   beforeEach(async () => {
     await resetDb();
   });
+  afterEach(clearLimits);
 
   describe('create — POST /projects/:projectKey/invites', () => {
     it('creates a pending invite and returns its token and inviter', async () => {
@@ -441,6 +443,27 @@ describe('invites', () => {
       // The invite is no longer pending.
       const view = await inviteeApi.invites({ token: created.data!.token }).get();
       expect(view.data).toMatchObject({ status: 'accepted' });
+    });
+
+    it('refuses the accept once the team has no seat left', async () => {
+      const owner = await setupOwner();
+      const invitee = await signUpTestUser();
+      const created = await owner.api
+        .projects({ projectKey: 'MKT' })
+        .invites.post({ email: invitee.email, role: 'member' });
+      const inviteeApi = authedApi(invitee.cookie);
+      // The owner alone already fills the team.
+      setLimits({ maxTeamMembers: 1 });
+
+      const accept = await inviteeApi.invites({ token: created.data!.token }).accept.post();
+      expect(accept.status).toBe(409);
+      expect((await inviteeApi.projects({ projectKey: 'MKT' }).get()).status).toBe(403);
+
+      // The invite is still pending, so it works again once there is room.
+      clearLimits();
+      expect((await inviteeApi.invites({ token: created.data!.token }).accept.post()).status).toBe(
+        200,
+      );
     });
 
     it("joins the invitee on the invite's pinned custom role", async () => {

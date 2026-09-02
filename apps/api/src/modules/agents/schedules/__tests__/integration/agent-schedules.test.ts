@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, afterEach, beforeEach } from 'bun:test';
 import { apiKeyApi, authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { untaggedRoutes } from '#tests/helpers/mcp';
 import { createAgent, projectIdOf, teamOf } from '#tests/helpers/agents';
+import { clearLimits, setLimits } from '#tests/helpers/limits';
 
 // A schedule sends a fixed task to an internal agent on a cron, in UTC. The worker
 // picks up the queued runs, so a run created here stays pending. Access is the
@@ -69,6 +70,29 @@ async function createSchedule(
 describe('agent schedules', () => {
   beforeEach(async () => {
     await resetDb();
+  });
+  afterEach(clearLimits);
+
+  it('refuses a cron that fires more often than the limits allow', async () => {
+    const { asOwner } = await setup();
+    const agentId = await makeAgent(asOwner);
+    setLimits({ minScheduleIntervalSeconds: 3600 });
+
+    const tooOften = await createSchedule(asOwner, agentId, { cron: '*/5 * * * *' });
+    expect(tooOften.status).toBe(400);
+
+    // The floor is read from the shortest gap ahead, not from the first one: this
+    // cron waits a day before the second of its two daily runs.
+    const burst = await createSchedule(asOwner, agentId, { cron: '0,1 9 * * *' });
+    expect(burst.status).toBe(400);
+
+    const created = await createSchedule(asOwner, agentId, { cron: '0 9 * * *' });
+    expect(created.status).toBe(201);
+
+    const patched = await schedules(asOwner)({ scheduleId: created.data!.id }).patch({
+      cron: '*/5 * * * *',
+    });
+    expect(patched.status).toBe(400);
   });
 
   it('creates a schedule and lists it with its next run', async () => {

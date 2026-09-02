@@ -4,8 +4,9 @@ import { eq } from 'drizzle-orm';
 import { authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
-import { createAgent } from '#tests/helpers/agents';
+import { createAgent, teamOf } from '#tests/helpers/agents';
 import {
+  countRunsAhead,
   enqueueAgentRun,
   claimDueRuns,
   markRunSuccess,
@@ -76,6 +77,35 @@ describe('agent_run queue store', () => {
     // A second immediate claim finds nothing due — the lease is still held.
     const second = await claimDueRuns();
     expect(second.find((r) => r.id === runId)).toBeUndefined();
+  });
+
+  it('counts the in-flight runs a run waits behind', async () => {
+    const { asOwner, columnId } = await setup();
+    const { agent, issue, runId } = await enqueueRun(asOwner, columnId);
+    await enqueueAgentRun({
+      agentId: agent.id,
+      projectId: agent.projects[0].id,
+      issueId: issue.id,
+      sourceActivityId: null,
+      prompt: 'again',
+    });
+    const teamId = await teamOf(asOwner, 'MKT');
+    const [, second] = await db
+      .select()
+      .from(agentRun)
+      .where(eq(agentRun.issueId, issue.id))
+      .orderBy(agentRun.id);
+
+    // Queued but unclaimed runs are not under way.
+    expect(await countRunsAhead(teamId, second.id)).toBe(0);
+
+    await claimDueRuns();
+    expect(await countRunsAhead(teamId, runId)).toBe(0);
+    expect(await countRunsAhead(teamId, second.id)).toBe(1);
+
+    // A finished run stops counting, so the next one is no longer held behind it.
+    await markRunSuccess(runId);
+    expect(await countRunsAhead(teamId, second.id)).toBe(0);
   });
 
   it('marks a claimed run successful and removes it from the queue', async () => {

@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, afterEach, beforeEach } from 'bun:test';
 import { api as anonApi, apiKeyApi, authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { addProjectMember } from '#tests/helpers/members';
 import { createAgent } from '#tests/helpers/agents';
+import { clearLimits, setLimits } from '#tests/helpers/limits';
 
 // The teams feature owns list, create, detail, rename, and leave. Every account is
 // given a team at registration, named after its username, so a fresh account already
@@ -36,6 +37,7 @@ describe('teams', () => {
   beforeEach(async () => {
     await resetDb();
   });
+  afterEach(clearLimits);
 
   describe('list', () => {
     it('lists the team the account was registered with', async () => {
@@ -108,6 +110,16 @@ describe('teams', () => {
 
       expect((await api.teams.post({ name: 'a'.repeat(60) })).status).toBe(201);
       expect((await api.teams.post({ name: 'a'.repeat(61) })).status).toBe(400);
+    });
+
+    it('refuses one more team than the limits allow', async () => {
+      const { api } = await signUpClient();
+      // The account already owns the team it was registered with.
+      setLimits({ maxTeams: 1 });
+
+      const created = await api.teams.post({ name: 'Design' });
+      expect(created.status).toBe(409);
+      expect(await api.teams.get().then((list) => list.data)).toHaveLength(1);
     });
 
     it('rejects a request without a session', async () => {

@@ -9,6 +9,8 @@ import { assertPublicHttpUrl } from '#shared/net';
 import { mcpTool } from '#mcp/generate';
 import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { getIssueProjectId } from '#modules/issues/service';
+import { getProjectTeamId } from '#modules/projects/service';
+import { getLimits } from '#shared/limits';
 import {
   getStorageSettings,
   mimeAllowed,
@@ -31,6 +33,7 @@ import {
   deleteAttachmentByPublicId,
   removeAttachmentEmbeds,
   getProjectAttachmentBytes,
+  getTeamAttachmentBytes,
   type AttachmentRow,
 } from './service';
 
@@ -56,6 +59,19 @@ async function assertUploadAllowed(
       throw new HttpError(
         413,
         `The project has used its ${limits.projectQuotaMb} MB storage quota. Delete attachments to free space.`,
+      );
+    }
+  }
+  // The instance quota above is per project; a team may hold a ceiling of its own
+  // across all of them.
+  const teamId = await getProjectTeamId(projectId);
+  const { maxStorageBytes } = await getLimits({ teamId });
+  if (maxStorageBytes > 0) {
+    const used = (await getTeamAttachmentBytes(teamId)) - replacedBytes;
+    if (used + size > maxStorageBytes) {
+      throw new HttpError(
+        413,
+        `The team has used its ${Math.round(maxStorageBytes / MB)} MB of storage. Delete attachments to free space.`,
       );
     }
   }

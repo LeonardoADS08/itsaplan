@@ -8,6 +8,8 @@ import {
 } from '@repo/db';
 import { and, eq } from 'drizzle-orm';
 import { removeMember, setMembership, type MemberRole } from '#modules/members/service';
+import { listTeamMemberIds } from '#modules/teams/service';
+import { getLimits } from '#shared/limits';
 
 // Turns provisioned group membership into project membership, and into the team
 // membership it stands on. This is the only place either row is written from SCIM,
@@ -71,6 +73,11 @@ async function reconcileProject(projectId: number): Promise<void> {
     .where(eq(projectMember.projectId, projectId));
 
   const byUser = new Map(existing.map((row) => [row.userId, row]));
+  // A seat ceiling stops the provider from adding people the team has no room for.
+  // Those already in it keep their membership and still join the project.
+  const { maxTeamMembers } = await getLimits({ teamId: owner.teamId });
+  const seats =
+    maxTeamMembers > 0 ? new Set(await listTeamMemberIds(owner.teamId)) : new Set<string>();
   // Tracked as rows change so the last-owner guard below stays correct without
   // re-counting after every write.
   let owners = existing.filter((row) => row.role === 'owner').length;
@@ -78,6 +85,10 @@ async function reconcileProject(projectId: number): Promise<void> {
   for (const [userId, want] of desired) {
     const have = byUser.get(userId);
     if (!have) {
+      if (maxTeamMembers > 0 && !seats.has(userId)) {
+        if (seats.size >= maxTeamMembers) continue;
+        seats.add(userId);
+      }
       // A project membership only exists on top of one in the team that owns the
       // project, so the group grants that first. It never raises an existing rank.
       await db

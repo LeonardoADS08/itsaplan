@@ -125,7 +125,7 @@ export async function runAgent(
   opts: RunOpts,
 ): Promise<{ text: string; threadId: string | null; usage: ContextUsage | null }> {
   const { agent, row, options, threadId } = await prepareRun(agentId, projectId, prompt, opts);
-  const result = await agent.generate(prompt, options);
+  const result = await agent.generate(prompt, { ...options, abortSignal: opts.abortSignal });
   const usage = contextOf(result.usage);
   // A chat thread keeps one number, replaced by each answer. An autonomous run keeps
   // the counts of that run instead, on its own row, so its caller stores them.
@@ -258,6 +258,9 @@ async function prepareRun(
 // agent's instructions.
 export type RunOpts = {
   callerUserId: string;
+  // Ends the model call and the tool loop when it fires, which is how a run is held to
+  // the wall time its team allows.
+  abortSignal?: AbortSignal;
   threadId?: string | null;
   issueId?: number | null;
   scheduleId?: number | null;

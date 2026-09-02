@@ -1,5 +1,11 @@
 import { HttpError } from './lib';
-import { getProjectByKey, type ProjectRow } from '#modules/projects/service';
+import {
+  getProjectById,
+  getProjectByKey,
+  projectFeatures,
+  type ProjectRow,
+} from '#modules/projects/service';
+import { featureLabel, type ProjectFeature } from './features';
 import { getMembership, getMemberContext, getTeamPermissions } from '#modules/members/service';
 import { getTeamMembership, runsTeam, type TeamStanding } from '#modules/teams/service';
 import { hasPermission, type PermissionAction, type PermissionResource } from './permissions';
@@ -140,6 +146,24 @@ export function assertMcpEnabled(project: ProjectRow, isMcp: boolean): void {
   if (!isMcp) return;
   if (!project.teamMcpEnabled) throw new HttpError(403, 'MCP is disabled for this team');
   if (!project.mcpEnabled) throw new HttpError(403, 'MCP is disabled for this project');
+}
+
+// Denies a call against a section the project has turned off, or that the team may
+// not use at all (the DTO reads a blocked section as off, which is what this reads).
+// Turning a section off hides it and closes its routes: what it already holds stays
+// in the database and comes back with it.
+export function assertFeatureEnabled(project: ProjectRow, feature: ProjectFeature): void {
+  if (projectFeatures(project)[feature]) return;
+  throw new HttpError(403, `${featureLabel(feature)} are turned off for this project`);
+}
+
+// The same check for a caller that resolved only the project's id.
+export async function assertProjectFeature(
+  projectId: number,
+  feature: ProjectFeature,
+): Promise<void> {
+  const project = await getProjectById(projectId);
+  if (project) assertFeatureEnabled(project, feature);
 }
 
 // Formats a resource key for an error message: "custom_fields" -> "custom fields".

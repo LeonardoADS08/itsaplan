@@ -1,5 +1,5 @@
 import { db, agentRun, issue, project } from '@repo/db';
-import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNotNull, lt, sql } from 'drizzle-orm';
 import { iso } from '#shared/lib';
 import type { AgentRunTrigger } from '../model';
 import { intEnv } from './helpers/env';
@@ -17,6 +17,29 @@ export const agentRunConfig = {
   maxAttempts: () => intEnv('AGENT_RUN_MAX_ATTEMPTS', 3),
   leaseSeconds: () => intEnv('AGENT_RUN_LEASE_SECONDS', 300),
 };
+
+// Runs of this team's agents that hold a slot and were queued before this one. A claim
+// stamps started_at and pushes next_attempt_at forward, so a pending run that is
+// stamped and still inside that window is one of them — as is a run waiting out its
+// retry backoff, which holds a slot it is not using. Counting only the older runs is
+// what keeps a ceiling from turning away every run of a burst at once: each yields to
+// the ones ahead of it and the rest come back on their next attempt.
+export async function countRunsAhead(teamId: number, runId: number): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(agentRun)
+    .innerJoin(project, eq(project.id, agentRun.projectId))
+    .where(
+      and(
+        eq(project.teamId, teamId),
+        eq(agentRun.status, 'pending'),
+        isNotNull(agentRun.startedAt),
+        gt(agentRun.nextAttemptAt, sql`now()`),
+        lt(agentRun.id, runId),
+      ),
+    );
+  return row?.count ?? 0;
+}
 
 export async function enqueueAgentRun(input: {
   agentId: number;
@@ -88,6 +111,7 @@ export async function claimDueRuns(): Promise<ClaimedRun[]> {
   const rows = await db.execute(sql`
     UPDATE agent_run r
     SET attempts = r.attempts + 1,
+        started_at = coalesce(r.started_at, now()),
         next_attempt_at = now() + make_interval(secs => ${leaseSeconds})
     WHERE r.id IN (
       SELECT id FROM agent_run q

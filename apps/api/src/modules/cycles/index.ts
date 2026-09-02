@@ -44,7 +44,12 @@ export const cycleRoutes = new Elysia({
   // Guard for routes that address a cycle by its own id (no :projectKey in the
   // path). Set `cycle: "<action>"` in the route options.
   .macro({
-    cycle: entityGuard('cycles', 'Cycle not found', (p) => getCycleProjectId(Number(p.cycleId))),
+    cycle: entityGuard(
+      'cycles',
+      'Cycle not found',
+      (p) => getCycleProjectId(Number(p.cycleId)),
+      'cycles',
+    ),
   })
 
   .get(
@@ -54,6 +59,7 @@ export const cycleRoutes = new Elysia({
     {
       query: listCyclesQuery,
       permission: ['cycles', 'read'],
+      feature: 'cycles',
       response: { 200: CycleListResponse, ...commonErrors },
       detail: {
         summary: 'List cycles',
@@ -74,6 +80,7 @@ export const cycleRoutes = new Elysia({
     },
     {
       permission: ['work_items', 'read'],
+      feature: 'cycles',
       response: { 200: CycleOptionListResponse, ...accessErrors },
       detail: {
         summary: 'List cycle options',
@@ -88,6 +95,7 @@ export const cycleRoutes = new Elysia({
     {
       query: completedCyclesQuery,
       permission: ['cycles', 'read'],
+      feature: 'cycles',
       response: { 200: CyclePageResponse, ...commonErrors },
       detail: {
         summary: 'List completed cycles',
@@ -105,6 +113,7 @@ export const cycleRoutes = new Elysia({
     {
       body: createCycleBody,
       permission: ['cycles', 'create'],
+      feature: 'cycles',
       response: { 201: CycleResponse, ...commonErrors },
       detail: {
         summary: 'Create a cycle',

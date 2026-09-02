@@ -277,6 +277,10 @@ export interface Project {
   subtasksEnabled: boolean;
   checklistsEnabled: boolean;
   issueStatsEnabled: boolean;
+  // The sections this project may use at all. One missing here is not available to
+  // the team: its flag above always reads false and the settings page does not offer
+  // it. Everything is available on a self-hosted instance.
+  availableFeatures: (keyof ProjectFeatures)[];
   // Which estimate kinds the issues carry, set in Settings -> Configuration. Read
   // through useProjectFeatures, which hides the estimate rows and their display
   // properties while a kind is off.

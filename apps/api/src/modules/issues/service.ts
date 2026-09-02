@@ -34,6 +34,7 @@ import {
 import type { IssueQuery } from '#modules/agents/core/issue-query';
 import { iso, num, numOrNull, HttpError } from '#shared/lib';
 import type { ProjectRow } from '#modules/projects/service';
+import { assertProjectFeature } from '#shared/access';
 import {
   getCustomFieldById,
   type CustomFieldRow,
@@ -728,6 +729,7 @@ async function assertInitiative(
   initiativeId: number | null | undefined,
 ): Promise<void> {
   if (initiativeId == null) return;
+  await assertProjectFeature(projectId, 'initiatives');
   if ((await getInitiativeProjectId(initiativeId)) !== projectId)
     throw new HttpError(400, 'Initiative must belong to this project');
 }
@@ -743,6 +745,7 @@ async function assertCycle(
   currentCycleId: number | null = null,
 ): Promise<void> {
   if (cycleId == null || cycleId === currentCycleId) return;
+  await assertProjectFeature(projectId, 'cycles');
   const ref = await getCycleRef(cycleId);
   if (!ref || ref.projectId !== projectId)
     throw new HttpError(400, 'Cycle must belong to this project');
@@ -786,6 +789,7 @@ async function assertParent(
   parentId: number | null | undefined,
 ): Promise<void> {
   if (parentId == null) return;
+  await assertProjectFeature(projectId, 'subtasks');
   if (parentId === issueId) throw new HttpError(400, 'An issue cannot be its own parent');
   const rows = await db
     .select({ projectId: issue.projectId, parentId: issue.parentId })

@@ -16,6 +16,7 @@ import {
 } from '@repo/db';
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { HttpError, iso } from '#shared/lib';
+import { getLimits } from '#shared/limits';
 import { defaultMemberPermissions, fullPermissions, type Permissions } from '#shared/permissions';
 import {
   getMemberContext,
@@ -612,7 +613,42 @@ export async function insertOwnedTeam(tx: Transaction, name: string, ownerId: st
   return { team: row, membership };
 }
 
+// How many teams this account owns, which is what the team ceiling counts.
+async function countOwnedTeams(ownerId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(teamMember)
+    .where(and(eq(teamMember.userId, ownerId), eq(teamMember.role, 'owner')));
+  return row?.count ?? 0;
+}
+
+// The people in the team, which is what a seat ceiling counts. An agent's bot user sits
+// in the member list but takes no seat.
+export async function listTeamMemberIds(teamId: number): Promise<string[]> {
+  const rows = await db
+    .select({ userId: teamMember.userId })
+    .from(teamMember)
+    .where(and(eq(teamMember.teamId, teamId), sql`${teamMember.role} <> 'agent'`));
+  return rows.map((row) => row.userId);
+}
+
+// Refuses one more person in the team. Called wherever a membership is added for
+// somebody who is not in it yet.
+export async function assertTeamSeatFree(teamId: number): Promise<void> {
+  const { maxTeamMembers } = await getLimits({ teamId });
+  if (maxTeamMembers === 0) return;
+  if ((await listTeamMemberIds(teamId)).length >= maxTeamMembers) {
+    throw new HttpError(409, `The team is full at ${maxTeamMembers} members`);
+  }
+}
+
+// The team an account gets at sign-up is written by the hook in @repo/auth, which does
+// not come through here — the ceiling applies to the teams created on top of that one.
 export async function createTeam(name: string, ownerId: string): Promise<TeamRow> {
+  const { maxTeams } = await getLimits({ ownerUserId: ownerId });
+  if (maxTeams > 0 && (await countOwnedTeams(ownerId)) >= maxTeams) {
+    throw new HttpError(409, `You already own ${maxTeams} teams`);
+  }
   return db.transaction(async (tx) => {
     const { team: row, membership } = await insertOwnedTeam(tx, name, ownerId);
     return {

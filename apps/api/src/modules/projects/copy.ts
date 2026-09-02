@@ -265,7 +265,7 @@ export async function copyProject(
         ...sourceFeatures,
       })
       .returning();
-    const proj = mapProject({
+    const proj = await mapProject({
       ...row,
       teamName: ownerTeam.name,
       teamMcpEnabled: ownerTeam.mcpEnabled,
