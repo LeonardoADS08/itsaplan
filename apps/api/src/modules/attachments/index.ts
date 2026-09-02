@@ -182,7 +182,7 @@ export const attachmentRoutes = new Elysia({
     {
       body: uploadAttachmentBody,
       params: issueParams,
-      issueAttachment: 'create',
+      issueAttachment: 'edit',
       response: { 201: AttachmentResponse, ...commonErrors, ...errors(413, 502) },
       detail: { summary: 'Upload an attachment' },
     },
@@ -251,7 +251,7 @@ export const attachmentRoutes = new Elysia({
     {
       params: issueParams,
       body: importAttachmentBody,
-      issueAttachment: 'create',
+      issueAttachment: 'edit',
       response: { 201: AttachmentResponse, ...commonErrors, ...errors(413, 502) },
       detail: {
         summary: 'Add an attachment from a URL or base64',

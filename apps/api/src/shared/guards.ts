@@ -5,6 +5,7 @@ import {
   requireProjectPermission,
   requireProjectOwner,
   requireProjectAdmin,
+  requireTeamRunsProject,
   requireMemberAdmin,
   requireSelfOrMemberAdmin,
   requireTeamMembership,
@@ -195,6 +196,18 @@ export const guards = new Elysia({ name: 'guards' }).use(authContext).macro({
     return {
       async resolve({ params, user, request }) {
         const project = await requireProjectAdmin((params as ProjectKeyParams).projectKey, user);
+        assertMcpEnabled(project, isMcpRequest(request.headers));
+        return { project };
+      },
+    };
+  },
+
+  // A project the caller's team runs, for what follows their rank in the team rather
+  // than any project role: copying the project into one of their own.
+  teamRunsProject(_enabled: boolean) {
+    return {
+      async resolve({ params, user, request }) {
+        const project = await requireTeamRunsProject((params as ProjectKeyParams).projectKey, user);
         assertMcpEnabled(project, isMcpRequest(request.headers));
         return { project };
       },

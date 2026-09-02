@@ -90,6 +90,22 @@ describe('projects', () => {
       expect(view.data?.columns.map((c) => c.name)).toEqual(DEFAULT_COLUMN_NAMES);
     });
 
+    it('denies a project member whose rank in the team is member', async () => {
+      const owner = await signUpClient();
+      await owner.api.projects.post({ key: 'SRC', name: 'Source' });
+      const role = await createRole(owner.api, 'SRC', {
+        name: 'Reader',
+        permissions: { work_items: { read: true } },
+      });
+      const member = await addProjectMember(owner.api, 'SRC', role.data!.id);
+
+      const res = await member.projects({ projectKey: 'SRC' }).copy.post({
+        key: 'DST',
+        name: 'Destination',
+      });
+      expect(res.status).toBe(403);
+    });
+
     it('rejects an empty key', async () => {
       const { api } = await signUpClient();
       const res = await api.projects.post({ key: '', name: 'Marketing' });

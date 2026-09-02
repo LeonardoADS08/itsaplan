@@ -105,12 +105,13 @@ export const projectRoutes = new Elysia({ name: 'projects', detail: { tags: ['Pr
     },
     {
       body: copyProjectBody,
-      permission: ['work_items', 'read'],
+      teamRunsProject: true,
       response: { 201: ProjectResponse, ...commonErrors },
       detail: {
         summary: 'Copy a project',
         description:
           "Copy a project's configuration into a new project you own, without its issues. " +
+          'Only an owner or a manager of the team that owns the source project may copy it. ' +
           'By default the structure (states, issue types, labels, custom fields, views, ' +
           'dashboards, actions) is copied. Pass `include` to choose sections; the API ' +
           'force-enables dependencies (e.g. a view pulls in the states it references).',

@@ -104,6 +104,23 @@ export async function assertProjectAdmin(
   throw new HttpError(403, 'Only a project owner or a team owner or manager can do this');
 }
 
+// Resolves the :projectKey path param to a project the caller's team runs: an owner
+// or manager of the team that owns it. A copy carries the project's configuration —
+// its webhooks and their signing secrets among it — into a project of the caller's
+// own, so it follows their rank in the team and no project role grants it. Wrapped
+// by the teamRunsProject guard. Throws 404 for an unknown project and 403 for
+// anyone else.
+export async function requireTeamRunsProject(
+  projectKey: string,
+  user: AuthUser | undefined | null,
+): Promise<ProjectRow> {
+  const current = requireUser(user);
+  const project = await requireProject(projectKey);
+  if (!runsTeam(await getTeamMembership(project.teamId, current.id)))
+    throw new HttpError(403, 'Only a team owner or manager can do this');
+  return project;
+}
+
 // Resolves the :projectKey path param to a project whose member list the caller may
 // act on: a member the role matrix allows, or an owner or manager of the team that
 // owns it. The team runs its projects, so it fills them from its own member list and

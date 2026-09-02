@@ -1077,7 +1077,7 @@ export const issueRoutes = new Elysia({ name: 'issues', detail: { tags: ['Issues
     {
       body: createCommentBody,
       params: issueParams,
-      workItem: 'create',
+      workItem: 'edit',
       response: { 201: FeedItemResponse, ...commonErrors },
       detail: {
         summary: 'Add a comment',
