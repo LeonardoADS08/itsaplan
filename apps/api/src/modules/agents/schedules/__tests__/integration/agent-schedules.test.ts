@@ -3,13 +3,13 @@ import { apiKeyApi, authedApi, type Api } from '#tests/helpers/app';
 import { signUpTestUser } from '#tests/helpers/auth';
 import { resetDb } from '#tests/helpers/db';
 import { untaggedRoutes } from '#tests/helpers/mcp';
-import { createAgent, teamOf } from '#tests/helpers/agents';
+import { createAgent, projectIdOf, teamOf } from '#tests/helpers/agents';
 
 // A schedule sends a fixed task to an internal agent on a cron, in UTC. The worker
 // picks up the queued runs, so a run created here stays pending. Access is the
 // ai_agents permission resource.
 
-const schedules = (api: Api) => api.projects({ projectKey: 'MKT' })['agent-schedules'];
+const schedules = (api: Api, projectKey = 'MKT') => api.projects({ projectKey })['agent-schedules'];
 
 async function setup() {
   const owner = await signUpTestUser({ name: 'Owner' });
@@ -53,12 +53,16 @@ async function createRunnerAgent(api: Api): Promise<{ agentId: number; asRunner:
   return { agentId: res.data!.agent.id, asRunner: apiKeyApi(res.data!.apiKey!) };
 }
 
-async function createSchedule(api: Api, agentId: number, cron = '0 9 * * *') {
-  return schedules(api).post({
+async function createSchedule(
+  api: Api,
+  agentId: number,
+  opts: { cron?: string; projectKey?: string } = {},
+) {
+  return schedules(api, opts.projectKey).post({
     agentId,
     name: 'Daily triage',
     prompt: 'Triage the new issues.',
-    cron,
+    cron: opts.cron ?? '0 9 * * *',
   });
 }
 
@@ -112,7 +116,7 @@ describe('agent schedules', () => {
   it('rejects an invalid cron expression', async () => {
     const { asOwner } = await setup();
     const agentId = await makeAgent(asOwner);
-    const res = await createSchedule(asOwner, agentId, 'not a cron');
+    const res = await createSchedule(asOwner, agentId, { cron: 'not a cron' });
     expect(res.status).toBe(400);
   });
 
@@ -126,6 +130,31 @@ describe('agent schedules', () => {
       cron: '0 9 * * *',
     });
     expect(res.status).toBe(400);
+  });
+
+  it('frees the schedule name again in another project of the team', async () => {
+    const { asOwner } = await setup();
+    const agentId = await makeAgent(asOwner);
+    const teamId = await teamOf(asOwner, 'MKT');
+    const marketingId = await projectIdOf(asOwner, 'MKT');
+    const ops = await asOwner.teams({ teamId }).projects.post({ key: 'OPS', name: 'Ops' });
+    await asOwner
+      .teams({ teamId })
+      ['ai-agents']({ agentId })
+      .projects.put({ projectIds: [marketingId, ops.data!.id] });
+    expect((await createSchedule(asOwner, agentId)).status).toBe(201);
+
+    const second = await createSchedule(asOwner, agentId, { projectKey: 'OPS' });
+    expect(second.status).toBe(201);
+  });
+
+  it('refuses a second schedule of the same name on one agent in one project', async () => {
+    const { asOwner } = await setup();
+    const agentId = await makeAgent(asOwner);
+    expect((await createSchedule(asOwner, agentId)).status).toBe(201);
+
+    const duplicate = await createSchedule(asOwner, agentId);
+    expect(duplicate.status).toBe(409);
   });
 
   it('schedules an external agent, whose runner claims the run', async () => {
@@ -185,7 +214,7 @@ describe('agent schedules', () => {
   it('recomputes the next run when the cron changes', async () => {
     const { asOwner } = await setup();
     const agentId = await makeAgent(asOwner);
-    const created = await createSchedule(asOwner, agentId, '0 9 * * *');
+    const created = await createSchedule(asOwner, agentId);
     const updated = await schedules(asOwner)({ scheduleId: created.data!.id }).patch({
       cron: '30 9 * * *',
       prompt: 'Triage and label the new issues.',

@@ -13,9 +13,9 @@ import {
 } from '@/components/ui/select';
 import { useDeleteRole, useRoleUsageQuery } from '@/services/roles.service';
 
-// Deleting a role that members, agents or pending invites are on moves them to
-// another role first — the API refuses the deletion without one, so the dialog asks
-// for it here. A role nothing is on is deleted straight away.
+// Deleting a role that members, agents, pending invites or provisioned group mappings
+// are on moves them to another role first — the API refuses the deletion without one,
+// so the dialog asks for it here. A role nothing is on is deleted straight away.
 export default function DeleteRoleDialog({
   teamId,
   role,
@@ -35,14 +35,15 @@ export default function DeleteRoleDialog({
     () => targets.find((r) => r.isDefault)?.id ?? targets[0]?.id ?? null,
   );
 
-  const inUse = usage != null && usage.members + usage.agents + usage.invites > 0;
   const counts = usage
     ? [
         { label: t('usageMembers'), n: usage.members },
         { label: t('usageAgents'), n: usage.agents },
         { label: t('usageInvites'), n: usage.invites },
+        { label: t('usageGroups'), n: usage.groups },
       ].filter((entry) => entry.n > 0)
     : [];
+  const inUse = counts.length > 0;
 
   function body() {
     if (usage == null) {

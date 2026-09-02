@@ -537,7 +537,9 @@ export const agentSchedule = pgTable(
   },
   (t) => [
     check('agent_schedule_status_check', sql`${t.status} IN ('active', 'paused')`),
-    unique().on(t.agentId, t.name),
+    // A schedule works in one project, and one agent works in several projects of
+    // its team, so the same name is free again in each of them.
+    unique().on(t.projectId, t.agentId, t.name),
     index('agent_schedule_due_idx').on(t.status, t.nextRunAt),
     index('agent_schedule_agent_idx').on(t.agentId),
     index('agent_schedule_project_idx').on(t.projectId),

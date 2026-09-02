@@ -71,8 +71,9 @@ export function fullPermissions(): Permissions {
   return Object.fromEntries(PERMISSION_RESOURCES.map((r) => [r, allowAll(r)])) as Permissions;
 }
 
-// The default "Member" role every team is created with. Teams seeded by migration
-// 0112 carry the older matrix, without members_manage.read and members_invite.read.
+// The default "Member" role every team is created with. A role a team already had
+// when migration 0115 moved it there keeps the matrix it was written with, which
+// granted neither members_manage.read nor members_invite.read.
 export function defaultMemberPermissions(): Permissions {
   const p = emptyPermissions();
   for (const r of ['work_items', 'initiatives', 'cycles', 'note_boards'] as const) {

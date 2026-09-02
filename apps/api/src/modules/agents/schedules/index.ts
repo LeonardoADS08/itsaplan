@@ -4,7 +4,7 @@ import { guards } from '#shared/guards';
 import { requireUser } from '#shared/access';
 import { noContent } from '#shared/http';
 import { HttpError } from '#shared/lib';
-import { accessErrors, commonErrors } from '#shared/responses';
+import { accessErrors, commonErrors, errors } from '#shared/responses';
 import { mcpTool } from '#mcp/generate';
 import { paginate } from '#shared/pagination';
 import { nextCronRun } from './cron';
@@ -81,7 +81,7 @@ export const agentScheduleRoutes = new Elysia({
     {
       body: createScheduleBody,
       permission: ['ai_agents', 'create'],
-      response: { 201: AgentScheduleResponse, ...commonErrors },
+      response: { 201: AgentScheduleResponse, ...commonErrors, ...errors(409) },
       detail: {
         summary: 'Create an agent schedule',
         description: 'Create a schedule that sends a task to an agent on a cron.',
@@ -120,7 +120,7 @@ export const agentScheduleRoutes = new Elysia({
       params: scheduleParams,
       body: updateScheduleBody,
       permission: ['ai_agents', 'edit'],
-      response: { 200: AgentScheduleResponse, ...commonErrors },
+      response: { 200: AgentScheduleResponse, ...commonErrors, ...errors(409) },
       detail: {
         summary: 'Update an agent schedule',
         description: "Update a schedule's agent, task, cron, or status.",

@@ -124,15 +124,15 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
       detail: {
         summary: 'Count what a role is assigned to',
         description:
-          'Count the project members, AI agents and pending invites on a role. They have to be moved to another role before it can be deleted.',
+          'Count the project members, AI agents, pending invites and provisioned group mappings on a role. They have to be moved to another role before it can be deleted.',
         ...mcpTool('get_role_usage'),
       },
     },
   )
 
   // Deletes a custom role. The default role cannot be deleted. A role that members,
-  // agents or pending invites are on is deleted only together with targetRoleId,
-  // the role they are all moved to.
+  // agents, pending invites or provisioned group mappings are on is deleted only
+  // together with targetRoleId, the role they are all moved to.
   .delete(
     '/teams/:teamId/roles/:roleId',
     async ({ membership, params, query }) => {
@@ -145,7 +145,7 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
         if (query.targetRoleId === undefined) {
           throw new HttpError(
             400,
-            'This role is in use. Pass targetRoleId to move its members, agents and pending invites to another role.',
+            'This role is in use. Pass targetRoleId to move its members, agents, pending invites and group mappings to another role.',
           );
         }
         if (query.targetRoleId === params.roleId) {
@@ -167,7 +167,7 @@ export const roleRoutes = new Elysia({ name: 'roles', detail: { tags: ['Roles'] 
       detail: {
         summary: 'Delete a role',
         description:
-          'Delete a custom role. The default role cannot be deleted. A role in use requires targetRoleId, the role its members, agents and pending invites are moved to.',
+          'Delete a custom role. The default role cannot be deleted. A role in use requires targetRoleId, the role its members, agents, pending invites and group mappings are moved to.',
         ...mcpTool('delete_role'),
       },
     },

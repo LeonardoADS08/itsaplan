@@ -1,6 +1,6 @@
 import { db, agentRun, agentSchedule, aiAgent, user } from '@repo/db';
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
-import { HttpError, iso } from '#shared/lib';
+import { HttpError, iso, rethrowDuplicate } from '#shared/lib';
 import { agentWorksInProject, canTriggerAgent, isTriggerableBy } from '../core/service';
 import { contextTokensOf } from '../core/run-queue';
 import { deleteThreadsWhere } from '../core/runtime/memory';
@@ -159,7 +159,8 @@ export async function createAgentSchedule(input: {
       status: input.status,
       nextRunAt: input.nextRunAt,
     })
-    .returning({ id: agentSchedule.id });
+    .returning({ id: agentSchedule.id })
+    .catch((err) => rethrowDuplicate(err, 'schedule for this agent'));
   return getAgentSchedule(input.projectId, row.id, input.actorUserId);
 }
 
@@ -185,7 +186,8 @@ export async function updateAgentSchedule(
   await db
     .update(agentSchedule)
     .set({ ...patch, updatedAt: new Date() })
-    .where(eq(agentSchedule.id, scheduleId));
+    .where(eq(agentSchedule.id, scheduleId))
+    .catch((err) => rethrowDuplicate(err, 'schedule for this agent'));
   return getAgentSchedule(projectId, scheduleId, actorUserId);
 }
 

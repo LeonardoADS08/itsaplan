@@ -260,6 +260,35 @@ describe('SCIM group reconciliation', () => {
     expect(await teamMemberIds(setup.god, teamId)).toContain(ada.id);
   });
 
+  // Left behind, the mapping's role_id would be nulled by its foreign key and the next
+  // sync would put the members it provisions on the default matrix instead.
+  it('counts a mapping on a role and moves it when the role is deleted', async () => {
+    const setup = await setupScim();
+    const project = await createProject(setup.god, 'Marketing', 'MKT');
+    const teamId = await teamIdOf(setup.god.api, 'MKT');
+    const reviewer = await createRole(setup.god.api, 'MKT', { name: 'Reviewer', permissions: {} });
+    const editor = await createRole(setup.god.api, 'MKT', { name: 'Editor', permissions: {} });
+    const roleId = reviewer.data!.id;
+    const groupId = await provisionGroup(setup, 'Engineering', []);
+    await setup.god.api.god['scim-groups']({ groupId }).mappings.put({
+      mappings: [{ projectId: project.id, role: 'member', roleId }],
+    });
+
+    const usage = await setup.god.api.teams({ teamId }).roles({ roleId }).usage.get();
+    expect(usage.data).toMatchObject({ members: 0, agents: 0, invites: 0, groups: 1 });
+
+    const deleted = await setup.god.api
+      .teams({ teamId })
+      .roles({ roleId })
+      .delete(undefined, { query: { targetRoleId: editor.data!.id } });
+    expect(deleted.status).toBe(204);
+
+    const groups = await setup.god.api.god['scim-groups'].get();
+    expect(groups.data!.find((g) => g.id === groupId)!.mappings).toEqual([
+      expect.objectContaining({ projectId: project.id, roleId: editor.data!.id }),
+    ]);
+  });
+
   describe('mapping validation', () => {
     it('404s an unknown group', async () => {
       const setup = await setupScim();

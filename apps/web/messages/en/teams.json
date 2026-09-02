@@ -118,6 +118,7 @@
     "usageMembers": "Members",
     "usageAgents": "Agents",
     "usageInvites": "Pending invites",
+    "usageGroups": "Provisioned groups",
     "moveTo": "Move to",
     "moveToPlaceholder": "Select a role",
     "moveAndDelete": "Move and delete",

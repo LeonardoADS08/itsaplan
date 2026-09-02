@@ -118,6 +118,7 @@
     "usageMembers": "成员",
     "usageAgents": "代理",
     "usageInvites": "待处理邀请",
+    "usageGroups": "已置备的组",
     "moveTo": "迁移到",
     "moveToPlaceholder": "选择角色",
     "moveAndDelete": "迁移并删除",

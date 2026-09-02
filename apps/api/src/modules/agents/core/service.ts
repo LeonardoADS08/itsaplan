@@ -4,6 +4,7 @@ import {
   user,
   apikey,
   project,
+  projectColumn,
   projectMember,
   teamMember,
   agentSkillLink,
@@ -652,6 +653,17 @@ async function setAgentProjects(agent: AiAgentRow, projectIds: number[]): Promis
         and(
           eq(projectMember.userId, agent.userId),
           wanted.length > 0 ? notInArray(projectMember.projectId, wanted) : undefined,
+        ),
+      );
+    // A column cannot keep assigning issues to an agent that no longer works in the
+    // project, the same rule remove_member follows.
+    await tx
+      .update(projectColumn)
+      .set({ autoAssignUserId: null })
+      .where(
+        and(
+          eq(projectColumn.autoAssignUserId, agent.userId),
+          wanted.length > 0 ? notInArray(projectColumn.projectId, wanted) : undefined,
         ),
       );
     if (wanted.length > 0) {

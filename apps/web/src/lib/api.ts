@@ -2687,6 +2687,8 @@ export interface RoleUsage {
   members: number;
   agents: number;
   invites: number;
+  // The provisioned group mappings that grant this role.
+  groups: number;
 }
 
 // The resources and actions the role editor renders. Fetched so the UI matches the

@@ -37,6 +37,7 @@ export const RoleUsageResponse = t.Object({
   members: t.Number(),
   agents: t.Number(),
   invites: t.Number(),
+  groups: t.Number(),
 });
 
 export const PermissionCatalogResponse = t.Object({
