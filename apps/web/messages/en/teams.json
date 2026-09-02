@@ -78,7 +78,8 @@
     "roleLabel": "Team role",
     "roleHint": {
       "member": "Works in the projects you add them to.",
-      "manager": "Manages projects and invites people to the team."
+      "manager": "Manages projects and invites people to the team.",
+      "owner": "Runs the team: its name, its roles and who belongs to it."
     },
     "submit": "Send invite",
     "joinsTeam": "Joins the team",

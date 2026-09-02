@@ -36,6 +36,7 @@ export default function TeamProjectMembers({
   canDelete,
   canAdd,
   canInvite,
+  canGrantOwner,
   canReadInvites,
 }: {
   teamId: number;
@@ -49,6 +50,7 @@ export default function TeamProjectMembers({
   canDelete: boolean;
   canAdd: boolean;
   canInvite: boolean;
+  canGrantOwner: boolean;
   canReadInvites: boolean;
 }) {
   const t = useTranslations('teams.panel');
@@ -119,6 +121,7 @@ export default function TeamProjectMembers({
                 isLastOwner={member.role === 'owner' && ownerCount === 1}
                 canEdit={canEdit}
                 canDelete={canDelete}
+                canGrantOwner={canGrantOwner}
               />
             ))}
           </div>
@@ -143,6 +146,7 @@ export default function TeamProjectMembers({
           teamName={teamName}
           canAdd={canAdd}
           canInvite={canInvite}
+          canGrantOwner={canGrantOwner}
           canReadInvites={canReadInvites}
           onClose={() => setAdding(false)}
         />

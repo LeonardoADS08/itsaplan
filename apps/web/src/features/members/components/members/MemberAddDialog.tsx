@@ -47,6 +47,7 @@ export default function MemberAddDialog({
   teamName,
   canAdd,
   canInvite,
+  canGrantOwner,
   canReadInvites,
   onClose,
 }: {
@@ -56,6 +57,9 @@ export default function MemberAddDialog({
   teamName: string;
   canAdd: boolean;
   canInvite: boolean;
+  // An owner bypasses the role matrix, so only a project owner or someone who runs
+  // the team hands that rank out, whether by adding a member or by inviting one.
+  canGrantOwner: boolean;
   // Reading the pending invites is a permission of its own: whoever may invite
   // without it goes without the "already invited" marker.
   canReadInvites: boolean;
@@ -161,7 +165,7 @@ export default function MemberAddDialog({
                     {r.name}
                   </SelectItem>
                 ))}
-                <SelectItem value={OWNER_VALUE}>{tCommon('owner')}</SelectItem>
+                {canGrantOwner && <SelectItem value={OWNER_VALUE}>{tCommon('owner')}</SelectItem>}
               </SelectContent>
             </Select>
           </div>

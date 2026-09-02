@@ -26,6 +26,7 @@ export default function TeamProjectMemberCard({
   self,
   isLastOwner,
   canEdit,
+  canGrantOwner,
   canDelete,
 }: {
   projectKey: string;
@@ -35,6 +36,7 @@ export default function TeamProjectMemberCard({
   self: boolean;
   isLastOwner: boolean;
   canEdit: boolean;
+  canGrantOwner: boolean;
   canDelete: boolean;
 }) {
   const t = useTranslations('members');
@@ -61,7 +63,12 @@ export default function TeamProjectMemberCard({
           (canReassign || canDescribe || canRevoke) && (
             <>
               {canReassign && (
-                <MemberRoleMenu projectKey={projectKey} member={member} roles={roles} />
+                <MemberRoleMenu
+                  projectKey={projectKey}
+                  member={member}
+                  roles={roles}
+                  canGrantOwner={canGrantOwner}
+                />
               )}
               {canDescribe && (
                 <MemberDescriptionDialog projectKey={projectKey} member={member} self={self} />

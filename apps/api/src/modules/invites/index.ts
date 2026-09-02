@@ -23,6 +23,7 @@ import {
 } from './model';
 import {
   createInvite,
+  mayGrantInviteRanks,
   listProjectInvites,
   listTeamInvites,
   deleteProjectInvite,
@@ -48,6 +49,24 @@ async function loadActionableInvite(token: string, user: AuthUser | undefined | 
   return { invite, current };
 }
 
+// The ranks are checked again here, against the sender's standing now: a link that
+// grants project or team ownership must not outlive the standing that issued it, and
+// the sender can be demoted or gone between the two.
+async function assertStillGrantable(invite: {
+  teamId: number;
+  projectId: number | null;
+  teamRole: string;
+  projectRole: string | null;
+  invitedByUserId: string | null;
+}): Promise<void> {
+  if (!(await mayGrantInviteRanks(invite, invite.invitedByUserId))) {
+    throw new HttpError(
+      409,
+      'Whoever sent this invite can no longer grant the rank it carries. Ask for a new one.',
+    );
+  }
+}
+
 export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invites'] } })
   .use(authContext)
   .use(guards)
@@ -55,6 +74,26 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
   .post(
     '/projects/:projectKey/invites',
     async ({ project, body, user, set }) => {
+      // Ownership is not one of the ranks the member permission carries: an owner
+      // bypasses the role matrix, so only a project owner or someone who runs the team
+      // hands it out — an invite is the third way to make one, beside members/.
+      const invitedBy = requireUser(user).id;
+      if (
+        !(await mayGrantInviteRanks(
+          {
+            teamId: project.teamId,
+            projectId: project.id,
+            teamRole: 'member',
+            projectRole: body.role,
+          },
+          invitedBy,
+        ))
+      ) {
+        throw new HttpError(
+          403,
+          'Only a project owner or a team owner or manager can invite an owner',
+        );
+      }
       // For a member invite, an explicit roleId must name a role of this project's
       // team; null (or omitted) falls back to the team's default role on accept. An
       // owner invite ignores roleId (owners bypass roles).
@@ -72,7 +111,7 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
         teamRole: 'member',
         projectRole: body.role,
         roleId,
-        invitedByUserId: requireUser(user).id,
+        invitedByUserId: invitedBy,
       });
       let emailQueued = false;
       try {
@@ -162,8 +201,13 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
   .post(
     '/teams/:teamId/invites',
     async ({ membership, body, set }) => {
-      if (body.role === 'manager' && membership.role !== 'owner') {
-        throw new HttpError(403, 'Only a team owner can invite a manager');
+      if (
+        !(await mayGrantInviteRanks(
+          { teamId: membership.teamId, projectId: null, teamRole: body.role, projectRole: null },
+          membership.userId,
+        ))
+      ) {
+        throw new HttpError(403, 'Only a team owner can invite an owner or a manager');
       }
       const invite = await createInvite({
         teamId: membership.teamId,
@@ -185,8 +229,8 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
       detail: {
         summary: 'Invite someone to a team',
         description:
-          'Create an invite link into the team, as a member or a manager. Only an owner can ' +
-          'invite a manager.',
+          'Create an invite link into the team, as a member, a manager or an owner. Only an ' +
+          'owner can invite a manager or another owner.',
       },
     },
   )
@@ -250,6 +294,7 @@ export const inviteRoutes = new Elysia({ name: 'invites', detail: { tags: ['Invi
     '/invites/:token/accept',
     async ({ params, user }) => {
       const { invite, current } = await loadActionableInvite(params.token, user);
+      await assertStillGrantable(invite);
       return acceptInvite(invite, current.id);
     },
     {

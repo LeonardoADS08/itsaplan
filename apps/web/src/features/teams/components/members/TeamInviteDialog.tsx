@@ -27,8 +27,8 @@ const REFUSAL_KEY: Record<string, RefusalKey> = {
 
 // Invites someone to the team itself: they join its member list and reach its
 // projects through a membership added afterwards. Laid out like the project's own
-// add-member dialog, without the project a membership needs. Only an owner can invite
-// a manager, so a manager is offered the member rank alone.
+// add-member dialog, without the project a membership needs. Only an owner grants a
+// rank above member, so a manager is offered the member rank alone.
 export default function TeamInviteDialog({
   teamId,
   teamName,
@@ -47,7 +47,8 @@ export default function TeamInviteDialog({
   const [refusal, setRefusal] = useState<string | null>(null);
   const createInvite = useCreateTeamInvite(teamId);
 
-  const ranks: InviteTeamRole[] = teamRole === 'owner' ? ['member', 'manager'] : ['member'];
+  const ranks: InviteTeamRole[] =
+    teamRole === 'owner' ? ['member', 'manager', 'owner'] : ['member'];
   const address = email.trim();
 
   async function submit(event: FormEvent) {

@@ -95,6 +95,7 @@ export default function MemberRow({
           member={member}
           roles={roles}
           canManage={canEdit && !self && !provisioned}
+          canGrantOwner={isAdmin}
           isLastOwner={isLastOwner}
         />
       </TableCell>

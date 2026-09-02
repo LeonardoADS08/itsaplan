@@ -2767,9 +2767,9 @@ export interface MemberCandidate {
 
 export type InviteStatus = 'pending' | 'accepted' | 'rejected';
 
-// The rank an invite puts its invitee on in the team. Team ownership is not granted
-// by an invite.
-export type InviteTeamRole = 'manager' | 'member';
+// The rank an invite puts its invitee on in the team. Only a team owner sends one
+// that grants 'owner' or 'manager'.
+export type InviteTeamRole = 'owner' | 'manager' | 'member';
 
 // An invite as shown to whoever manages a team's or a project's invites: carries the
 // token so they can share the link, and who sent it.

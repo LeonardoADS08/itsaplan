@@ -68,7 +68,7 @@ async function ownTeamId(api: ReturnType<typeof authedApi>): Promise<number> {
 async function addTeamMember(
   owner: { api: ReturnType<typeof authedApi> },
   teamId: number,
-  role: 'manager' | 'member',
+  role: 'owner' | 'manager' | 'member',
 ) {
   const user = await signUpTestUser();
   const created = await owner.api.teams({ teamId }).invites.post({ email: user.email, role });
@@ -821,9 +821,88 @@ describe('invites', () => {
       const teamId = await ownTeamId(owner.api);
       const res = await owner.api
         .teams({ teamId })
-        // @ts-expect-error — the rank must be "manager" | "member"
-        .invites.post({ email: 'x@example.com', role: 'owner' });
+        // @ts-expect-error — the rank must be "owner" | "manager" | "member"
+        .invites.post({ email: 'x@example.com', role: 'agent' });
       expect(res.status).toBe(400);
+    });
+
+    it('lets an owner invite another owner', async () => {
+      const owner = await setupOwner();
+      const teamId = await ownTeamId(owner.api);
+      const invitee = await signUpTestUser();
+
+      const created = await owner.api
+        .teams({ teamId })
+        .invites.post({ email: invitee.email, role: 'owner' });
+      expect(created.status).toBe(201);
+
+      const inviteeApi = authedApi(invitee.cookie);
+      expect((await inviteeApi.invites({ token: created.data!.token }).accept.post()).status).toBe(
+        200,
+      );
+      const teams = await inviteeApi.teams.get();
+      expect(teams.data!.find((one) => one.id === teamId)).toMatchObject({ role: 'owner' });
+    });
+
+    it('refuses an owner invite from a manager', async () => {
+      const owner = await setupOwner();
+      const teamId = await ownTeamId(owner.api);
+      const manager = await addTeamMember(owner, teamId, 'manager');
+
+      const res = await manager.api
+        .teams({ teamId })
+        .invites.post({ email: 'x@example.com', role: 'owner' });
+      expect(res.status).toBe(403);
+    });
+  });
+
+  // An owner bypasses the role matrix, so the rank is not the member permission's to
+  // hand out — on either side of the invite, since the sender can lose the standing
+  // before the link is opened.
+  describe('granting ownership', () => {
+    it('refuses an owner invite from a member who may only invite', async () => {
+      const owner = await setupOwner();
+      const teamId = await ownTeamId(owner.api);
+      const inviter = await addTeamMember(owner, teamId, 'member');
+      const role = await createRole(owner.api, 'MKT', {
+        name: 'Recruiter',
+        permissions: { members_invite: { create: true, read: true } },
+      });
+      await owner.api
+        .projects({ projectKey: 'MKT' })
+        .members.post({ userId: inviter.user.userId, role: 'member', roleId: role.data!.id });
+
+      const refused = await inviter.api
+        .projects({ projectKey: 'MKT' })
+        .invites.post({ email: 'x@example.com', role: 'owner' });
+      expect(refused.status).toBe(403);
+
+      // The same caller may still invite a plain member.
+      const allowed = await inviter.api
+        .projects({ projectKey: 'MKT' })
+        .invites.post({ email: 'x@example.com', role: 'member' });
+      expect(allowed.status).toBe(201);
+    });
+
+    it('refuses an owner invite whose sender lost the standing before it was accepted', async () => {
+      const owner = await setupOwner();
+      const teamId = await ownTeamId(owner.api);
+      const manager = await addTeamMember(owner, teamId, 'manager');
+      const invitee = await signUpTestUser();
+
+      const created = await manager.api
+        .projects({ projectKey: 'MKT' })
+        .invites.post({ email: invitee.email, role: 'owner' });
+      expect(created.status).toBe(201);
+
+      await owner.api.teams({ teamId }).members({ userId: manager.user.userId }).patch({
+        role: 'member',
+      });
+
+      const accept = await authedApi(invitee.cookie)
+        .invites({ token: created.data!.token })
+        .accept.post();
+      expect(accept.status).toBe(409);
     });
   });
 });

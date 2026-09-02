@@ -78,7 +78,8 @@
     "roleLabel": "团队角色",
     "roleHint": {
       "member": "在你添加他的项目中工作。",
-      "manager": "管理项目，并邀请他人加入团队。"
+      "manager": "管理项目，并邀请他人加入团队。",
+      "owner": "管理团队：名称、角色和成员。"
     },
     "submit": "发送邀请",
     "joinsTeam": "加入团队",

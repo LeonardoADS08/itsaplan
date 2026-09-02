@@ -2,7 +2,7 @@ import { t } from 'elysia';
 
 const projectRole = t.Union([t.Literal('owner'), t.Literal('member')]);
 
-const teamRole = t.Union([t.Literal('manager'), t.Literal('member')]);
+const teamRole = t.Union([t.Literal('owner'), t.Literal('manager'), t.Literal('member')]);
 
 const inviteStatus = t.Union([t.Literal('pending'), t.Literal('accepted'), t.Literal('rejected')]);
 

@@ -1,8 +1,8 @@
 import { db, teamInvite, teamMember, projectMember, teamRole, team, project, user } from '@repo/db';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { HttpError, iso, pgErrorCode } from '#shared/lib';
 import { getMembership, type MemberRole } from '#modules/members/service';
-import { getTeamMembership, type TeamRole } from '#modules/teams/service';
+import { getTeamMembership, runsTeam, type TeamRole } from '#modules/teams/service';
 
 // Data access for invites. An invite is a token-addressed grant of membership in a
 // team, and — when it names a project — in that project too. Creating one requires
@@ -12,9 +12,16 @@ import { getTeamMembership, type TeamRole } from '#modules/teams/service';
 
 export type InviteStatus = 'pending' | 'accepted' | 'rejected';
 
-// The rank an invite puts its invitee on in the team. Team ownership is not granted
-// by an invite.
-export type InviteTeamRole = Exclude<TeamRole, 'owner'>;
+// The rank an invite puts its invitee on in the team.
+export type InviteTeamRole = TeamRole;
+
+// The standings a team rank outranks. An invite never lowers a rank, so accepting one
+// only rewrites a membership below the rank it grants.
+const OUTRANKED: Record<TeamRole, TeamRole[]> = {
+  owner: ['manager', 'member'],
+  manager: ['member'],
+  member: [],
+};
 
 // Row shown to whoever manages invites. Includes the token so they can share the
 // link, and who sent it.
@@ -166,6 +173,36 @@ async function assertNotAlreadyMember(input: NewInvite, email: string): Promise<
   }
 }
 
+// The ranks an invite hands out, and the sender it is checked against. Read when the
+// invite is created and again when it is accepted: the standing that issued the link
+// can be gone by the time the invitee opens it, and a link must not outlive it.
+//
+// Project ownership takes an owner of the project or someone who runs the team that
+// owns it — the standing members/ asks for, since an owner bypasses the role matrix.
+// A team rank above 'member' takes a team owner. Everything else takes nothing beyond
+// the route's own guard.
+export async function mayGrantInviteRanks(
+  invite: {
+    teamId: number;
+    projectId: number | null;
+    teamRole: string;
+    projectRole: string | null;
+  },
+  senderId: string | null,
+): Promise<boolean> {
+  const grantsTeamRank = invite.teamRole !== 'member';
+  const grantsProjectOwner = invite.projectRole === 'owner';
+  if (!grantsTeamRank && !grantsProjectOwner) return true;
+  if (!senderId) return false;
+
+  const standing = await getTeamMembership(invite.teamId, senderId);
+  if (grantsTeamRank && standing !== 'owner') return false;
+  if (grantsProjectOwner && !runsTeam(standing)) {
+    return (await getMembership(invite.projectId!, senderId)) === 'owner';
+  }
+  return true;
+}
+
 export async function createInvite(input: NewInvite): Promise<InviteRow> {
   const email = normalizeEmail(input.email);
   await assertNotAlreadyMember(input, email);
@@ -306,6 +343,7 @@ export async function getInviteRowByToken(token: string) {
       projectRole: teamInvite.projectRole,
       roleId: teamInvite.roleId,
       status: teamInvite.status,
+      invitedByUserId: teamInvite.invitedByUserId,
     })
     .from(teamInvite)
     .where(eq(teamInvite.token, token));
@@ -337,15 +375,16 @@ export async function acceptInvite(
 
   return db.transaction(async (tx) => {
     // An invite is refused for an address already in the team, so a conflict here is
-    // someone who joined between the invite and this accept. setWhere keeps an owner
-    // or a manager where they are: an invite never lowers a rank.
+    // someone who joined between the invite and this accept. setWhere rewrites only a
+    // standing the invite outranks: an invite never lowers a rank.
+    const outranked = OUTRANKED[invite.teamRole as TeamRole] ?? [];
     await tx
       .insert(teamMember)
       .values({ teamId: invite.teamId, userId, role: invite.teamRole })
       .onConflictDoUpdate({
         target: [teamMember.teamId, teamMember.userId],
         set: { role: invite.teamRole },
-        setWhere: eq(teamMember.role, 'member'),
+        setWhere: outranked.length > 0 ? inArray(teamMember.role, outranked) : sql`false`,
       });
 
     if (invite.projectId != null) {

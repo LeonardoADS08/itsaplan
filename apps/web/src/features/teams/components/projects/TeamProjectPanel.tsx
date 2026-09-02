@@ -117,6 +117,7 @@ export default function TeamProjectPanel({
                 canDelete={canDelete}
                 canAdd={canAdd}
                 canInvite={canInvite}
+                canGrantOwner={runsProject}
                 canReadInvites={canReadInvites}
               />
             </>

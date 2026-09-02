@@ -52,6 +52,7 @@ export default function MembersPage() {
           teamName={project.project.teamName}
           canAdd={canAdd}
           canInvite={canInvite}
+          canGrantOwner={isAdmin}
           canReadInvites={canReadInvites}
           onClose={() => setAdding(false)}
         />

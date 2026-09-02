@@ -308,7 +308,7 @@ export const teamInvite = pgTable(
     projectId: integer('project_id').references(() => project.id, { onDelete: 'cascade' }),
     email: text('email').notNull(),
     // An invite that names a project always brings its invitee into the team as a
-    // plain member; 'manager' is granted by an invite into the team itself.
+    // plain member; a rank above that is granted by an invite into the team itself.
     teamRole: text('team_role').notNull().default('member'),
     projectRole: text('project_role'),
     // The team role the invitee joins the project on when project_role is "member".
@@ -328,7 +328,7 @@ export const teamInvite = pgTable(
     respondedAt: timestamp('responded_at', { withTimezone: true }),
   },
   (t) => [
-    check('team_invite_team_role_check', sql`${t.teamRole} IN ('manager', 'member')`),
+    check('team_invite_team_role_check', sql`${t.teamRole} IN ('owner', 'manager', 'member')`),
     check(
       'team_invite_project_role_check',
       sql`(${t.projectId} IS NULL AND ${t.projectRole} IS NULL)
