@@ -14,6 +14,10 @@ describe('localeFromAcceptLanguage', () => {
     expect(localeFromAcceptLanguage('ar-SA,ar;q=0.9,en;q=0.8')).toBe('ar');
   });
 
+  it('matches a regional Spanish browser locale to the supported base language', () => {
+    expect(localeFromAcceptLanguage('es-CO,es;q=0.9,en;q=0.8')).toBe('es');
+  });
+
   it('uses the fallback for a preferred wildcard', () => {
     expect(localeFromAcceptLanguage('de-DE,*;q=0.9,zh;q=0.8')).toBe('en');
   });

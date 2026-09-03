@@ -1,0 +1,108 @@
+{
+  "title": "Miembros",
+  "description": "Personas con acceso a este proyecto. Invitar a personas por correo electrónico; los propietarios pueden revocar el acceso.",
+  "columns": {
+    "member": "Miembro",
+    "role": "Rol",
+    "timezone": "Zona horaria",
+    "joined": "Unido",
+    "actions": "Acciones"
+  },
+  "you": "(tú)",
+  "aiAgent": "Agente de IA",
+  "groups": {
+    "people": "Personas",
+    "agents": "Agentes de IA"
+  },
+  "leaveProject": "Dejar el proyecto",
+  "revokeAccess": "Revocar el acceso",
+  "lastOwner": "Un proyecto debe conservar al menos un propietario",
+  "leaveTitle": "Dejar este proyecto",
+  "leaveDescription": "Perderás el acceso a este proyecto y tus problemas. Un propietario puede invitarte a volver más tarde.",
+  "revokeTitle": "Revocar el acceso a {name}",
+  "revokeDescription": "{name} perderá el acceso a este proyecto. Se les puede invitar a volver más tarde.",
+  "selectRole": "Seleccionar función",
+  "editDescription": "Editar descripción",
+  "descriptionQuestionSelf": "¿Qué haces en este proyecto?",
+  "descriptionQuestionOther": "¿Qué hace esta persona en este proyecto?",
+  "descriptionPlaceholder": "e.g. Ingeniero de backend, propietario de API y de las integraciones.",
+  "invites": {
+    "emailPlaceholder": "nombre@ejemplo.com",
+    "rolePlaceholder": "Rol",
+    "invite": "Invitar",
+    "inviting": "Invitando…",
+    "pendingCount": "{count, plural,one{# invitación pendiente}other{# invitaciones pendientes}}",
+    "copyLink": "Copiar enlace",
+    "copied": "Copiado",
+    "revokeAction": "Revocar invitación",
+    "removeAction": "Eliminar invitación",
+    "invitedBy": "Invitado por {name} · ",
+    "createdAt": "creado{date}",
+    "respondedAt": "{status, select, accepted {aceptada} rejected {rechazada} other {actualizada}} {date}",
+    "status": {
+      "pending": "Pendiente",
+      "accepted": "Aceptado",
+      "rejected": "Rechazado"
+    },
+    "revokeTitle": "Revocar invitación para {email}",
+    "revokeConfirm": "Revocar invitación",
+    "revokeDescription": "El enlace de invitación dejará de funcionar. Puedes invitar a este correo electrónico nuevamente más tarde."
+  },
+  "roles": {
+    "title": "Roles",
+    "description": "Roles personalizados y los permisos que cada uno otorga. Asigne un rol a un miembro de la lista de miembros.",
+    "ownerOnly": "Solo los propietarios del proyecto pueden administrar roles.",
+    "empty": "Aún no hay roles. Crea uno para otorgar acceso con alcance.",
+    "columns": {
+      "role": "Rol",
+      "permissions": "Permisos",
+      "actions": "Acciones"
+    },
+    "default": "Predeterminado",
+    "editAction": "Editar rol",
+    "deleteAction": "Eliminar rol",
+    "defaultUndeletable": "La función predeterminada no se puede eliminar",
+    "deleteTitle": "Eliminar función \"{name}\"",
+    "deleteDescription": "Los miembros con esta función se trasladarán a el rol predeterminada. Esto no se puede deshacer.",
+    "newRole": "Nuevo rol",
+    "editorTitleEdit": "Editar rol",
+    "editorTitleNew": "Nuevo rol",
+    "editorSubtitle": "permisos de rol",
+    "namePlaceholder": "e.g. Colaborador",
+    "resourceColumn": "Recurso",
+    "toggleActionAll": "Alternar {action} para todos los recursos",
+    "toggleGroupAll": "Alternar todos los permisos de {group}",
+    "toggleActionGroup": "Alternar {action} para {group}",
+    "cellAria": "{resource}: {action}",
+    "saveRole": "Guardar rol",
+    "createRole": "Crear rol",
+    "importExport": "Importar y exportar roles",
+    "copyRoles": "Copiar roles",
+    "pasteRoles": "Pegar roles",
+    "nothingToCopy": "No hay roles personalizados para copiar.",
+    "copiedRoles": "Copiado {count, plural,one{# rol}other{# roles}}.",
+    "copyFailed": "No se pudo copiar al portapapeles.",
+    "readFailed": "No se pudo leer el portapapeles.",
+    "parseFailed": "No se pudieron leer los roles del portapapeles.",
+    "import": {
+      "title": "Se aplicarán los roles del portapapeles",
+      "summary": "{count, plural,one{# rol}other{# roles}}. Sobrescribir un rol reemplaza tu matriz de permisos; los miembros mantienen el rol.",
+      "preview": "Permisos de vista previa",
+      "apply": "¿Aplicar {count, plural,=0{roles}one{# rol}other{# roles}}",
+      "applied": "Roles aplicados: {created} creado, {updated} actualizado{skipped, plural,=0{}other{, # omitidos}}.",
+      "actions": {
+        "create": "Nuevo",
+        "update": "Sobrescribir",
+        "skip": "Skip (predeterminado)"
+      }
+    },
+    "transferErrors": {
+      "invalidJson": "El portapapeles no contiene JSON.",
+      "notAnExport": "El portapapeles no contiene una exportación de roles.",
+      "empty": "La exportación de roles está vacía."
+    }
+  },
+  "promoted": "Miembro ascendido a propietario",
+  "roleUpdated": "Rol de miembro actualizado",
+  "descriptionUpdated": "Descripción del miembro actualizada"
+}

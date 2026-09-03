@@ -1,0 +1,144 @@
+{
+  "title": "Iniciativas",
+  "newInitiative": "Nueva iniciativa",
+  "notFound": "Iniciativa no encontrada.",
+  "options": "Opciones de iniciativa",
+  "showDescription": "Mostrar descripción",
+  "noDescription": "Sin descripción.",
+  "noOwner": "Sin propietario",
+  "targetDate": "Fecha objetivo",
+  "progress": "Progreso",
+  "activity": "Actividad",
+  "noActivity": "Aún no hay actividad.",
+  "noIssuesLinked": "Aún no hay problemas vinculados.",
+  "inProgress": "En progreso",
+  "emptyTitle": "Aún no hay iniciativas",
+  "emptyDescription": "Una iniciativa agrupa problemas relacionados bajo un objetivo.",
+  "emptyTabDescription": "Las iniciativas se mueven entre pestañas a medida que cambia tu estado.",
+  "emptyTab": {
+    "active": "No hay iniciativas activas",
+    "planned": "No hay iniciativas planificadas",
+    "proposed": "No hay iniciativas propuestas",
+    "completed": "No hay iniciativas completadas"
+  },
+  "tabs": {
+    "active": "Activo",
+    "planned": "Planificada",
+    "proposed": "Propuesta",
+    "completed": "Completado",
+    "all": "Todas las iniciativas"
+  },
+  "detailTabs": {
+    "overview": "Descripción general",
+    "issues": "Incidencias"
+  },
+  "columns": {
+    "name": "Nombre",
+    "priority": "Prioridad",
+    "owner": "Propietario",
+    "target": "Objetivo",
+    "progress": "Progreso",
+    "health": "Salud"
+  },
+  "status": {
+    "proposed": "Propuesta",
+    "planned": "Planificada",
+    "active": "Activo",
+    "completed": "Completado",
+    "canceled": "Cancelado"
+  },
+  "stateGroups": {
+    "backlog": "Atrasos",
+    "unstarted": "Pendiente",
+    "started": "En progreso",
+    "completed": "Listo",
+    "canceled": "Cancelado"
+  },
+  "health": {
+    "on_track": "En camino",
+    "at_risk": "En riesgo",
+    "off_track": "Fuera de camino",
+    "unknown": "Sin actualización"
+  },
+  "healthInfo": {
+    "trigger": "¿Cómo se calcula la salud?",
+    "title": "Salud",
+    "description": "Compara el trabajo realizado con el tiempo transcurrido. Se actualiza automáticamente.",
+    "legend": {
+      "on_track": "Work sigue el ritmo del cronograma.",
+      "at_risk": "El trabajo se está retrasando con respecto al cronograma.",
+      "off_track": "El trabajo está muy atrasado o la fecha objetivo ya pasó.",
+      "unknown": "Aún no hay suficientes datos: no hay problemas o no hay fecha objetivo."
+    },
+    "howCalculated": "Cómo se calcula",
+    "workDone": "Trabajo realizado",
+    "timeElapsed": "Tiempo transcurrido",
+    "trail": "Hasta qué punto el trabajo va por detrás del tiempo",
+    "trailOnTrack": "hasta un 10 % de retraso",
+    "trailAtRisk": "10-25% detrás",
+    "trailOffTrack": "más del 25% detrás"
+  },
+  "timeline": {
+    "title": "Cronología",
+    "started": "Iniciado",
+    "target": "Objetivo",
+    "remaining": "Remanente",
+    "overdue": "{days}d vencido",
+    "dueToday": "Vence hoy",
+    "left": "{days}d izquierda",
+    "timeElapsed": "Tiempo transcurrido",
+    "workDone": "Trabajo realizado",
+    "noTargetDate": "Establece una fecha objetivo para realizar un seguimiento del ritmo."
+  },
+  "form": {
+    "title": "Título",
+    "titlePlaceholder": "Lanzamiento del tercer trimestre",
+    "description": "Descripción",
+    "descriptionPlaceholder": "¿De qué se trata esta iniciativa?",
+    "create": "Crear iniciativa",
+    "creating": "Creando…",
+    "editTitle": "Editar iniciativa",
+    "save": "Guardar cambios"
+  },
+  "pagination": {
+    "range": "{from}–{to} de {total}",
+    "previous": "Página anterior",
+    "next": "Página siguiente"
+  },
+  "select": {
+    "label": "Iniciativa",
+    "search": "Enlace a la iniciativa…",
+    "empty": "Sin iniciativas.",
+    "none": "Sin iniciativa"
+  },
+  "feed": {
+    "system": "Sistema",
+    "createdInitiative": "creó la iniciativa",
+    "createdIssue": "creó el problema",
+    "renamed": "renombrado a “{title}”",
+    "descriptionUpdated": "actualizó la descripción",
+    "descriptionCleared": "borró la descripción",
+    "statusSet": "estableció el estado en {status}",
+    "statusMoved": "movido de {from} a {to}",
+    "prioritySet": "estableció prioridad a {priority}",
+    "priorityRemoved": "eliminó la prioridad",
+    "ownerSet": "establecer propietario en {name}",
+    "ownerRemoved": " propietario eliminado {name}",
+    "assigneeSet": " asignado a {name}",
+    "assigneeRemoved": " asignado asignado {name}",
+    "delegateSet": " delegado a {name}",
+    "delegateRemoved": " delegado eliminado {name}",
+    "targetDateSet": " establecer fecha objetivo en {date}",
+    "targetDateRemoved": " fecha objetivo eliminada",
+    "startDateSet": "establece la fecha de inicio en {date}",
+    "startDateRemoved": " fecha de inicio eliminada",
+    "dueDateSet": "establece la fecha de vencimiento en {date}",
+    "dueDateRemoved": "fecha de vencimiento eliminada",
+    "labelAdded": "etiqueta agregada {label}",
+    "labelRemoved": "etiqueta eliminada {label}",
+    "typeSet": "establece el tipo en {type}",
+    "typeRemoved": "tipo eliminado",
+    "linked": "vinculado a {name}",
+    "unlinked": "desvinculado de la iniciativa"
+  }
+}

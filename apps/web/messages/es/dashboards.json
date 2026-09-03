@@ -1,0 +1,204 @@
+{
+  "noAccess": "No tienes acceso a los paneles.",
+  "defaultName": "Descripción general",
+  "newDashboard": "Nuevo panel",
+  "renameDashboard": "Cambiar nombre del panel",
+  "namePlaceholder": "Nombre del panel",
+  "options": "Opciones del panel",
+  "rename": "Renombrar",
+  "editLayout": "Editar diseño",
+  "discard": "Descartar",
+  "saveDashboard": "Guardar panel",
+  "saveChanges": "Guardar cambios",
+  "noWidgets": "Aún no hay widgets. Agrega uno para crear este panel.",
+  "addWidget": "Agregar widget",
+  "addWidgetTitle": "Agregar un widget",
+  "addWidgetDescription": "Elige un widget para agregarlo a este panel.",
+  "searchWidgets": "Buscar widgets",
+  "clearSearch": "Borrar búsqueda",
+  "noWidgetMatches": "No hay coincidencias de widgets “{query}”.",
+  "dragToMove": "Arrastrar para mover",
+  "widgetName": "Nombre del widget",
+  "widgetSettings": "Configuración del widget",
+  "widgetOptions": "Opciones del widget",
+  "removeWidget": "Eliminar widget",
+  "lastDays": "Últimos días de {days}",
+  "showRows": "Mostrar {count}",
+  "widgetGroups": {
+    "issues": "Incidencias",
+    "agents": "Agentes de IA y webhooks"
+  },
+  "widgets": {
+    "stat": {
+      "label": "Número",
+      "description": "Número de problemas que coinciden con un filtro"
+    },
+    "recent_issues": {
+      "label": "Problemas recientes",
+      "description": "Últimos problemas por hora de creación o actualización"
+    },
+    "activity_feed": {
+      "label": "Feed de actividad",
+      "description": "Registro de cambios de todo el proyecto, filtrable por actor y acción"
+    },
+    "pulse": {
+      "label": "Pulso",
+      "description": "Mapa de calor de la actividad diaria al estilo de GitHub"
+    },
+    "throughput": {
+      "label": "Rendimiento",
+      "description": "Problemas creados y cerrados por semana"
+    },
+    "breakdown": {
+      "label": "Desglose",
+      "description": "Recuento de incidencias por estado, prioridad, tipo o persona asignada"
+    },
+    "agent_runs": {
+      "label": "Ejecuciones de agentes",
+      "description": "Ejecuciones recientes de agentes de IA y sus resultados"
+    },
+    "agent_health": {
+      "label": "Estado del agente",
+      "description": "Tasa de éxito y errores de ejecución del agente en una ventana"
+    },
+    "webhook_health": {
+      "label": "Salud del Webhook",
+      "description": "Resultados de entrega del Webhook y puntos finales deshabilitados"
+    },
+    "agent_workload": {
+      "label": "Carga de trabajo del agente",
+      "description": "Problemas delegados y resultados de ejecución por agente"
+    }
+  },
+  "breakdown": {
+    "empty": "Sin problemas todavía.",
+    "by": {
+      "status": "Estado",
+      "priority": "Prioridad",
+      "type": "Tipo",
+      "assignee": "Persona asignada",
+      "delegate": "Delegado"
+    },
+    "caption": {
+      "status": "Por estado",
+      "priority": "Por prioridad",
+      "type": "Por tipo",
+      "assignee": "Por asignado",
+      "delegate": "Por delegado"
+    }
+  },
+  "recentIssues": {
+    "empty": "No hay problemas que coincidan con este filtro.",
+    "captionCreated": "El más nuevo primero",
+    "captionUpdated": "Recientemente actualizado",
+    "filterCount": "{count, plural, one {# filtro} other {# filtros}}",
+    "sort": {
+      "created": "El más reciente",
+      "updated": "Actualizado"
+    }
+  },
+  "activityFeed": {
+    "empty": "Ninguna actividad coincide con este filtro.",
+    "someone": "Alguien",
+    "filterCount": "{count, plural, one {# filtro} other {# filtros}}",
+    "actions": {
+      "all": "Toda la actividad",
+      "status": "Cambios de estado",
+      "assignee": "Asignaciones",
+      "priority": "Prioridad",
+      "created": "Creado"
+    },
+    "verbs": {
+      "comment": "comentó",
+      "created": "creado",
+      "title": "renombrado",
+      "description": "actualizó la descripción de ",
+      "status": " cambió el estado de ",
+      "assignee": " cambió el asignado de ",
+      "priority": " cambió la prioridad de ",
+      "type": " cambió el tipo de ",
+      "start_date": " cambió la fecha de inicio de ",
+      "due_date": " cambió la fecha de vencimiento de ",
+      "label_add": " agregó una etiqueta a",
+      "label_remove": "eliminó una etiqueta de",
+      "field": "actualizó un campo en",
+      "other": "actualizado"
+    }
+  },
+  "pulse": {
+    "caption": {
+      "hour": "Por hora",
+      "day": "Por día",
+      "week": "Por semana"
+    },
+    "unit": {
+      "hour": "Horas",
+      "day": "Días",
+      "week": "Semanas"
+    },
+    "events": "{count, plural,one{# event}other{# events}}",
+    "eventNoun": "{count, plural,one{event}other{events}}",
+    "active": "{count} activas",
+    "less": "Menos",
+    "more": "Más"
+  },
+  "throughput": {
+    "empty": "No hay actividad en este período.",
+    "lastWeeks": "Últimos días de {weeks}semanas",
+    "created": "Creado",
+    "closed": "Cerrado"
+  },
+  "agentRuns": {
+    "empty": "Aún no se ejecuta ningún agente.",
+    "filters": {
+      "all": "Todas las ejecuciones",
+      "failed": "Fallido",
+      "pending": "En cola",
+      "success": "Exitoso"
+    },
+    "status": {
+      "pending": "en cola",
+      "success": "éxito",
+      "failed": "falló",
+      "canceled": "cancelado"
+    },
+    "trigger": {
+      "mention": "ran al mencionar in",
+      "delegation": "ran al delegar ",
+      "field": "ran en un campo de",
+      "manual": "ran manualmente",
+      "schedule": "ran según lo programado"
+    }
+  },
+  "agentHealth": {
+    "empty": "No se ejecuta ningún agente.",
+    "successRate": "tasa de éxito",
+    "runs": "{count, plural,one{# run}other{# run}}",
+    "failed": "{count} falló",
+    "queued": "{count} en cola"
+  },
+  "webhookHealth": {
+    "deliveries": "entregas",
+    "failed": "{count} falló",
+    "pending": "{count} pendiente",
+    "allDelivered": "todos entregados",
+    "disabled": "{count, plural,one{# punto final deshabilitado}other{# puntos finales deshabilitados}}"
+  },
+  "agentWorkload": {
+    "empty": "No hay agentes en este proyecto.",
+    "agent": "Agente",
+    "delegated": "Delegadas",
+    "runs": "Ejecuciones",
+    "failed": "{count} falló",
+    "kind": {
+      "external": "Externo",
+      "internal": "Interno"
+    }
+  },
+  "defaultWidgets": {
+    "open": "Abierto",
+    "inProgress": "En progreso",
+    "backlog": "Atrasos",
+    "unassigned": "Sin asignar"
+  }
+}

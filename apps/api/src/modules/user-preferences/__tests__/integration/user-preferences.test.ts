@@ -91,6 +91,17 @@ describe('user preferences', () => {
     });
   });
 
+  it('saves and reads back the Spanish locale', async () => {
+    const u = await signUpTestUser();
+    const client = authedApi(u.cookie);
+
+    const res = await client.account.preferences.patch({ locale: 'es' });
+
+    expect(res.status).toBe(200);
+    const stored = await client.account.preferences.get();
+    expect(stored.data?.locale).toBe('es');
+  });
+
   it('keeps the fields left out of a patch', async () => {
     const u = await signUpTestUser();
     const client = authedApi(u.cookie);

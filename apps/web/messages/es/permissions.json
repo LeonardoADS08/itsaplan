@@ -1,0 +1,46 @@
+{
+  "viewPermissions": "Ver permisos",
+  "none": "No se han concedido permisos",
+  "grantedCount": "{count, plural,one{# permiso}other{# permisos}} concedidos",
+  "resources": {
+    "work_items": "Elementos de trabajo",
+    "initiatives": "Iniciativas",
+    "cycles": "Ciclos",
+    "dashboards": "Paneles",
+    "views": "Vistas de elementos de trabajo",
+    "members_invite": "Invitaciones",
+    "members_manage": "Miembros",
+    "states": "Estados",
+    "issue_types": "Se crearán tipos de problemas",
+    "labels": "Etiquetas",
+    "ai_agents": "Agentes de IA",
+    "integrations": "Integraciones",
+    "agent_skills": "Habilidades del agente",
+    "agent_tools": "Herramientas del agente",
+    "custom_fields": "Campos personalizados",
+    "workflow_config": "Configuración del flujo de trabajo",
+    "actions": "Acciones",
+    "webhooks": "Webhooks",
+    "note_boards": "Tableros de notas",
+    "danger_zone": "Zona de peligro"
+  },
+  "actions": {
+    "create": "Crear",
+    "edit": "Editar",
+    "read": "Leer",
+    "delete": "Eliminar"
+  },
+  "groups": {
+    "workItems": "Elementos de trabajo",
+    "dashboards": "Paneles",
+    "notes": "Notas",
+    "ai": "IA",
+    "configuration": "Configuración",
+    "members": "Miembros",
+    "project": "Proyecto",
+    "other": "Otro"
+  },
+  "resourceColumn": "Recurso",
+  "allowed": "permitido",
+  "notAllowed": "no permitido"
+}

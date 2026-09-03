@@ -1,0 +1,32 @@
+{
+  "label": "Claves de API",
+  "title": "Claves de API",
+  "description": "Las claves personales de API autentican solicitudes a la API como tu cuenta ({email}). El valor de una clave se muestra una sola vez, cuando la creas.",
+  "sectionTitle": "Tus claves API",
+  "create": "Crear clave API",
+  "empty": "Aún no hay claves de API. Crea una para autenticar solicitudes en la API.",
+  "fallbackName": "Clave de API",
+  "createdAt": "Creado {date}",
+  "deleteAction": "Eliminar clave de API",
+  "createDialog": {
+    "title": "Crear clave API",
+    "nameLabel": "Nombre",
+    "namePlaceholder": "p. ej., canalización de CI",
+    "nameHint": "Una etiqueta para reconocer esta clave más adelante.",
+    "submit": "Crear clave",
+    "submitPending": "Creando…",
+    "error": "No se pudo crear la clave API."
+  },
+  "createdDialog": {
+    "title": "Clave de API creada",
+    "description": "Copia tu clave ahora. Por seguridad, se muestra solo una vez y no se puede recuperar más tarde.",
+    "copy": "Copiar clave"
+  },
+  "deleteDialog": {
+    "title": "¿Eliminar la clave API?",
+    "confirm": "Eliminar clave",
+    "description": "Cualquier solicitud que usa esta clave dejará de funcionar inmediatamente. Esto no se puede deshacer.",
+    "error": "No se pudo eliminar la clave API."
+  },
+  "loadFailed": "No se pudieron cargar las claves API."
+}

@@ -1,0 +1,76 @@
+{
+  "title": "Ciclos",
+  "newCycle": "Nuevo ciclo",
+  "status": {
+    "upcoming": "Próximo",
+    "active": "Activo",
+    "completed": "Completado"
+  },
+  "views": {
+    "table": "Tabla",
+    "timeline": "Cronología"
+  },
+  "columns": {
+    "name": "Nombre",
+    "dates": "Fechas",
+    "length": "Longitud",
+    "issues": "Incidencias",
+    "progress": "Progreso"
+  },
+  "emptyTitle": "Aún no hay ciclos",
+  "emptyDescription": "Un ciclo es un período de tiempo determinado en el que el equipo planifica tus problemas.",
+  "nothingPlannedTitle": "Nada planeado",
+  "nothingPlannedDescription": "La línea de tiempo muestra los ciclos activos y futuros. Los terminados están en la mesa.",
+  "options": "Opciones de ciclo",
+  "transferIssues": "{count, plural,one{Mover # problema sin terminar}other{Mover # problemas sin terminar}}",
+  "finishedEarly": "Terminado temprano, planeado finalizar {date}",
+  "form": {
+    "editTitle": "Editar ciclo",
+    "newTitle": "Nuevo ciclo",
+    "name": "Nombre",
+    "goal": "Objetivo",
+    "goalPlaceholder": "¿Qué debería ofrecer este ciclo?",
+    "length": "Longitud",
+    "starts": "Inicio",
+    "ends": "Finaliza",
+    "create": "Crear ciclo",
+    "saveFailed": "No se pudo guardar el ciclo"
+  },
+  "weeks": "{count, plural,one{# semana}other{# semanas}}",
+  "transfer": {
+    "title": "Mover problemas sin terminar",
+    "description": "Los problemas sin terminar se mueven al ciclo que elige. Los terminados y cancelados se quedan aquí.",
+    "moveTo": "Mover a",
+    "noCycle": "Sin ciclo",
+    "submit": "Mover problemas",
+    "moving": "Mover…",
+    "moved": "{count, plural,one{# problema movido}other{# problemas movidos}}",
+    "failed": "No se pudieron mover los problemas"
+  },
+  "finish": {
+    "action": "Finalizar ciclo",
+    "title": "Finalizar ciclo antes",
+    "description": "{cycle} cierra hoy en lugar de {date}. No puedes volver a abrirlo. {count, plural,=0{No queda nada sin terminar.}one{# el problema sin terminar permanece ahí.}other{# los problemas sin terminar permanecen ahí.}}",
+    "submit": "Finalizar ciclo"
+  },
+  "startNext": {
+    "action": "Comience el siguiente ciclo hoy",
+    "title": "Inicia el siguiente ciclo hoy",
+    "description": "{cycle} se cierra hoy y no puede volver a abrirlo.{next} comienza hoy y aún termina en {date}. {count, plural,=0{Nada se transfiere.}one{# el problema sin terminar se mueve a él.}other{# los problemas sin terminar se mueven a él.}} Los problemas terminados y cancelados permanecen en {cycle}.",
+    "submit": "Iniciar el siguiente ciclo",
+    "started": "{cycle} iniciado.{count, plural,=0{No hay problemas transferidos.}one{# problema transferido.}other{# problemas transferidos.}}"
+  },
+  "delete": {
+    "title": "Eliminar ciclo",
+    "description": "{cycle} se elimina definitivamente. {count, plural,=0{No tiene problemas.}one{# el problema permanece en el proyecto, sin un ciclo.}other{# los problemas permanecen en el proyecto, sin un ciclo.}}"
+  },
+  "details": "Detalles del ciclo",
+  "goal": "Objetivo",
+  "noGoal": "No se ha establecido ningún objetivo.",
+  "progress": "Progreso",
+  "openCycle": "Abrir ciclo",
+  "dragFailed": "No se pudo mover el ciclo",
+  "notFound": "Ciclo no encontrado.",
+  "defaultName": "Sprint {n}",
+  "issuesDone": "Problemas realizados"
+}

@@ -1,0 +1,217 @@
+{
+  "pager": {
+    "perPage": "Por página",
+    "rowsPerPage": "Filas por página",
+    "range": "{first}-{last} de {total}",
+    "previous": "Página anterior",
+    "next": "Página siguiente"
+  },
+  "access": {
+    "owner": "Un propietario tiene acceso completo: no se consulta la matriz de roles.",
+    "role": "Resuelto desde el rol \"{role}\".",
+    "default": "No se asigna ningún rol: se aplican los permisos de miembro predeterminados.",
+    "joined": "joined{date}"
+  },
+  "providers": {
+    "credential": "Contraseña",
+    "google": "ID",
+    "passkey": "Clave de acceso"
+  },
+  "users": {
+    "empty": "Ninguna cuenta coincide con estos filtros.",
+    "searchPlaceholder": "Buscar por nombre o correo electrónico",
+    "kind": "Tipo de cuenta",
+    "kinds": {
+      "human": "Humanos",
+      "agent": "Bots de IA",
+      "all": "Todas las cuentas"
+    },
+    "columns": {
+      "account": "Cuenta",
+      "role": "Rol",
+      "signIn": "Iniciar sesión",
+      "projects": "Proyectos",
+      "lastSeen": "Última vez",
+      "email": "Correo electrónico"
+    },
+    "registered": "joined{date}",
+    "roleGod": "Superadministrador",
+    "roleUser": "Usuario",
+    "agent": "Agente",
+    "noProviders": "ninguno",
+    "neverSeen": "nunca",
+    "verified": "Verificado",
+    "notVerified": "No verificado",
+    "open": "Abrir cuenta",
+    "showAccess": "Mostrar acceso al proyecto"
+  },
+  "userPanel": {
+    "instanceOwner": "Propietario de la instancia",
+    "user": "Usuario",
+    "aiAgent": "Agente de IA",
+    "emailVerified": "Correo electrónico verificado",
+    "unconfirmedTitle": "Dirección de correo electrónico no confirmada",
+    "unconfirmedHint": "Confírmelo aquí cuando el enlace nunca les llegue.",
+    "verify": "Marcar como verificado",
+    "verifying": "Confirmando...",
+    "verifyDone": "Dirección de correo electrónico confirmada",
+    "signInMethods": "Métodos de inicio de sesión",
+    "noProviders": "Ninguno vinculado",
+    "projects": "Proyectos",
+    "noProjects": "Ninguno",
+    "registered": "Registrado",
+    "lastSeen": "Última vez",
+    "neverSignedIn": "Nunca iniciado sesión",
+    "projectAccess": "Acceso al proyecto",
+    "noAccessTitle": "Sin acceso al proyecto",
+    "noAccessHint": "Esta cuenta no llega a nada hasta que alguien la invita a un proyecto.",
+    "deleteHint": "Los problemas y comentarios permanecen, con el autor sin asignar.",
+    "deleteTitle": "Eliminar cuenta",
+    "deleteConfirm": "Eliminar cuenta",
+    "deleteConfirmWithProjects": "{count, plural,one{Eliminar cuenta y proyecto}other{Eliminar cuenta y proyectos}}",
+    "deleteMessage": "<strong>{name}</strong> pierde el acceso a esta instancia. Los problemas y comentarios que escribieron permanecen, sin asignar al autor. Esto no se puede deshacer.",
+    "soleOwnerTitle": "{count, plural,one{Solo propietario de un proyecto}other{Solo propietario de #proyectos}}",
+    "soleOwnerHint": "{count, plural,one{Una vez que la cuenta desaparece, nadie puede administrarla.}other{Una vez que la cuenta desaparece, nadie puede administrarlos.}}",
+    "deleteWithProjects": "{count, plural,one{Eliminar el proyecto con la cuenta}other{Eliminar los proyectos con la cuenta}}",
+    "deleteWithProjectsOn": "Todo lo que hay dentro también.",
+    "deleteWithProjectsOff": "O cancelar y agregar un segundo propietario primero.",
+    "deleted": "Cuenta eliminada",
+    "deletedWithProjects": "Cuenta y tus proyectos eliminados"
+  },
+  "projects": {
+    "empty": "No hay proyectos que coincidan con esta búsqueda.",
+    "searchPlaceholder": "Buscar por clave o nombre",
+    "columns": {
+      "project": "Proyecto",
+      "members": "Miembros",
+      "issues": "Incidencias",
+      "agents": "Agentes",
+      "lastActivity": "Última actividad",
+      "mcp": "MCP"
+    },
+    "created": "creado{date}",
+    "archived": "{count}archivado",
+    "neverActive": "nunca",
+    "mcpEnabled": "Activado",
+    "mcpOff": "Desactivado",
+    "open": "Abrir proyecto",
+    "showDetails": "Mostrar detalles del proyecto"
+  },
+  "projectPanel": {
+    "mcpEnabled": "MCP habilitado",
+    "mcpOff": "MCP desactivado",
+    "created": "creado{date}",
+    "lastActivity": "Última actividad: {value}",
+    "noActivity": "ninguna todavía",
+    "statTitle": "{label}: {value}",
+    "stats": {
+      "issues": "Incidencias",
+      "archivedIssues": "Problemas archivados",
+      "initiatives": "Iniciativas",
+      "members": "Miembros",
+      "dashboards": "Paneles",
+      "views": "Vistas",
+      "agents": "Agentes de IA",
+      "skills": "Habilidades",
+      "tools": "Herramientas",
+      "integrations": "Integraciones"
+    },
+    "members": "Miembros",
+    "noMembersTitle": "No hay miembros",
+    "noMembersHint": "Nadie puede acceder a este proyecto hasta que alguien sea invitado a él."
+  },
+  "general": {
+    "saved": "Valores predeterminados del proyecto guardados",
+    "projectDefaults": "Valores predeterminados del proyecto",
+    "mcpEnabled": "Habilite MCP en nuevos proyectos",
+    "mcpEnabledHint": "Se puede acceder a un nuevo proyecto a través de MCP tan pronto como se crea."
+  },
+  "authentication": {
+    "saved": "Configuraciones de autenticación guardadas",
+    "registration": "Registro",
+    "registrationHint": "Quién puede crear una cuenta en esta instancia.",
+    "modes": {
+      "open": {
+        "label": "Abierto",
+        "description": "Cualquiera que llegue a la página de registro puede crear una cuenta."
+      },
+      "invite": {
+        "label": "Solo por invitación",
+        "description": "Solo se puede crear una cuenta a través de un enlace de invitación."
+      },
+      "closed": {
+        "label": "Cerrado",
+        "description": "No hay cuentas nuevas. Los existentes siguen iniciando sesión."
+      }
+    },
+    "signIn": "Opciones de inicio de sesión",
+    "signInHint": "Opciones que necesitan correo saliente. Permanecen desactivados hasta que se configura un proveedor.",
+    "needsProvider": "Primero configure el proveedor de correo electrónico en Integraciones.",
+    "requireVerification": "Requiere confirmación de correo electrónico",
+    "requireVerificationHint": "Una cuenta nueva debe confirmar tu dirección antes de poder iniciar sesión.",
+    "magicLink": "Enlaces de inicio de sesión",
+    "magicLinkHint": "Ofrecemos iniciar sesión con un enlace enviado por correo electrónico, junto con la contraseña."
+  },
+  "hotkeys": {
+    "saved": "Atajos de teclado guardados"
+  },
+  "storage": {
+    "saved": "Configuración de almacenamiento guardada",
+    "fileSize": "Tamaño del archivo",
+    "fileSizeHint": "El archivo más grande que puede contener una carga. Se rechaza un archivo más grande antes de almacenarlo.",
+    "attachmentMb": "Tamaño del archivo adjunto (MB)",
+    "attachmentHint": "Se aplica a archivos adjuntos emitidos, archivos pegados en una descripción y archivos adjuntos agregados por agentes.",
+    "avatarMb": "Tamaño de avatar (MB)",
+    "avatarHint": "La imagen de perfil que las personas cargan para tu cuenta.",
+    "mimeTypes": "Tipos de archivos adjuntos aceptados",
+    "mimeTypesHint": "Un tipo de contenido por línea. Déjelo vacío para aceptar cualquier archivo.",
+    "mimeTypesNote": "Una línea es de tipo completo (aplicación/pdf) o un comodín (imagen/*). Los archivos ya almacenados se conservan independientemente de lo que diga la lista.",
+    "quota": "Cuota de proyecto",
+    "quotaHint": "Almacenamiento total de archivos adjuntos que puede usar un proyecto. 0 significa que no hay límite.",
+    "quotaMb": "Almacenamiento por proyecto (MB)",
+    "quotaNote": "Una vez que un proyecto alcanza la cuota, se rechazan las nuevas cargas hasta que alguien elimine los archivos adjuntos."
+  },
+  "telegram": {
+    "saved": "Telegram configuración guardada",
+    "bot": "Bot",
+    "botConfigured": "Las personas conectan tu cuenta Telegram abriendo un chat con este bot desde tu perfil.",
+    "botMissing": "Crea un bot con @BotFather en Telegram y pega tu token aquí.",
+    "botToken": "Token del bot",
+    "botTokenHint": "El token se verifica con Telegram cuando guarda, por lo que aquí se rechaza uno incorrecto en lugar de fallar silenciosamente más tarde.",
+    "resolvedHint": "Resuelto desde el token. Este es el bot que la gente verá cuando se conecte."
+  },
+  "email": {
+    "saved": "Proveedor de correo electrónico guardado",
+    "provider": "Proveedor de correo electrónico",
+    "providerHint": "Elige un proveedor. Las credenciales se almacenan cifradas.",
+    "from": "De dirección",
+    "fromHint": "Requerido para Resend. Con SMTP, el valor predeterminado es nombre de usuario.",
+    "host": "Servidor",
+    "port": "Puerto",
+    "encryption": "Cifrado",
+    "encryptionOptions": {
+      "none": "Ninguno",
+      "ssl": "SSL",
+      "tls": "TLS"
+    },
+    "username": "Nombre de usuario",
+    "password": "Contraseña",
+    "passwordPlaceholder": "SMTP contraseña",
+    "timeout": "Tiempo de espera (s)",
+    "optional": "Opcional",
+    "apiKey": "Clave de API",
+    "projectNotifications": "Notificaciones de proyecto",
+    "projectNotificationsHint": "Permita que los proyectos entreguen tus notificaciones a través de este proveedor en lugar de configurar uno propio. Cada proyecto aún elige si usarlo."
+  },
+  "authProvider": {
+    "saved": "Proveedor de autenticación guardado",
+    "google": "ID",
+    "googleConfigured": "Una dirección sin cuenta obtiene una; una dirección que ya tiene una cuenta confirmada inicia sesión.",
+    "googleMissing": "Agrega primero el cliente ID y el secreto.",
+    "clientId": "Cliente ID",
+    "clientSecret": "Cliente secreto",
+    "redirectUri": "Redireccionar URI",
+    "redirectUriHint": "Registre esto en el cliente OAuth en la consola de la nube Google. Google rechaza el inicio de sesión si no coincide exactamente.",
+    "copyRedirectUri": "Copiar URI de redireccionamiento"
+  }
+}

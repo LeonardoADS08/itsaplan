@@ -1,0 +1,113 @@
+{
+  "account": {
+    "profile": "Perfil",
+    "preferences": "Preferencias",
+    "accounts": "Cuentas",
+    "security": "Seguridad",
+    "api-keys": "Claves de API"
+  },
+  "godGroups": {
+    "management": "Administración",
+    "instance": "Instancia"
+  },
+  "god": {
+    "users": {
+      "label": "Usuarios",
+      "description": "Cada cuenta en esta instancia: el rol global, si la dirección está confirmada y los proyectos a los que cada usuario puede acceder."
+    },
+    "projects": {
+      "label": "Proyectos",
+      "description": "Cada proyecto en esta instancia: qué tiene cada uno, cuándo estuvo activo por última vez y quién puede acceder a él."
+    },
+    "general": {
+      "label": "General",
+      "description": "Valores predeterminados para nuevos proyectos."
+    },
+    "authentication": {
+      "label": "Autenticación",
+      "description": "Quién puede registrarse en esta instancia, cómo se confirman las cuentas y con qué proveedores inician sesión las personas."
+    },
+    "hotkeys": {
+      "label": "Atajos de teclado",
+      "description": "La clave a la que está vinculado cada comando para todos en esta instancia. Cada persona puede volver a vincular un acceso directo para tu propia cuenta en tus preferencias."
+    },
+    "storage": {
+      "label": "Almacenamiento",
+      "description": "Cuánto pueden cargar las personas: el tamaño de un solo archivo, los tipos de archivos adjuntos aceptados y el almacenamiento que obtiene cada proyecto."
+    },
+    "telegram": {
+      "label": "ID",
+      "description": "El bot al que las personas conectan tu cuenta Telegram y el que entrega notificaciones Telegram para proyectos que no configuran ningún bot propio."
+    },
+    "email": {
+      "label": "Proveedor de correo electrónico",
+      "description": "El proveedor de correo a través del cual envía la instancia: contraseña restablecimientos, confirmación de dirección y enlaces de inicio de sesión."
+    },
+    "auth-provider": {
+      "label": "Proveedor de autenticación",
+      "description": "Las cuentas externas con las que las personas pueden iniciar sesión."
+    }
+  },
+  "settings": {
+    "general": {
+      "label": "General",
+      "description": "El nombre del proyecto, la descripción y las secciones que muestra."
+    },
+    "notifications": {
+      "label": "Proveedores de notificaciones",
+      "description": "El correo electrónico (SMTP o Resend) y las credenciales del bot Telegram a través de las cuales este proyecto envía notificaciones."
+    },
+    "states": {
+      "label": "Estados",
+      "description": "Los estados del flujo de trabajo que avanzan los problemas, cada uno mostrado como una columna."
+    },
+    "issue-types": {
+      "label": "Se crearán tipos de problemas",
+      "description": "Los tipos de problemas que este proyecto puede contener, cada uno con tus propios campos."
+    },
+    "labels": {
+      "label": "Etiquetas",
+      "description": "Etiquetas para organizar y filtrar problemas en todo el proyecto."
+    },
+    "custom-fields": {
+      "label": "Campos personalizados",
+      "description": "Campos adicionales que se muestran en problemas, globales o específicos de un tipo de problema."
+    },
+    "configuration": {
+      "label": "Configuración",
+      "description": "Cómo se cierran las subtareas con tu principal y cuándo se archivan los problemas obsoletos."
+    },
+    "actions": {
+      "label": "Acciones",
+      "description": "Botones en un problema que establece campos con un solo clic."
+    },
+    "schedules": {
+      "label": "Programaciones",
+      "description": "Ejecutar tareas del agente en un cronograma recurrente."
+    },
+    "webhooks": {
+      "label": "Webhooks",
+      "description": "Enviar eventos del proyecto a URL externas, firmadas con un secreto por webhook."
+    },
+    "git": {
+      "label": "Repositorios",
+      "description": "Cerrar problemas cuando tus solicitudes de extracción se fusionan en GitHub. Usuarios de GitLab, Gitea, Forgejo o Bitbucket."
+    },
+    "ai-agents": {
+      "label": "Agentes",
+      "description": "Bot a los que puede delegar problemas."
+    },
+    "integrations": {
+      "label": "Integraciones",
+      "description": "Credenciales que tus agentes utilizan para comunicarse con proveedores y herramientas de IA."
+    },
+    "agent-skills": {
+      "label": "Habilidades",
+      "description": "Instrucciones reutilizables que los agentes internos cargan bajo demanda."
+    },
+    "agent-tools": {
+      "label": "Herramientas",
+      "description": "Herramientas que los agentes pueden llamar, cada una conectada a una credencial de integración."
+    }
+  }
+}

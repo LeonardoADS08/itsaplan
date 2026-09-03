@@ -1,0 +1,37 @@
+{
+  "title": "Bandeja de entrada",
+  "empty": "Sin notificaciones",
+  "selectNotification": "Selecciona una notificación",
+  "backToList": "Bandeja de entrada",
+  "filter": "Filtrar",
+  "display": "Pantalla",
+  "notificationType": "Tipo de notificación",
+  "showRead": "Mostrar leído",
+  "showSnoozed": "Mostrar pospuesto",
+  "markAllRead": "Marcar todo como leído",
+  "deleteAllRead": "Eliminar todo lo leído",
+  "deleteAllReadCompleted": "Eliminar todo lo leído para problemas completados",
+  "types": {
+    "assigned": "Asignado",
+    "mentioned": "Mencionado",
+    "commented": "Comentado",
+    "state_changed": "Estado cambiado"
+  },
+  "actions": {
+    "markRead": "Marcar como leído",
+    "markUnread": "Marcar como no leído",
+    "snooze": "Posponer",
+    "unsnooze": "No posponer",
+    "tomorrow": "Mañana",
+    "inAWeek": "En una semana",
+    "pickDate": "Elige una fecha..."
+  },
+  "event": {
+    "someone": "Alguien",
+    "assigned": "{who} le asignó el problema",
+    "mentioned": "{who} mencionó que tú",
+    "commented": "{who} comentó",
+    "stateChanged": "{who} cambió el estado de {from} a {to}",
+    "stateChangedPlain": "{who}cambió el estado"
+  }
+}

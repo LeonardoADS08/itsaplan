@@ -1,0 +1,179 @@
+{
+  "cancel": "Cancelar",
+  "done": "Listo",
+  "loading": "Cargando…",
+  "signOut": "Cerrar sesión",
+  "member": "Miembro",
+  "owner": "Propietario",
+  "delete": "Eliminar",
+  "more": "Más",
+  "back": "Volver",
+  "save": "Guardar",
+  "saving": "Guardando...",
+  "close": "Cerrar",
+  "name": "Nombre",
+  "edit": "Editar",
+  "language": "Idioma",
+  "toggleTheme": "Alternar tema",
+  "priority": {
+    "label": "Prioridad",
+    "tooltip": "{priority} prioridad",
+    "setTo": "Establecer prioridad en…",
+    "none": "Sin prioridad",
+    "urgent": "Urgente",
+    "high": "Alta",
+    "medium": "Medio",
+    "low": "Baja"
+  },
+  "add": "Agregar",
+  "showMore": "Mostrar más",
+  "archived": "Archivado",
+  "clear": "Limpiar",
+  "noLabels": "Sin etiquetas.",
+  "enabled": "Activado",
+  "fullscreen": "Pantalla completa",
+  "exitFullscreen": "Salir de pantalla completa",
+  "resizePropertiesPanel": "Cambiar el tamaño del panel de propiedades",
+  "resizeTitleColumn": "Cambiar el tamaño de la columna de título",
+  "openGeneralSettings": "Abrir configuración general",
+  "noSectionAccess": "No tienes acceso a esta sección.",
+  "brandSubtitle": "Planificar problemas en un tablero. Inicia sesión para abrir tus proyectos.",
+  "hotkeys": {
+    "pressKeys": "Presiona las teclas",
+    "fixed": "Fijas",
+    "resetShortcut": "Restablecer este acceso directo",
+    "groups": {
+      "general": "General",
+      "workItems": "Elementos de trabajo"
+    },
+    "commands": {
+      "palette": {
+        "toggle": "Abrir la paleta de comandos"
+      },
+      "project": {
+        "switch": "Cambiar al proyecto 1–9",
+        "new": "Nuevo proyecto",
+        "settings": "Abrir configuración del proyecto"
+      },
+      "sidebar": {
+        "toggle": "Mostrar u ocultar la barra lateral"
+      },
+      "chat": {
+        "toggle": "Mostrar u ocultar el chat de IA"
+      },
+      "issue": {
+        "new": "Nuevo número"
+      },
+      "view": {
+        "kanban": "Diseño del tablero",
+        "table": "Diseño de la tabla",
+        "timeline": "Diseño de la línea de tiempo",
+        "calendar": "Diseño del calendario"
+      },
+      "board": {
+        "select-all": "Selecciona todos los problemas en el tablero"
+      }
+    },
+    "conflict": "Ya utilizado por {command}"
+  },
+  "agentChat": {
+    "emptyHint": "Envía un mensaje para probar cómo responde este agente y qué herramientas utiliza.",
+    "messagePlaceholder": "Mensaje {agent}…",
+    "reset": "Restablecer conversación",
+    "send": "Enviar",
+    "sendHint": "Ingresar para enviar, ⌘/Ctrl+Intro para una nueva línea",
+    "stop": "Detener",
+    "stopped": "Detenido",
+    "loadingEarlier": "Cargando mensajes anteriores…",
+    "messages": "Mensajes de conversación",
+    "usingTool": "Usando {tool}…",
+    "usedTool": "Usado {tool}",
+    "usedTools": "{count, plural,one{Usado # herramienta}other{Usado # herramientas}}",
+    "toolInput": "Entrada",
+    "toolOutput": "Salida",
+    "thinking": "Pensando…",
+    "waitingForRunner": "Esperando al corredor...",
+    "waitingToSend": "Esperando enviar",
+    "removePending": "Eliminar mensaje",
+    "title": "Chatear con {agent}",
+    "unreachable": "No se pudo comunicar con el agente. Inténtalo de nuevo.",
+    "runnerOffline": "Runner sin conexión",
+    "runnerOfflineHint": "Inicia el ejecutor en tu máquina para chatear con este agente.",
+    "attachFile": "Adjunta una hoja de cálculo, un documento, un PDF o un archivo de texto para que el agente lo lea",
+    "removeAttachment": "Eliminar archivo adjunto",
+    "uploadFailed": "No se pudo cargar el archivo.",
+    "tooManyAttachments": "Puedes adjuntar hasta {max} archivos a un mensaje.",
+    "importRows": "{count, plural,one{# fila}other{# filas}}",
+    "confirmImport": "Confirmar importación",
+    "cancelImport": "Cancelar",
+    "importWorking": "Creando problemas...",
+    "importShowAllRows": "Mostrar todas las filas de {count}",
+    "importShowFewerRows": "Mostrar primero {count}",
+    "importRowState": "Importar",
+    "importRowNew": "Se creará",
+    "importSkipHint": "Las filas marcadas con ✕ se omiten al confirmar.",
+    "importAdjustHint": "Pídele al agente que ajuste la asignación si algo parece incorrecto.",
+    "importCanceled": "Esta importación fue cancelada. No se creó nada.",
+    "importFailed": "La importación falló.",
+    "importConfirmed": "{count, plural,one{Se crearon # incidencias}other{Se crearon # incidencias}}",
+    "importSkippedRow": "Fila omitida {row}: {reason}",
+    "contextSize": "Contexto de conversación: {count, plural,one{# token}other{# tokens}}",
+    "contextUnavailable": "El tamaño del contexto no está disponible para este agente"
+  },
+  "share": {
+    "createFailed": "No se pudo crear el vínculo. Inténtalo de nuevo.",
+    "changeFailed": " No se pudo cambiar lo que muestra el enlace. Inténtalo de nuevo.",
+    "stopFailed": " No se pudo dejar de compartir. Inténtalo de nuevo.",
+    "copyFailed": "No se pudo copiar el enlace. Selecciónalo y cópialo manualmente.",
+    "hint": "Cualquiera que tenga el enlace puede leerlo. No se necesita cuenta.",
+    "shareLink": "Compartir enlace",
+    "fullDetails": "Detalles completos del problema",
+    "fullDetailsHint": "Personas asignadas, etiquetas, campos personalizados y actividad.",
+    "stopSharing": "Dejar de compartir",
+    "createLink": "Crear enlace",
+    "copy": "Copiar",
+    "copied": "Copiado"
+  },
+  "actions": "Acciones",
+  "clearSearch": "Borrar búsqueda",
+  "hide": "Ocultar",
+  "show": "Mostrar",
+  "copy": "Copiar",
+  "copied": "Copiado",
+  "change": "Cambiar",
+  "featureOffHint": "Un propietario puede volver a activar esta sección en Configuración general.",
+  "description": "Descripción",
+  "pickColor": "Elegir color",
+  "new": "Nuevo",
+  "features": {
+    "initiatives": "Iniciativas",
+    "cycles": "Ciclos",
+    "dashboards": "Paneles",
+    "notes": "Notas",
+    "subtasks": "Subtareas",
+    "checklists": "Listas de verificación",
+    "issueStats": "Estadísticas de problemas"
+  },
+  "featureOffTitle": "{feature} están desactivadas",
+  "toggleSidebar": "Alternar barra lateral",
+  "system": "Sistema",
+  "genericError": "Algo salió mal",
+  "commandPalette": "Paleta de comandos",
+  "commandPaletteHint": "Buscar un comando para ejecutar...",
+  "scrollToEnd": "Desplazarse hasta el final",
+  "scrollToStart": "Desplazarse hasta el inicio",
+  "editor": {
+    "linkUrl": "Enlace URL",
+    "codeBlock": "Bloque de código",
+    "table": "Tabla",
+    "tableAddRow": "Agregar fila",
+    "tableDeleteRow": "Eliminar fila",
+    "tableAddColumn": "Agregar columna",
+    "tableDeleteColumn": "Eliminar columna",
+    "tableDelete": "Eliminar tabla"
+  },
+  "chart": {
+    "download": "Guardar gráfico",
+    "downloadFailed": "El gráfico no se pudo guardar"
+  }
+}

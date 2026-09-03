@@ -1,0 +1,16 @@
+{
+  "updateAvailable": "Actualización disponible",
+  "releaseHistory": "Historial de publicaciones",
+  "runningOutdated": "Estás ejecutando {current}. Lo último es {latest}.",
+  "runningUnknown": "Estás ejecutando {current}. Última versión desconocida.",
+  "runningLatest": "Estás ejecutando {current}, la última versión.",
+  "noReleases": "No se incluyen notas de la versión con esta compilación.",
+  "badgeRunning": "Ejecutando",
+  "badgeNew": "Nuevo",
+  "earlier": "Lanzamientos anteriores",
+  "check": "Buscar actualizaciones",
+  "checking": "Comprobando",
+  "lastChecked": "Última verificación {date}",
+  "allReleases": "Todas las versiones",
+  "noNotes": "Esta versión no tiene notas."
+}

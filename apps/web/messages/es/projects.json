@@ -1,0 +1,31 @@
+{
+  "label": "Administrar proyectos",
+  "title": "Administrar proyectos",
+  "description": "Cada proyecto al que perteneces, con tus permisos en cada uno. Copia uno para comenzar un nuevo proyecto desde tu configuración. Los propietarios pueden eliminar un proyecto; los miembros pueden dejar uno. Al eliminarlo, se elimina permanentemente el proyecto y todo lo que contiene.",
+  "empty": "Aún no eres miembro de ningún proyecto.",
+  "columns": {
+    "project": "Proyecto",
+    "role": "Rol",
+    "permissions": "Permisos",
+    "actions": "Acciones"
+  },
+  "yourPermissions": "Tus permisos",
+  "copyAction": "Copiar proyecto",
+  "deleteAction": "Eliminar proyecto",
+  "leaveAction": "Dejar el proyecto",
+  "roles": {
+    "owner": "Propietario",
+    "member": "Miembro"
+  },
+  "deleteDialog": {
+    "title": "¿Eliminar {name}?",
+    "confirm": "Eliminar permanentemente",
+    "description": "Esto elimina permanentemente <strong>{name}</strong> y todo lo que contiene: problemas, comentarios, archivos adjuntos y configuraciones. Esto no se puede deshacer.",
+    "typeToConfirm": "Escribe <code>{key}</code> para confirmar."
+  },
+  "leaveDialog": {
+    "title": "Salga de {name}?",
+    "confirm": "Dejar el proyecto",
+    "description": ". Perderá el acceso a <strong>{name}</strong> y tus elementos de trabajo. Para volver a unirse, necesita una nueva invitación de un propietario."
+  }
+}
