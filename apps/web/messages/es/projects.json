@@ -20,11 +20,11 @@
   "deleteDialog": {
     "title": "¿Eliminar {name}?",
     "confirm": "Eliminar permanentemente",
-    "description": "Esto elimina permanentemente <strong>{name}</strong> y todo lo que contiene: problemas, comentarios, archivos adjuntos y configuraciones. Esto no se puede deshacer.",
+    "description": "Esto elimina permanentemente <strong>{name}</strong> y todo lo que contiene: tareas, comentarios, archivos adjuntos y configuraciones. Esto no se puede deshacer.",
     "typeToConfirm": "Escribe <code>{key}</code> para confirmar."
   },
   "leaveDialog": {
-    "title": "Salga de {name}?",
+    "title": "¿Salir de {name}?",
     "confirm": "Dejar el proyecto",
     "description": ". Perderá el acceso a <strong>{name}</strong> y tus elementos de trabajo. Para volver a unirse, necesita una nueva invitación de un propietario."
   }

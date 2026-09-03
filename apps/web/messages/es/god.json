@@ -53,7 +53,7 @@
     "unconfirmedTitle": "Dirección de correo electrónico no confirmada",
     "unconfirmedHint": "Confírmelo aquí cuando el enlace nunca les llegue.",
     "verify": "Marcar como verificado",
-    "verifying": "Confirmando...",
+    "verifying": "Confirmando…",
     "verifyDone": "Dirección de correo electrónico confirmada",
     "signInMethods": "Métodos de inicio de sesión",
     "noProviders": "Ninguno vinculado",
@@ -65,14 +65,14 @@
     "projectAccess": "Acceso al proyecto",
     "noAccessTitle": "Sin acceso al proyecto",
     "noAccessHint": "Esta cuenta no llega a nada hasta que alguien la invita a un proyecto.",
-    "deleteHint": "Los problemas y comentarios permanecen, con el autor sin asignar.",
+    "deleteHint": "Las tareas y comentarios permanecen, con el autor sin asignar.",
     "deleteTitle": "Eliminar cuenta",
     "deleteConfirm": "Eliminar cuenta",
-    "deleteConfirmWithProjects": "{count, plural,one{Eliminar cuenta y proyecto}other{Eliminar cuenta y proyectos}}",
-    "deleteMessage": "<strong>{name}</strong> pierde el acceso a esta instancia. Los problemas y comentarios que escribieron permanecen, sin asignar al autor. Esto no se puede deshacer.",
-    "soleOwnerTitle": "{count, plural,one{Solo propietario de un proyecto}other{Solo propietario de #proyectos}}",
-    "soleOwnerHint": "{count, plural,one{Una vez que la cuenta desaparece, nadie puede administrarla.}other{Una vez que la cuenta desaparece, nadie puede administrarlos.}}",
-    "deleteWithProjects": "{count, plural,one{Eliminar el proyecto con la cuenta}other{Eliminar los proyectos con la cuenta}}",
+    "deleteConfirmWithProjects": "{count, plural, one {Eliminar cuenta y proyecto} other {Eliminar cuenta y proyectos}}",
+    "deleteMessage": "<strong>{name}</strong> pierde el acceso a esta instancia. Las tareas y comentarios que escribieron permanecen, sin asignar al autor. Esto no se puede deshacer.",
+    "soleOwnerTitle": "{count, plural, one {Único propietario de un proyecto} other {Único propietario de # proyectos}}",
+    "soleOwnerHint": "{count, plural, one {Una vez que la cuenta desaparece, nadie puede administrarla.} other {Una vez que la cuenta desaparece, nadie puede administrarlos.}}",
+    "deleteWithProjects": "{count, plural, one {Eliminar el proyecto con la cuenta} other {Eliminar los proyectos con la cuenta}}",
     "deleteWithProjectsOn": "Todo lo que hay dentro también.",
     "deleteWithProjectsOff": "O cancelar y agregar un segundo propietario primero.",
     "deleted": "Cuenta eliminada",
@@ -84,7 +84,7 @@
     "columns": {
       "project": "Proyecto",
       "members": "Miembros",
-      "issues": "Incidencias",
+      "issues": "Tareas",
       "agents": "Agentes",
       "lastActivity": "Última actividad",
       "mcp": "MCP"
@@ -100,13 +100,13 @@
   "projectPanel": {
     "mcpEnabled": "MCP habilitado",
     "mcpOff": "MCP desactivado",
-    "created": "creado{date}",
+    "created": "creado {date}",
     "lastActivity": "Última actividad: {value}",
     "noActivity": "ninguna todavía",
     "statTitle": "{label}: {value}",
     "stats": {
-      "issues": "Incidencias",
-      "archivedIssues": "Problemas archivados",
+      "issues": "Tareas",
+      "archivedIssues": "Tareas archivadas",
       "initiatives": "Iniciativas",
       "members": "Miembros",
       "dashboards": "Paneles",
@@ -123,7 +123,7 @@
   "general": {
     "saved": "Valores predeterminados del proyecto guardados",
     "projectDefaults": "Valores predeterminados del proyecto",
-    "mcpEnabled": "Habilite MCP en nuevos proyectos",
+    "mcpEnabled": "Activa MCP en los proyectos nuevos",
     "mcpEnabledHint": "Se puede acceder a un nuevo proyecto a través de MCP tan pronto como se crea."
   },
   "authentication": {
@@ -145,12 +145,15 @@
       }
     },
     "signIn": "Opciones de inicio de sesión",
-    "signInHint": "Opciones que necesitan correo saliente. Permanecen desactivados hasta que se configura un proveedor.",
+    "signInHint": "Cómo inicia sesión la gente. Las opciones que envían correo permanecen desactivadas hasta que se configura un proveedor.",
     "needsProvider": "Primero configure el proveedor de correo electrónico en Integraciones.",
     "requireVerification": "Requiere confirmación de correo electrónico",
     "requireVerificationHint": "Una cuenta nueva debe confirmar tu dirección antes de poder iniciar sesión.",
     "magicLink": "Enlaces de inicio de sesión",
-    "magicLinkHint": "Ofrecemos iniciar sesión con un enlace enviado por correo electrónico, junto con la contraseña."
+    "magicLinkHint": "Ofrecemos iniciar sesión con un enlace enviado por correo electrónico, junto con la contraseña.",
+    "emailPassword": "Correo electrónico y contraseña",
+    "emailPasswordHint": "Ofrece el formulario de inicio de sesión y registro. Desactívalo para permitir el acceso solo a través de un proveedor de inicio de sesión.",
+    "needsSso": "Configura primero un proveedor de inicio de sesión en Integraciones."
   },
   "hotkeys": {
     "saved": "Atajos de teclado guardados"
@@ -164,7 +167,7 @@
     "avatarMb": "Tamaño de avatar (MB)",
     "avatarHint": "La imagen de perfil que las personas cargan para tu cuenta.",
     "mimeTypes": "Tipos de archivos adjuntos aceptados",
-    "mimeTypesHint": "Un tipo de contenido por línea. Déjelo vacío para aceptar cualquier archivo.",
+    "mimeTypesHint": "Un tipo de contenido por línea. Déjalo vacío para aceptar cualquier archivo.",
     "mimeTypesNote": "Una línea es de tipo completo (aplicación/pdf) o un comodín (imagen/*). Los archivos ya almacenados se conservan independientemente de lo que diga la lista.",
     "quota": "Cuota de proyecto",
     "quotaHint": "Almacenamiento total de archivos adjuntos que puede usar un proyecto. 0 significa que no hay límite.",
@@ -201,7 +204,12 @@
     "optional": "Opcional",
     "apiKey": "Clave de API",
     "projectNotifications": "Notificaciones de proyecto",
-    "projectNotificationsHint": "Permita que los proyectos entreguen tus notificaciones a través de este proveedor en lugar de configurar uno propio. Cada proyecto aún elige si usarlo."
+    "projectNotificationsHint": "Permita que los proyectos entreguen tus notificaciones a través de este proveedor en lugar de configurar uno propio. Cada proyecto aún elige si usarlo.",
+    "test": "Enviar correo de prueba",
+    "testing": "Enviando…",
+    "testHint": "Envía un mensaje real con la configuración actual sin guardarla.",
+    "testConfigureFirst": "Activa primero un proveedor y añade sus credenciales requeridas.",
+    "testSent": "Correo de prueba enviado a {email}"
   },
   "authProvider": {
     "saved": "Proveedor de autenticación guardado",
@@ -212,6 +220,61 @@
     "clientSecret": "Cliente secreto",
     "redirectUri": "Redireccionar URI",
     "redirectUriHint": "Registre esto en el cliente OAuth en la consola de la nube Google. Google rechaza el inicio de sesión si no coincide exactamente.",
-    "copyRedirectUri": "Copiar URI de redireccionamiento"
+    "copyRedirectUri": "Copiar URI de redireccionamiento",
+    "oidc": "OpenID Connect",
+    "oidcConfigured": "Una dirección sin cuenta obtiene una; una dirección con una cuenta ya confirmada inicia sesión en ella.",
+    "oidcMissing": "Añade primero la URL de descubrimiento, el ID de cliente y el secreto.",
+    "discoveryUrl": "URL de descubrimiento",
+    "discoveryUrlHint": "El .well-known/openid-configuration de tu proveedor. De ahí se leen los endpoints de autorización, token e información de usuario.",
+    "oidcLabel": "Etiqueta del botón",
+    "oidcLabelPlaceholder": "Iniciar sesión con Acme SSO",
+    "oidcLabelHint": "Nombra a tu proveedor en el botón de inicio de sesión. Déjalo vacío para una etiqueta genérica.",
+    "scopes": "Scopes",
+    "scopesHint": "Separados por espacios. openid es obligatorio; profile y email completan el nombre y la dirección.",
+    "oidcRedirectUriHint": "Regístrala como URI de redirección en el cliente de tu proveedor de identidad. El proveedor rechaza el inicio de sesión si no coincide exactamente."
+  },
+  "scim": {
+    "saved": "Configuración de SCIM guardada",
+    "provisioning": "Aprovisionamiento",
+    "provisioningConfigured": "Tu proveedor de identidad crea, actualiza y desactiva cuentas en esta instancia.",
+    "provisioningMissing": "Genera primero un token.",
+    "token": "Token",
+    "noToken": "Aún no se ha generado ningún token",
+    "tokenHint": "El token bearer que envía tu proveedor de identidad. Se muestra una sola vez; generar uno nuevo deja de funcionar el anterior.",
+    "generateToken": "Generar token",
+    "replaceToken": "Reemplazar token",
+    "baseUrl": "Punto de conexión de SCIM",
+    "baseUrlHint": "Apunta tu proveedor de identidad a esta dirección.",
+    "copyBaseUrl": "Copiar punto de conexión de SCIM",
+    "groups": "Grupos",
+    "groupsHint": "Los grupos que envía tu proveedor de identidad. La lista es suya; lo que otorga cada grupo se define aquí.",
+    "groupsEmpty": "Aún no se ha enviado ningún grupo.",
+    "memberCount": "{count, plural, =0 {Sin miembros} one {# miembro} other {# miembros}}",
+    "grantsNothing": "no otorga nada todavía",
+    "editMappings": "Editar acceso",
+    "roleOwner": "Propietario",
+    "roleMember": "Miembro",
+    "tokenDialog": {
+      "title": "Generar un token de SCIM",
+      "description": "El token se muestra una sola vez y no se puede volver a consultar. Cualquier token ya en uso deja de funcionar.",
+      "submit": "Generar",
+      "submitPending": "Generando…",
+      "createdTitle": "Tu token de SCIM",
+      "createdDescription": "Cópialo ahora en tu proveedor de identidad. No se volverá a mostrar.",
+      "copy": "Copiar token"
+    },
+    "mappings": {
+      "title": "Qué otorga {group}",
+      "description": "Los miembros de este grupo se unen a los proyectos listados aquí. Quitar un proyecto elimina las membresías que este grupo había otorgado en él.",
+      "empty": "Este grupo no otorga nada todavía.",
+      "addProject": "Añadir un proyecto…",
+      "role": "Rol",
+      "roleOwner": "Propietario",
+      "roleMember": "Miembro",
+      "projectRole": "Rol en el proyecto",
+      "defaultRole": "Rol predeterminado",
+      "remove": "Quitar proyecto",
+      "saved": "Acceso del grupo guardado"
+    }
   }
 }

@@ -25,17 +25,17 @@
   "lastDays": "Últimos días de {days}",
   "showRows": "Mostrar {count}",
   "widgetGroups": {
-    "issues": "Incidencias",
+    "issues": "Tareas",
     "agents": "Agentes de IA y webhooks"
   },
   "widgets": {
     "stat": {
       "label": "Número",
-      "description": "Número de problemas que coinciden con un filtro"
+      "description": "Número de tareas que coinciden con un filtro"
     },
     "recent_issues": {
-      "label": "Problemas recientes",
-      "description": "Últimos problemas por hora de creación o actualización"
+      "label": "Tareas recientes",
+      "description": "Últimas tareas por hora de creación o actualización"
     },
     "activity_feed": {
       "label": "Feed de actividad",
@@ -47,11 +47,11 @@
     },
     "throughput": {
       "label": "Rendimiento",
-      "description": "Problemas creados y cerrados por semana"
+      "description": "Tareas creadas y cerradas por semana"
     },
     "breakdown": {
       "label": "Desglose",
-      "description": "Recuento de incidencias por estado, prioridad, tipo o persona asignada"
+      "description": "Recuento de tareas por estado, prioridad, tipo o persona asignada"
     },
     "agent_runs": {
       "label": "Ejecuciones de agentes",
@@ -67,11 +67,11 @@
     },
     "agent_workload": {
       "label": "Carga de trabajo del agente",
-      "description": "Problemas delegados y resultados de ejecución por agente"
+      "description": "Tareas delegadas y resultados de ejecución por agente"
     }
   },
   "breakdown": {
-    "empty": "Sin problemas todavía.",
+    "empty": "Sin tareas todavía.",
     "by": {
       "status": "Estado",
       "priority": "Prioridad",
@@ -88,7 +88,7 @@
     }
   },
   "recentIssues": {
-    "empty": "No hay problemas que coincidan con este filtro.",
+    "empty": "No hay tareas que coincidan con este filtro.",
     "captionCreated": "El más nuevo primero",
     "captionUpdated": "Recientemente actualizado",
     "filterCount": "{count, plural, one {# filtro} other {# filtros}}",
@@ -112,14 +112,14 @@
       "comment": "comentó",
       "created": "creado",
       "title": "renombrado",
-      "description": "actualizó la descripción de ",
-      "status": " cambió el estado de ",
-      "assignee": " cambió el asignado de ",
-      "priority": " cambió la prioridad de ",
-      "type": " cambió el tipo de ",
-      "start_date": " cambió la fecha de inicio de ",
-      "due_date": " cambió la fecha de vencimiento de ",
-      "label_add": " agregó una etiqueta a",
+      "description": "actualizó la descripción de",
+      "status": "cambió el estado de",
+      "assignee": "cambió el asignado de",
+      "priority": "cambió la prioridad de",
+      "type": "cambió el tipo de",
+      "start_date": "cambió la fecha de inicio de",
+      "due_date": "cambió la fecha de vencimiento de",
+      "label_add": "agregó una etiqueta a",
       "label_remove": "eliminó una etiqueta de",
       "field": "actualizó un campo en",
       "other": "actualizado"
@@ -136,8 +136,8 @@
       "day": "Días",
       "week": "Semanas"
     },
-    "events": "{count, plural,one{# event}other{# events}}",
-    "eventNoun": "{count, plural,one{event}other{events}}",
+    "events": "{count, plural, one {# event} other {# events}}",
+    "eventNoun": "{count, plural, one {event} other {events}}",
     "active": "{count} activas",
     "less": "Menos",
     "more": "Más"
@@ -163,17 +163,17 @@
       "canceled": "cancelado"
     },
     "trigger": {
-      "mention": "ran al mencionar in",
-      "delegation": "ran al delegar ",
-      "field": "ran en un campo de",
-      "manual": "ran manualmente",
-      "schedule": "ran según lo programado"
+      "mention": "se ejecutó al ser mencionado en",
+      "delegation": "se ejecutó por delegación de",
+      "field": "se ejecutó por un campo de",
+      "manual": "se ejecutó manualmente",
+      "schedule": "se ejecutó según lo programado"
     }
   },
   "agentHealth": {
     "empty": "No se ejecuta ningún agente.",
     "successRate": "tasa de éxito",
-    "runs": "{count, plural,one{# run}other{# run}}",
+    "runs": "{count, plural, one {# ejecución} other {# ejecuciones}}",
     "failed": "{count} falló",
     "queued": "{count} en cola"
   },
@@ -182,7 +182,7 @@
     "failed": "{count} falló",
     "pending": "{count} pendiente",
     "allDelivered": "todos entregados",
-    "disabled": "{count, plural,one{# punto final deshabilitado}other{# puntos finales deshabilitados}}"
+    "disabled": "{count, plural, one {# punto final deshabilitado} other {# puntos finales deshabilitados}}"
   },
   "agentWorkload": {
     "empty": "No hay agentes en este proyecto.",

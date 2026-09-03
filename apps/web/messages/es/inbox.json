@@ -10,7 +10,7 @@
   "showSnoozed": "Mostrar pospuesto",
   "markAllRead": "Marcar todo como leído",
   "deleteAllRead": "Eliminar todo lo leído",
-  "deleteAllReadCompleted": "Eliminar todo lo leído para problemas completados",
+  "deleteAllReadCompleted": "Eliminar todo lo leído para tareas completadas",
   "types": {
     "assigned": "Asignado",
     "mentioned": "Mencionado",
@@ -24,11 +24,11 @@
     "unsnooze": "No posponer",
     "tomorrow": "Mañana",
     "inAWeek": "En una semana",
-    "pickDate": "Elige una fecha..."
+    "pickDate": "Elige una fecha…"
   },
   "event": {
     "someone": "Alguien",
-    "assigned": "{who} le asignó el problema",
+    "assigned": "{who} le asignó la tarea",
     "mentioned": "{who} mencionó que tú",
     "commented": "{who} comentó",
     "stateChanged": "{who} cambió el estado de {from} a {to}",

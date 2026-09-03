@@ -11,19 +11,19 @@
   "selectAll": "Seleccionar todo",
   "deselectAll": "Deseleccionar todo",
   "resizeColumn": "Cambiar el tamaño de la columna",
-  "viewNamePlaceholder": "Todos los problemas",
-  "sortedOrder": "Los problemas se ordenan por {field}. Cambie el orden a Manual para moverlos.",
+  "viewNamePlaceholder": "Todos las tareas",
+  "sortedOrder": "Las tareas se ordenan por {field}. Cambia el orden a Manual para moverlas.",
   "statusSince": "En el estado actual desde {date}",
   "createdOn": "Creado {date}",
-  "updatedOn": " Las subtareas {date}",
-  "subtasksProgress": " actualizadas {done}/{total}",
+  "updatedOn": "Actualizado {date}",
+  "subtasksProgress": "Subtareas {done}/{total}",
   "subtasksDone": "{done} de {total} hechas",
   "wip": {
-    "reached": "{column} están en tu límite de problemas de {limit}.",
-    "tooltip": " Límite de trabajo en progreso:{max}",
+    "reached": "{column} están en tu límite de tareas de {limit}.",
+    "tooltip": "Límite de trabajo en progreso: {max}",
     "count": "{count}/{max}",
     "filteredCount": "{shown} de {total}/{max}",
-    "filteredTooltip": "{shown} mostrado por los filtros actuales. El límite de {max} cuenta todos los problemas de {total} en la columna."
+    "filteredTooltip": "{shown} mostrado por los filtros actuales. El límite de {max} cuenta todos las tareas de {total} en la columna."
   },
   "columns": {
     "title": "Título",
@@ -46,7 +46,7 @@
     "nextMonth": "Mes próximo",
     "today": "Hoy",
     "moreIssues": "+{count}más",
-    "issueCount": "{count, plural,one{# incidencias}other{# incidencias}}",
+    "issueCount": "{count, plural, one {# tarea} other {# tareas}}",
     "weekdays": {
       "sun": "Sol",
       "mon": "Lun",
@@ -68,7 +68,7 @@
     }
   },
   "timeline": {
-    "empty": "Aún no hay problemas para colocar en la línea de tiempo.",
+    "empty": "Aún no hay tareas para colocar en la línea de tiempo.",
     "expandGroup": "Expandir grupo",
     "collapseGroup": "Contraer grupo",
     "inferredStart": "Inicio inferido a partir de la fecha de creación",
@@ -92,19 +92,19 @@
   },
   "removal": {
     "archive": {
-      "title": "{count, plural,one{Archivar problema}other{Problemas de archivo}}",
-      "confirm": "{count, plural,one{Archivo # problema}other{Archivo # problemas}}",
-      "description": "{count, plural,one{Archivo # ¿problema seleccionado? Sale del tablero y se puede restaurar más tarde.}other{Archivo # ¿Problemas seleccionados? Abandonan el tablero y se pueden restaurar más tarde.}}"
+      "title": "{count, plural, one {Archivar tarea} other {Archivar tareas}}",
+      "confirm": "{count, plural, one {Archivar # tarea} other {Archivar # tareas}}",
+      "description": "{count, plural, one {¿Archivar # tarea seleccionada? Sale del tablero y se puede restaurar más tarde.} other {¿Archivar # tareas seleccionadas? Salen del tablero y se pueden restaurar más tarde.}}"
     },
     "delete": {
-      "title": "{count, plural,one{Eliminar problema}other{Eliminar problemas}}",
-      "confirm": "{count, plural,one{Eliminar # problema}other{Eliminar # problemas}}",
-      "description": "{count, plural,one{¿Eliminar # problema seleccionado?}other{¿Eliminar # problemas seleccionados?}} Esto también elimina comentarios, actividades y archivos adjuntos. Esto no se puede deshacer."
+      "title": "{count, plural, one {Eliminar tarea} other {Eliminar tareas}}",
+      "confirm": "{count, plural, one {Eliminar # tarea} other {Eliminar # tareas}}",
+      "description": "{count, plural, one {¿Eliminar # tarea seleccionada?} other {¿Eliminar # tareas seleccionadas?}} Esto también elimina comentarios, actividades y archivos adjuntos. Esto no se puede deshacer."
     }
   },
   "share": {
-    "issueTitle": "Incidencia",
-    "issueUnavailable": "Este problema no está disponible.",
+    "issueTitle": "Tarea",
+    "issueUnavailable": "Esta tarea no está disponible.",
     "boardUnavailable": "Este tablero compartido no está disponible. Es posible que el enlace haya sido revocado."
   },
   "groups": {

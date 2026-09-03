@@ -1,7 +1,7 @@
 {
   "viewPermissions": "Ver permisos",
   "none": "No se han concedido permisos",
-  "grantedCount": "{count, plural,one{# permiso}other{# permisos}} concedidos",
+  "grantedCount": "{count, plural, one {# permiso} other {# permisos}} concedidos",
   "resources": {
     "work_items": "Elementos de trabajo",
     "initiatives": "Iniciativas",
@@ -11,7 +11,7 @@
     "members_invite": "Invitaciones",
     "members_manage": "Miembros",
     "states": "Estados",
-    "issue_types": "Se crearán tipos de problemas",
+    "issue_types": "Se crearán tipos de tareas",
     "labels": "Etiquetas",
     "ai_agents": "Agentes de IA",
     "integrations": "Integraciones",

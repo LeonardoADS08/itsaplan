@@ -63,7 +63,7 @@
     "googleDisconnected": "Google desconectado",
     "telegramConnected": "Telegram conectado",
     "telegramDisconnected": "Telegram desconectado",
-    "telegramWaiting": "Espera a que presiones Iniciar en el chat del bot...",
+    "telegramWaiting": "Espera a que presiones Iniciar en el chat del bot…",
     "telegramDescription": "Recibir notificaciones en Telegram.",
     "connect": "Conectar",
     "disconnect": "Desconectar",
@@ -82,11 +82,11 @@
       "dateAndTime": "Fecha y hora",
       "dateAndTimeDescription": "Las marcas de tiempo se almacenan en UTC y se muestran en la zona que elige aquí.",
       "navigation": "Navegación",
-      "navigationDescription": "Adónde te lleva la aplicación y cómo se abren las incidencias.",
-      "issueSettings": "Configuración de problemas",
-      "issueSettingsDescription": "Cómo comienzan las estadísticas y el registro de actividad de una incidencia. Cambiarlos mientras una incidencia está abierta no cambia los datos existentes.",
+      "navigationDescription": "Adónde te lleva la aplicación y cómo se abren las tareas.",
+      "issueSettings": "Configuración de tareas",
+      "issueSettingsDescription": "Cómo comienzan las estadísticas y el registro de actividad de una tarea. Cambiarlos mientras una tarea está abierta no cambia los datos existentes.",
       "notifications": "Notificaciones",
-      "notificationsDescription": "Ver una incidencia te muestra tus comentarios y cambios de estado.",
+      "notificationsDescription": "Ver una tarea te muestra tus comentarios y cambios de estado.",
       "aiChat": "Chat de IA",
       "shortcuts": "Atajos de teclado",
       "shortcutsDescription": "Presiona Cambiar y luego las teclas que quieras. Restablecer usa el acceso directo configurado para esta instancia."
@@ -116,8 +116,8 @@
       "Antarctica": "Antártida",
       "Other": "Otro"
     },
-    "issueOpenMode": "Problemas abiertos en",
-    "issueOpenModeDescription": "Qué sucede cuando haces clic en un problema en un tablero, tabla, calendario o línea de tiempo.",
+    "issueOpenMode": "Tareas abiertas en",
+    "issueOpenModeDescription": "Qué sucede cuando haces clic en una tarea en un tablero, tabla, calendario o línea de tiempo.",
     "issueOpenModeOptions": {
       "panel": "Panel lateral",
       "page": "Página completa"
@@ -131,7 +131,7 @@
       "initiatives": "Iniciativas"
     },
     "showStats": "Mostrar estadísticas",
-    "showStatsDescription": "Si la sección de estadísticas comienza a expandirse cuando abre un problema.",
+    "showStatsDescription": "Si la sección de estadísticas comienza a expandirse cuando abre una tarea.",
     "statsView": "Mostrar estadísticas as",
     "statsViewDescription": "Compact es una barra con una participación por estado; La línea de tiempo le da a cada estado tu propio carril en un eje de tiempo.",
     "statsViewOptions": {
@@ -139,12 +139,12 @@
       "timeline": "Cronología"
     },
     "activityView": "Mostrar actividad como",
-    "activityViewDescription": "Flat es cada entrada más nueva primero; Agrupado divide el registro según el estado en el que se encontraba el problema.",
+    "activityViewDescription": "Flat es cada entrada más nueva primero; Agrupado divide el registro según el estado en el que se encontraba la tarea.",
     "activityViewOptions": {
       "flat": "Plana",
       "grouped": "Agrupado por estado"
     },
-    "autoWatch": "Observe los problemas automáticamente",
+    "autoWatch": "Observe las tareas automáticamente",
     "autoWatchDescription": "Los que tú crea, le asignan, comenta o menciona.",
     "showChatByDefault": "Mostrar el chat de forma predeterminada",
     "showChatByDefaultDescription": "El panel de chat se abre con una página de proyecto. Ciérrelo en cualquier momento desde tu encabezado o desde el ícono de chat."

@@ -18,7 +18,7 @@
   "revokeAccess": "Revocar el acceso",
   "lastOwner": "Un proyecto debe conservar al menos un propietario",
   "leaveTitle": "Dejar este proyecto",
-  "leaveDescription": "Perderás el acceso a este proyecto y tus problemas. Un propietario puede invitarte a volver más tarde.",
+  "leaveDescription": "Perderás el acceso a este proyecto y tus tareas. Un propietario puede invitarte a volver más tarde.",
   "revokeTitle": "Revocar el acceso a {name}",
   "revokeDescription": "{name} perderá el acceso a este proyecto. Se les puede invitar a volver más tarde.",
   "selectRole": "Seleccionar función",
@@ -31,9 +31,14 @@
     "rolePlaceholder": "Rol",
     "invite": "Invitar",
     "inviting": "Invitando…",
-    "pendingCount": "{count, plural,one{# invitación pendiente}other{# invitaciones pendientes}}",
+    "pendingCount": "{count, plural, one {# invitación pendiente} other {# invitaciones pendientes}}",
     "copyLink": "Copiar enlace",
     "copied": "Copiado",
+    "emailQueued": "Correo de invitación en cola",
+    "emailUnavailable": "Invitación creada, pero el correo no se puso en cola. Copia el enlace para compartirlo.",
+    "resendUnavailable": "El correo no está configurado. Copia el enlace de invitación para compartirlo.",
+    "resendEmail": "Enviar correo",
+    "resendingEmail": "Poniendo en cola…",
     "revokeAction": "Revocar invitación",
     "removeAction": "Eliminar invitación",
     "invitedBy": "Invitado por {name} · ",
@@ -50,7 +55,7 @@
   },
   "roles": {
     "title": "Roles",
-    "description": "Roles personalizados y los permisos que cada uno otorga. Asigne un rol a un miembro de la lista de miembros.",
+    "description": "Roles personalizados y los permisos que cada uno otorga. Asigna un rol a un miembro desde la lista de miembros.",
     "ownerOnly": "Solo los propietarios del proyecto pueden administrar roles.",
     "empty": "Aún no hay roles. Crea uno para otorgar acceso con alcance.",
     "columns": {
@@ -80,16 +85,16 @@
     "copyRoles": "Copiar roles",
     "pasteRoles": "Pegar roles",
     "nothingToCopy": "No hay roles personalizados para copiar.",
-    "copiedRoles": "Copiado {count, plural,one{# rol}other{# roles}}.",
+    "copiedRoles": "Copiado {count, plural, one {# rol} other {# roles}}.",
     "copyFailed": "No se pudo copiar al portapapeles.",
     "readFailed": "No se pudo leer el portapapeles.",
     "parseFailed": "No se pudieron leer los roles del portapapeles.",
     "import": {
       "title": "Se aplicarán los roles del portapapeles",
-      "summary": "{count, plural,one{# rol}other{# roles}}. Sobrescribir un rol reemplaza tu matriz de permisos; los miembros mantienen el rol.",
+      "summary": "{count, plural, one {# rol} other {# roles}}. Sobrescribir un rol reemplaza tu matriz de permisos; los miembros mantienen el rol.",
       "preview": "Permisos de vista previa",
-      "apply": "¿Aplicar {count, plural,=0{roles}one{# rol}other{# roles}}",
-      "applied": "Roles aplicados: {created} creado, {updated} actualizado{skipped, plural,=0{}other{, # omitidos}}.",
+      "apply": "Aplicar {count, plural, =0 {roles} one {# rol} other {# roles}}",
+      "applied": "Roles aplicados: {created} creado, {updated} actualizado{skipped, plural, =0 {} other {, # omitidos}}.",
       "actions": {
         "create": "Nuevo",
         "update": "Sobrescribir",
@@ -104,5 +109,6 @@
   },
   "promoted": "Miembro ascendido a propietario",
   "roleUpdated": "Rol de miembro actualizado",
-  "descriptionUpdated": "Descripción del miembro actualizada"
+  "descriptionUpdated": "Descripción del miembro actualizada",
+  "provisioned": "Gestionado por SCIM"
 }

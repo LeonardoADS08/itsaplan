@@ -3,9 +3,9 @@
   "key": "Clave (corta, por ejemplo, MKT)",
   "copyKey": "Clave",
   "description": "Descripción",
-  "issueTypes": "Se crearán tipos de problemas",
-  "typesCreated": "{count, plural,one{# tipo de problema}other{# tipos de problemas}}",
-  "defaultType": "Los problemas nuevos obtienen {type} de forma predeterminada. Los tipos se pueden editar en configuración.",
+  "issueTypes": "Se crearán tipos de tareas",
+  "typesCreated": "{count, plural, one {# tipo de tarea} other {# tipos de tareas}}",
+  "defaultType": "Las tareas nuevas obtienen {type} de forma predeterminada. Los tipos se pueden editar en configuración.",
   "presets": {
     "general": "General",
     "software": "Software",
@@ -30,7 +30,7 @@
   },
   "copyItems": {
     "states": "Estados",
-    "issueTypes": "Se crearán tipos de problemas",
+    "issueTypes": "Se crearán tipos de tareas",
     "labels": "Etiquetas",
     "customFields": "Campos personalizados",
     "views": "Vistas",

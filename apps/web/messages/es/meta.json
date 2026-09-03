@@ -1,4 +1,4 @@
 {
-  "title": "Es un plan: seguimiento de problemas para personas y agentes",
-  "description": "Un rastreador de problemas de código abierto y autohospedado con agentes de IA integrados. Asigne trabajo a personas o agentes y condúzcalo a través de API, webhooks y MCP."
+  "title": "Es un plan: seguimiento de tareas para personas y agentes",
+  "description": "Un rastreador de tareas de código abierto y autohospedado con agentes de IA integrados. Asigna trabajo a personas o agentes y guíalo a través de API, webhooks y MCP."
 }

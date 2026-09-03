@@ -46,6 +46,10 @@
     "auth-provider": {
       "label": "Proveedor de autenticación",
       "description": "Las cuentas externas con las que las personas pueden iniciar sesión."
+    },
+    "scim": {
+      "label": "SCIM",
+      "description": "Permite que un proveedor de identidad cree, actualice y desactive cuentas en esta instancia, y conceda acceso a proyectos a través de sus grupos."
     }
   },
   "settings": {
@@ -59,27 +63,27 @@
     },
     "states": {
       "label": "Estados",
-      "description": "Los estados del flujo de trabajo que avanzan los problemas, cada uno mostrado como una columna."
+      "description": "Los estados del flujo de trabajo que avanzan las tareas, cada uno mostrado como una columna."
     },
     "issue-types": {
-      "label": "Se crearán tipos de problemas",
-      "description": "Los tipos de problemas que este proyecto puede contener, cada uno con tus propios campos."
+      "label": "Se crearán tipos de tareas",
+      "description": "Los tipos de tareas que este proyecto puede contener, cada uno con tus propios campos."
     },
     "labels": {
       "label": "Etiquetas",
-      "description": "Etiquetas para organizar y filtrar problemas en todo el proyecto."
+      "description": "Etiquetas para organizar y filtrar tareas en todo el proyecto."
     },
     "custom-fields": {
       "label": "Campos personalizados",
-      "description": "Campos adicionales que se muestran en problemas, globales o específicos de un tipo de problema."
+      "description": "Campos adicionales que se muestran en tareas, globales o específicos de un tipo de tarea."
     },
     "configuration": {
       "label": "Configuración",
-      "description": "Cómo se cierran las subtareas con tu principal y cuándo se archivan los problemas obsoletos."
+      "description": "Cómo se cierran las subtareas con su tarea principal y cuándo se archivan las tareas obsoletas."
     },
     "actions": {
       "label": "Acciones",
-      "description": "Botones en un problema que establece campos con un solo clic."
+      "description": "Botones en una tarea que establece campos con un solo clic."
     },
     "schedules": {
       "label": "Programaciones",
@@ -91,11 +95,11 @@
     },
     "git": {
       "label": "Repositorios",
-      "description": "Cerrar problemas cuando tus solicitudes de extracción se fusionan en GitHub. Usuarios de GitLab, Gitea, Forgejo o Bitbucket."
+      "description": "Cerrar tareas cuando tus solicitudes de extracción se fusionan en GitHub. Usuarios de GitLab, Gitea, Forgejo o Bitbucket."
     },
     "ai-agents": {
       "label": "Agentes",
-      "description": "Bot a los que puede delegar problemas."
+      "description": "Bot a los que puede delegar tareas."
     },
     "integrations": {
       "label": "Integraciones",

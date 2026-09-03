@@ -18,7 +18,7 @@
   "boardNamePlaceholder": "Nombre del tablero",
   "makePublic": "Hacer público",
   "makePrivate": "Hacer privado",
-  "privateHint": "Solo tú puede ver este tablero. Puedes compartirlo con los miembros seleccionados más tarde.",
+  "privateHint": "Solo tú puedes ver este tablero. Puedes compartirlo con los miembros seleccionados más tarde.",
   "publicHint": "Todos los participantes del proyecto pueden ver este tablero.",
   "createBoard": "Crear tablero",
   "emptyTitle": "Aún no hay tableros",
@@ -26,7 +26,7 @@
   "backgroundColor": "Color de fondo",
   "fullscreen": "Pantalla completa",
   "exitFullscreen": "Salir de pantalla completa",
-  "notePlaceholder": "Escribir una nota...",
+  "notePlaceholder": "Escribir una nota…",
   "noteTitlePlaceholder": "Título",
   "dragNote": "Arrastrar nota",
   "bold": "Negrita",
@@ -36,7 +36,7 @@
   "deleteNote": "Eliminar nota",
   "save": {
     "unsaved": "Cambios no guardados",
-    "saving": "Guardando...",
+    "saving": "Guardando…",
     "saved": "Guardado",
     "error": "Error al guardar"
   },
@@ -47,7 +47,7 @@
   },
   "visibilityHint": {
     "public": "Todos los miembros del proyecto pueden ver este tablero",
-    "private": "Solo tu creador puede ver este tablero",
+    "private": "Solo su creador puede ver este tablero",
     "restricted": "Solo tu creador y los miembros elegidos pueden ver este tablero"
   },
   "addNote": "Agregar nota",
