@@ -44,7 +44,7 @@
     "tools": "Herramientas",
     "skills": "Habilidades",
     "agents": "Agentes",
-    "schedules": "Programaciones"
+    "schedules": "Tareas recurrentes"
   },
   "title": "Nuevo proyecto",
   "copyTitle": "Copiar proyecto \"{name}\"",

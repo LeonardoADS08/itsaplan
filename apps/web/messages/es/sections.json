@@ -86,7 +86,7 @@
       "description": "Botones en una tarea que establece campos con un solo clic."
     },
     "schedules": {
-      "label": "Programaciones",
+      "label": "Tareas recurrentes",
       "description": "Ejecutar tareas del agente en un cronograma recurrente."
     },
     "webhooks": {

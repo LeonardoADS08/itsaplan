@@ -29,7 +29,7 @@ export const LOCALE_FLAGS: Record<Locale, string> = {
   'zh-CN': '🇨🇳',
   ar: '🇪🇬',
   fr: '🇫🇷',
-  es: '🌎',
+  es: '🇪🇸',
 };
 
 export function isLocale(value: string | undefined | null): value is Locale {
